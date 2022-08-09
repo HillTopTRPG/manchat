@@ -1,22 +1,24 @@
-version: '3'
+version: '3.9'
 services:
-  app:
-    restart: always
-    build:
-      context: .
+  rails:
+    build: .
+    stdin_open: true
+    tty: true
     volumes:
-      - .:/app
-      - /app/node_modules
-      - public-data:/app/public
-      - tmp-data:/app/tmp
-      - log-data:/app/log
-    command: sh launch.sh
+      - .:/app:cached
+      - app-public:/app/public
+      - app-tmp:/app/tmp
+      - app-log:/app/log
+      - app-bundle:/app/.bundle
+      - app-vendor-bundle:/app/vendor/bundle
+    environment:
+      - APP_DOCKER_DB_HOST=mysql
+      - APP_DOCKER_DB_PORT=3306
+    command: bash -c "rm -f tmp/pids/server.pid && bundle exec bin/rails s"
     depends_on:
-      - db
-  db:
-    restart: always
-    image: mysql:8.0.25
-    platform: linux/amd64
+      - mysql
+  mysql:
+    build: ./docker/mysql
     environment:
       MYSQL_DATABASE: app_development
       MYSQL_USER: appuser
@@ -28,17 +30,22 @@ services:
     command: mysqld --character-set-server=utf8mb4 --explicit_defaults_for_timestamp=true --default-authentication-plugin=mysql_native_password    
     ports:
       - 3306:3306
+    volumes:
+      - mysql-data:/var/lib/mysql
   nginx:
-    build:
-      context: ./nginx
+    build: ./docker/nginx
     ports:
       - 81:80
     depends_on:
       - app
     volumes:
-      - public-data:/app/public
-      - tmp-data:/app/tmp
+      - app-public:/app/public
+      - app-tmp:/app/tmp
+
 volumes:
-  public-data:
-  tmp-data:
-  log-data:
+  app-public:
+  app-bundle:
+  app-vendor-bundle:
+  app-tmp:
+  app-log:
+  mysql-data:
