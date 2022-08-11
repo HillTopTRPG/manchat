@@ -1,0 +1,5 @@
+FROM node:18.1-alpine
+
+WORKDIR /app
+
+ENTRYPOINT ["yarn", "build", "--"]

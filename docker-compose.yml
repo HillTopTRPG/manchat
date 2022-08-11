@@ -1,16 +1,41 @@
 version: '3.9'
 services:
+  nginx-frontend: # ビルドされたvueの成果物を公開するWebサーバー
+    build:
+      context: ./docker/nginx
+      args:
+        - TARGET_CONF=vue.conf
+    ports:
+      - 81:80
+    volumes:
+      - vue-public:/app/dist
+    depends_on:
+      - vue
+  nginx-backend: # ビルドされたrailsの成果物を公開するWebサーバー
+    build:
+      context: ./docker/nginx
+      args:
+        - TARGET_CONF=rails.conf
+    ports:
+      - 82:80
+    volumes:
+      - rails-public:/app/public
+      - rails-tmp:/app/tmp
+    depends_on:
+      - rails
+  vue: # 起動することでビルドするコンテナ―(ビルド後に終了する)
+    build: ./docker/vue
+    volumes:
+      - ./frontend:/app
+      - vue-public:/app/dist
   rails:
     build: .
     stdin_open: true
     tty: true
     volumes:
       - .:/app:cached
-      - app-public:/app/public
-      - app-tmp:/app/tmp
-      - app-log:/app/log
-      - app-bundle:/app/.bundle
-      - app-vendor-bundle:/app/vendor/bundle
+      - rails-public:/app/public
+      - rails-tmp:/app/tmp
     environment:
       - APP_DOCKER_DB_HOST=mysql
       - APP_DOCKER_DB_PORT=3306
@@ -26,26 +51,16 @@ services:
       MYSQL_PASSWORD: asf#aks3AFja
       TZ: 'Asia/Tokyo'
       MYSQL_ROOT_HOST: "%"
+    stdin_open: true
     tty: true
-    command: mysqld --character-set-server=utf8mb4 --explicit_defaults_for_timestamp=true --default-authentication-plugin=mysql_native_password    
+    command: mysqld --character-set-server=utf8mb4 --explicit_defaults_for_timestamp=true --default-authentication-plugin=mysql_native_password
     ports:
       - 3306:3306
     volumes:
       - mysql-data:/var/lib/mysql
-  nginx:
-    build: ./docker/nginx
-    ports:
-      - 81:80
-    depends_on:
-      - app
-    volumes:
-      - app-public:/app/public
-      - app-tmp:/app/tmp
 
 volumes:
-  app-public:
-  app-bundle:
-  app-vendor-bundle:
-  app-tmp:
-  app-log:
   mysql-data:
+  vue-public:
+  rails-public:
+  rails-tmp:
