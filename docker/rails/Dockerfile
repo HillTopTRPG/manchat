@@ -1,9 +1,6 @@
-FROM ruby:3.0
+FROM --platform=linux/x86_64 ruby:3.0
 
-ENV APP /app
-
-COPY ../.. $APP/
-WORKDIR $APP
+WORKDIR /app
 
 ENV BUNDLER_VERSION 2.3.18
 
@@ -34,10 +31,6 @@ RUN gem install nokogiri \
     --with-xslt-config=/usr/bin/xslt-config
 
 RUN gem install bundler -v ${BUNDLER_VERSION}
-
-RUN mkdir -p tmp/sockets && \
-    mkdir -p /tmp/public && \
-    cp -rf $APP/public/* /tmp/public
 
 ENTRYPOINT [ \
   "prehook", "ruby -v", "--", \

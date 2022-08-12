@@ -1,49 +1,43 @@
 version: '3.9'
 services:
-  nginx-frontend: # ビルドされたvueの成果物を公開するWebサーバー
-    build:
-      context: ./docker/nginx
-      args:
-        - TARGET_CONF=vue.conf
+  nginx:
+    image: nginx:1.23-alpine
+    platform: linux/x86_64
     ports:
-      - 81:80
+      - "81:80"
     volumes:
-      - vue-public:/app/dist
+      - ./docker/nginx/app.conf:/etc/nginx/conf.d/app.conf
     depends_on:
       - vue
-  nginx-backend: # ビルドされたrailsの成果物を公開するWebサーバー
-    build:
-      context: ./docker/nginx
-      args:
-        - TARGET_CONF=rails.conf
-    ports:
-      - 82:80
-    volumes:
-      - rails-public:/app/public
-      - rails-tmp:/app/tmp
-    depends_on:
       - rails
-  vue: # 起動することでビルドするコンテナ―(ビルド後に終了する)
-    build: ./docker/vue
+  vue:
+    image: node:18.1-alpine
+    platform: linux/x86_64
     volumes:
-      - ./frontend:/app
-      - vue-public:/app/dist
+      - ./frontend:/app:cached
+    working_dir: /app
+    command: "yarn dev"
   rails:
-    build: .
-    stdin_open: true
-    tty: true
+    build: ./docker/rails
+    ports:
+      - "3000:3000"
     volumes:
       - .:/app:cached
-      - rails-public:/app/public
-      - rails-tmp:/app/tmp
+    command: bash -c "rm -f tmp/pids/server.pid && bundle exec bin/rails s -p 3000"
+    depends_on:
+      - mysql
     environment:
       - APP_DOCKER_DB_HOST=mysql
       - APP_DOCKER_DB_PORT=3306
-    command: bash -c "rm -f tmp/pids/server.pid && bundle exec bin/rails s"
-    depends_on:
-      - mysql
+    stdin_open: true
+    tty: true
   mysql:
     build: ./docker/mysql
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+    command: mysqld --character-set-server=utf8mb4 --explicit_defaults_for_timestamp=true --default-authentication-plugin=mysql_native_password
     environment:
       MYSQL_DATABASE: app_development
       MYSQL_USER: appuser
@@ -53,14 +47,6 @@ services:
       MYSQL_ROOT_HOST: "%"
     stdin_open: true
     tty: true
-    command: mysqld --character-set-server=utf8mb4 --explicit_defaults_for_timestamp=true --default-authentication-plugin=mysql_native_password
-    ports:
-      - 3306:3306
-    volumes:
-      - mysql-data:/var/lib/mysql
 
 volumes:
   mysql-data:
-  vue-public:
-  rails-public:
-  rails-tmp:
