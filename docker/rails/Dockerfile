@@ -1,4 +1,4 @@
-FROM --platform=linux/x86_64 ruby:3.0
+FROM ruby:3.0
 
 WORKDIR /app
 
@@ -34,5 +34,9 @@ RUN gem install bundler -v ${BUNDLER_VERSION}
 
 ENTRYPOINT [ \
   "prehook", "ruby -v", "--", \
-  "prehook", "bundle install -j3", "--" \
+  "prehook", "bundle install -j3", "--", \
+  # mysqlが接続可能になるまで待つ
+  "/app/wait-for-it.sh mysql:3306", "--", \
+  "bundle exec rails db:create", "--", \
+  "bundle exec rails db:migrate", "--" \
 ]
