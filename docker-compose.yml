@@ -11,19 +11,16 @@ services:
       - vue
       - rails
   vue:
-    image: node:18.1-alpine
-    platform: linux/x86_64
+    build: ./docker/vue
     volumes:
-      - ./frontend:/app:cached
-    working_dir: /app
+      - ./frontend:/app
     command: "yarn dev"
+    stdin_open: true
   rails:
     build: ./docker/rails
-    ports:
-      - "3000:3000"
     volumes:
-      - .:/app:cached
-    command: bash -c "rm -f tmp/pids/server.pid && bundle exec bin/rails s -p 3000"
+      - .:/app
+    command: bash -c "rm -f tmp/pids/server.pid && bundle exec bin/rails s -p 3000 -b '0.0.0.0'"
     depends_on:
       - mysql
     environment:
@@ -39,12 +36,8 @@ services:
       - mysql-data:/var/lib/mysql
     command: mysqld --character-set-server=utf8mb4 --explicit_defaults_for_timestamp=true --default-authentication-plugin=mysql_native_password
     environment:
-      MYSQL_DATABASE: app_development
-      MYSQL_USER: appuser
-      MYSQL_ROOT_PASSWORD: asf#aks3AFja
-      MYSQL_PASSWORD: asf#aks3AFja
+      MYSQL_ALLOW_EMPTY_PASSWORD: true
       TZ: 'Asia/Tokyo'
-      MYSQL_ROOT_HOST: "%"
     stdin_open: true
     tty: true
 
