@@ -1,6 +1,4 @@
-FROM ruby:3.0
-
-WORKDIR /app
+FROM --platform=linux/x86_64 ruby:3.0
 
 ENV BUNDLER_VERSION 2.3.18
 
@@ -22,8 +20,7 @@ RUN apt-get install -y golang-go && \
     make build && \
     mv build/Linux/entrykit /bin/entrykit && \
     chmod +x /bin/entrykit && \
-    entrykit --symlink && \
-    cd ../
+    entrykit --symlink
 
 RUN gem install nokogiri \
     -- --use-system-libraries \
@@ -32,11 +29,13 @@ RUN gem install nokogiri \
 
 RUN gem install bundler -v ${BUNDLER_VERSION}
 
+ADD ./wait-for-it.sh /app/wait-for-it.sh
+
+WORKDIR /app
+
 ENTRYPOINT [ \
   "prehook", "ruby -v", "--", \
-  "prehook", "bundle install -j3", "--", \
-  # mysqlが接続可能になるまで待つ
-  "/app/wait-for-it.sh mysql:3306", "--", \
-  "bundle exec rails db:create", "--", \
-  "bundle exec rails db:migrate", "--" \
+  "prehook", "bundle install -j4", "--", \
+  "prehook", "/app/wait-for-it.sh mysql:3306 -- bundle exec rails db:create", "--", \
+  "prehook", "bundle exec rails db:migrate", "--" \
 ]

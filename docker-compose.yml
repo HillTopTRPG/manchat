@@ -11,19 +11,16 @@ services:
       - vue
       - rails
   vue:
-    image: node:18.1-alpine
-    platform: linux/x86_64
+    build: ./docker/vue
     volumes:
-      - ./frontend:/app:cached
-    working_dir: /app
+      - ./frontend:/app
     command: "yarn dev"
+    stdin_open: true
   rails:
     build: ./docker/rails
-    ports:
-      - "3000:3000"
     volumes:
-      - .:/app:cached
-    command: bash -c "rm -f tmp/pids/server.pid && bundle exec bin/rails s -p 3000"
+      - .:/app
+    command: bash -c "rm -f tmp/pids/server.pid && bundle exec bin/rails s -p 3000 -b '0.0.0.0'"
     depends_on:
       - mysql
     environment:
