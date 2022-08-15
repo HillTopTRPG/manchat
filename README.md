@@ -1,9 +1,27 @@
 # README
 
+## 開発中コマンドメモ
+
+ * Docker起動
+   1. `docker compose up -d` 起動(最低限これだけ)
+   2. `docker compose ps` コンテナ―状況確認
+   3. `docker compose logs rails -f` railsのログを確認
+ * Docker初期化
+   1. `docker compose down` コンテナー停止＆削除
+   2. `docker rmi $(docker images -q)` イメージ全削除
+   3. `docker system prune --volumes` コンテナなど全削除
+   4. `docker system df` Dockerが使っているストレージ容量確認
+ * rails操作
+   * `docker compose exec rails bash` railsコンテナに入る
+   * `docker compose run rails bundle install` 未起動のコンテナに直接コマンド叩く
+ * railsデバッグ
+   1. railsソースに`binding.pry`を書く
+   2. `docker compose restart rails`
+   3. `docker attach trpg-session-tools_rails`
+
 ## 構成
 * docker(docker-compose)
-  1. [nginx](https://www.nginx.co.jp/) 1.23-alpine (frontend web server) 
-  2. [nginx](https://www.nginx.co.jp/) 1.23-alpine (backend web server)
+  1. [nginx](https://www.nginx.co.jp/) 1.23-alpine port=81
   3. Ruby on Rails 7
   4. mysql 8.0.25
   5. Vue 3 + Vuetify 3 (build only)
@@ -41,7 +59,7 @@
 7. コマンドライン上で6-2の`git clone`によって作成されたフォルダに移動する
    * `cd cloneで作成されたフォルダのパス`
 8. とにかく起動(docker-compose.ymlの記載に沿ってdockerが各環境を構築して起動する)
-   * `docker compose up --build`
+   * `docker compose up`
 9. ブラウザからアクセス！
    * http://localhost:81  フロントエンドのページ（メインのコンテンツ）
-   * http://localhost:82  バックエンドのページ（管理画面になる予定）
+   * http://localhost:81/api/v1/users  バックエンドデータを直接覗き見

@@ -15,9 +15,10 @@ services:
     volumes:
       - ./frontend:/app
     command: "yarn dev"
-    stdin_open: true
   rails:
     build: ./docker/rails
+    tty: true
+    stdin_open: true
     volumes:
       - .:/app
     command: bash -c "rm -f tmp/pids/server.pid && bundle exec bin/rails s -p 3000 -b '0.0.0.0'"
@@ -26,8 +27,6 @@ services:
     environment:
       - APP_DOCKER_DB_HOST=mysql
       - APP_DOCKER_DB_PORT=3306
-    stdin_open: true
-    tty: true
   mysql:
     build: ./docker/mysql
     ports:
@@ -38,8 +37,7 @@ services:
     environment:
       MYSQL_ALLOW_EMPTY_PASSWORD: true
       TZ: 'Asia/Tokyo'
-    stdin_open: true
-    tty: true
 
 volumes:
   mysql-data:
+  rails-bundle:
