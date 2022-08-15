@@ -1,0 +1,13 @@
+# Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
+
+one:
+  uuid: MyString
+  name: MyString
+  password: MyString
+  last_logged_in: 2022-08-13 19:42:32
+
+two:
+  uuid: MyString
+  name: MyString
+  password: MyString
+  last_logged_in: 2022-08-13 19:42:32

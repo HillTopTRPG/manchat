@@ -1,0 +1,25 @@
+<p style="color: green"><%= notice %></p>
+
+<h1>Users</h1>
+
+<table id="api_v1_users">
+<thead>
+<tr>
+  <th>id</th>
+  <th>Uuid</th>
+  <th>Name</th>
+  <th>Password</th>
+  <th>Last logged in</th>
+  <th>created_at</th>
+  <th>updated_at</th>
+  <th>Show</th>
+</tr>
+</thead>
+<tbody>
+<% @api_v1_users.each do |api_v1_user| %>
+  <%= render api_v1_user %>
+<% end %>
+</tbody>
+</table>
+
+<%= link_to "New user", new_api_v1_user_path %>

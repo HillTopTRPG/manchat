@@ -1,5 +1,22 @@
 # README
 
+## 開発中コマンドメモ
+
+ * Docker
+   * `docker system df` Dockerが使っているストレージ容量確認
+   * `docker system prune --volumes` コンテナなど全削除
+   * `docker rmi $(docker images -q)` イメージ全削除
+ * Docker Compose
+   * `docker compose ps`
+   * `docker compose down`
+   * `docker compose up -d`
+   * `docker compose exec rails bash`
+ * railsソース反映
+   * `docker compose restart rails`
+   * `docker compose logs rails -f`
+   * `docker compose exec rails bundle install`
+   * `docker compose exec rails bin/importmap pin jquery`
+
 ## 構成
 * docker(docker-compose)
   1. [nginx](https://www.nginx.co.jp/) 1.23-alpine (frontend web server) 
