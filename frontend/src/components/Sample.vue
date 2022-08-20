@@ -2,7 +2,8 @@
   <v-card
     max-width="375"
     class="mx-auto"
-    height="800"
+    height="400"
+    min-height="400"
   >
     Sample Text
   </v-card>

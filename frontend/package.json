@@ -13,6 +13,7 @@
     "roboto-fontface": "*",
     "splitpanes": "^3.1.1",
     "vue": "^3.2.37",
+    "vue-uuid": "^3.0.0",
     "vuetify": "^3.0.0-beta.0",
     "webfontloader": "^1.0.0"
   },
