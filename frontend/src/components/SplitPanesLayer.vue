@@ -17,6 +17,9 @@ import 'splitpanes/dist/splitpanes.css'
 import { ref } from "vue"
 import { uuid } from 'vue-uuid'
 import { componentMap } from "./panes"
+import provideAll from "~/data"
+
+provideAll()
 
 interface Props {
   layout: Layout
