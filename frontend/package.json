@@ -11,11 +11,14 @@
     "@mdi/font": "5.9.55",
     "jquery": "^3.6.0",
     "roboto-fontface": "*",
+    "splitpanes": "^3.1.1",
     "vue": "^3.2.37",
+    "vue-uuid": "^3.0.0",
     "vuetify": "^3.0.0-beta.0",
     "webfontloader": "^1.0.0"
   },
   "devDependencies": {
+    "@types/splitpanes": "^2.2.1",
     "@types/webfontloader": "^1.0.0",
     "@vitejs/plugin-vue": "^3.0.0",
     "typescript": "^4.6.4",
