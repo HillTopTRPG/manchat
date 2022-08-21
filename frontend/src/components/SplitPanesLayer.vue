@@ -52,7 +52,6 @@ const addPane = (event: { target: HTMLElement }) => {
   const btnElm: HTMLElement = event.target.tagName === "button" ? event.target : event.target.closest("button")!
   const idx = parseInt(btnElm.dataset.idx || "0")
   const direction = btnElm.dataset.direction
-  console.log(`${cLayout.value.type}::[${idx}-${direction}] => ${cLayout.value.panes[idx].type}::${cLayout.value.panes[idx].panes.length}`)
   Array.from(document.getElementsByClassName( "split-panes-layer" ))
     .find((elm: Element) => (elm as HTMLElement).dataset.uuid === cLayout.value.panes[idx].uuid)
     ?.classList.remove(`on-hold-${direction}`)
@@ -72,30 +71,48 @@ const addPane = (event: { target: HTMLElement }) => {
   }
 }
 
-const onMouseEnter = (event: { target: HTMLElement }) => {
+const showBorderSelf = (event: { target: HTMLElement }) => {
   const btnElm: HTMLElement = event.target.tagName === "button" ? event.target : event.target.closest("button")!
   const idx = parseInt(btnElm.dataset.idx || "0")
   const direction = btnElm.dataset.direction
-  Array.from(document.getElementsByClassName( "split-panes-layer" ))
+  Array.from(document.getElementsByClassName( "splitpanes__pane" ))
     .find((elm: Element) => (elm as HTMLElement).dataset.uuid === cLayout.value.panes[idx].uuid)
     ?.classList.add(direction ? `on-hold-${direction}` : "on-hold")
 }
 
-const onMouseLeave = (event: { target: HTMLElement }) => {
+const hideBorderSelf = (event: { target: HTMLElement }) => {
   const btnElm: HTMLElement = event.target.tagName === "button" ? event.target : event.target.closest("button")!
   const idx = parseInt(btnElm.dataset.idx || "0")
   const direction = btnElm.dataset.direction
-  Array.from(document.getElementsByClassName( "split-panes-layer" ))
+  Array.from(document.getElementsByClassName( "splitpanes__pane" ))
       .find((elm: Element) => (elm as HTMLElement).dataset.uuid === cLayout.value.panes[idx].uuid)
       ?.classList.remove(direction ? `on-hold-${direction}` : "on-hold")
+}
+
+const showBorderChildren = (event: { target: HTMLElement }) => {
+  const btnElm: HTMLElement = event.target.tagName === "button" ? event.target : event.target.closest("button")!
+  const idx = parseInt(btnElm.dataset.idx || "0")
+  Array.from(document.getElementsByClassName( "splitpanes__pane" ))
+    .filter((elm: Element) => cLayout.value.panes[idx].panes.map(p => p.uuid).some(uuid => uuid === (elm as HTMLElement).dataset.uuid))
+    .forEach(elm => elm.classList.add("on-hold"))
+}
+
+const hideBorderChildren = (event: { target: HTMLElement }) => {
+  const btnElm: HTMLElement = event.target.tagName === "button" ? event.target : event.target.closest("button")!
+  const idx = parseInt(btnElm.dataset.idx || "0")
+  Array.from(document.getElementsByClassName( "splitpanes__pane" ))
+    .filter((elm: Element) => cLayout.value.panes[idx].panes.map(p => p.uuid).some(uuid => uuid === (elm as HTMLElement).dataset.uuid))
+    .forEach(elm => elm.classList.remove("on-hold"))
 }
 
 const addBrotherPane = (idx: number, isAfter: boolean) => {
   const addObj: Layout = { type: "normal", uuid: uuid.v4(), panes: [] }
   cLayout.value.panes.splice(idx + (isAfter ? 1 : 0), 0, addObj)
+  cLayout.value.panes.forEach(p => p.size = 100 / cLayout.value.panes.length)
 }
 
 const removePane = (event: { target: HTMLElement }) => {
+  hideBorderSelf(event)
   const btnElm: HTMLElement = event.target.tagName === "button" ? event.target : event.target.closest("button")!
   const idx = parseInt(btnElm.dataset.idx || "0")
   if (!cLayout.value.panes) return
@@ -109,6 +126,8 @@ const removePane = (event: { target: HTMLElement }) => {
     cLayout.value.panes.splice(idx, 1)
   }
 }
+
+const onResizedPanes = (event: { size: number }[]) => event.forEach(({size}, idx) => cLayout.value.panes[idx].size = size)
 </script>
 
 <template>
@@ -116,9 +135,10 @@ const removePane = (event: { target: HTMLElement }) => {
     class="flex-fill"
     :class="isNest ? null : 'root'"
     :horizontal="cLayout.type === 'horizontal' || undefined"
-    :first-splitter="(cLayout.panes?.length || 0) > 1"
     :key="cLayout.uuid"
     v-if="cLayout.type === 'horizontal' || cLayout.type === 'vertical'"
+    @resized="onResizedPanes"
+    :dbl-click-splitter="false"
   >
     <pane
       v-for="(pane, idx) in cLayout.panes"
@@ -127,6 +147,8 @@ const removePane = (event: { target: HTMLElement }) => {
       :class="(pane.type !== 'horizontal' && pane.type !== 'vertical') ? 'last-generation' : null"
       :style="{ 'overflow': (pane.type === 'horizontal' || pane.type === 'vertical') ? 'hidden' : 'auto' }"
       :size="pane.size === undefined ? 100 - (cLayout.panes.reduce((p, c) => (c.size || 0) + p, 0)) : pane.size"
+      :data-uuid="pane.uuid"
+      min-size="5"
     >
       <div
         class="split-panes-layer d-flex w-100 h-100"
@@ -144,23 +166,25 @@ const removePane = (event: { target: HTMLElement }) => {
         >
           <div class="position-sticky d-flex" :class="cLayout.type === 'horizontal' && (pane.type === 'horizontal' || pane.type === 'vertical') ? 'flex-column h-100 py-5' : 'flex-row w-100 px-5'" style="gap: 1em; top: 0; left: 0;">
             <template v-if="pane.type === 'horizontal' || pane.type === 'vertical'">
-              <v-btn size="x-small" icon="mdi-view-split-vertical" v-if="pane.type !== 'horizontal'" @click="pane.type = 'horizontal'"></v-btn>
-              <v-btn size="x-small" icon="mdi-view-split-horizontal" v-if="pane.type !== 'vertical'" @click="pane.type = 'vertical'"></v-btn>
+              <v-btn
+                size="x-small"
+                icon="mdi-view-split-vertical"
+                :data-idx="idx"
+                v-if="pane.type !== 'horizontal'"
+                @click="pane.type = 'horizontal'"
+                @mouseenter="showBorderChildren"
+                @mouseleave="hideBorderChildren"
+              ></v-btn>
+              <v-btn
+                size="x-small"
+                icon="mdi-view-split-horizontal"
+                :data-idx="idx"
+                v-if="pane.type !== 'vertical'"
+                @click="pane.type = 'vertical'"
+                @mouseenter="showBorderChildren"
+                @mouseleave="hideBorderChildren"
+              ></v-btn>
             </template>
-            <v-menu v-if="pane.type !== 'horizontal' && pane.type !== 'vertical'" open-on-hover>
-              <template v-slot:activator="{ props: menu }">
-                <v-btn size="x-small" color="secondary" v-bind="menu" icon="mdi-package-variant-closed" />
-              </template>
-              <v-list @update:selected="s => pane.component = s[0]">
-                <v-list-item
-                  v-for="n in Object.keys(componentMap)"
-                  :title="n"
-                  :value="n"
-                  density="compact"
-                  :active="n === pane.component"
-                />
-              </v-list>
-            </v-menu>
             <v-menu location="center">
               <template v-slot:activator="{ props: menu }">
                 <v-btn size="x-small" color="primary" v-bind="menu" icon="mdi-plus" />
@@ -177,8 +201,8 @@ const removePane = (event: { target: HTMLElement }) => {
                       :data-idx="idx"
                       data-direction="up"
                       @click="addPane"
-                      @mouseenter="onMouseEnter"
-                      @mouseleave="onMouseLeave"
+                      @mouseenter="showBorderSelf"
+                      @mouseleave="hideBorderSelf"
                     />
                   </v-col>
                 </v-row>
@@ -193,8 +217,8 @@ const removePane = (event: { target: HTMLElement }) => {
                       :data-idx="idx"
                       data-direction="left"
                       @click="addPane"
-                      @mouseenter="onMouseEnter"
-                      @mouseleave="onMouseLeave"
+                      @mouseenter="showBorderSelf"
+                      @mouseleave="hideBorderSelf"
                     ></v-btn>
                   </v-col>
                   <v-col class="pa-0">
@@ -215,8 +239,8 @@ const removePane = (event: { target: HTMLElement }) => {
                       :data-idx="idx"
                       data-direction="right"
                       @click="addPane"
-                      @mouseenter="onMouseEnter"
-                      @mouseleave="onMouseLeave"
+                      @mouseenter="showBorderSelf"
+                      @mouseleave="hideBorderSelf"
                     ></v-btn>
                   </v-col>
                 </v-row>
@@ -231,12 +255,26 @@ const removePane = (event: { target: HTMLElement }) => {
                       :data-idx="idx"
                       data-direction="down"
                       @click="addPane"
-                      @mouseenter="onMouseEnter"
-                      @mouseleave="onMouseLeave"
+                      @mouseenter="showBorderSelf"
+                      @mouseleave="hideBorderSelf"
                     ></v-btn>
                   </v-col>
                 </v-row>
               </v-container>
+            </v-menu>
+            <v-menu v-if="pane.type !== 'horizontal' && pane.type !== 'vertical' && pane.component" open-on-hover>
+              <template v-slot:activator="{ props: menu }">
+                <v-btn size="x-small" color="secondary" v-bind="menu" icon="mdi-package-variant-closed" />
+              </template>
+              <v-list @update:selected="s => pane.component = s[0]">
+                <v-list-item
+                  v-for="n in Object.keys(componentMap)"
+                  :title="n"
+                  :value="n"
+                  density="compact"
+                  :active="n === pane.component"
+                />
+              </v-list>
             </v-menu>
             <template v-if="(cLayout.panes?.length || 0) > 1">
               <v-spacer />
@@ -245,8 +283,8 @@ const removePane = (event: { target: HTMLElement }) => {
                 icon="mdi-close"
                 :data-idx="idx"
                 @click="removePane"
-                @mouseenter="onMouseEnter"
-                @mouseleave="onMouseLeave"
+                @mouseenter="showBorderSelf"
+                @mouseleave="hideBorderSelf"
               />
             </template>
           </div>
@@ -255,9 +293,17 @@ const removePane = (event: { target: HTMLElement }) => {
       </div>
     </pane>
   </splitpanes>
-  <keep-alive v-else>
-    <component :is="componentMap[componentTarget]" />
+  <keep-alive v-else-if="cLayout.component">
+    <component :is="componentMap[cLayout.component]" />
   </keep-alive>
+  <v-list v-else @update:selected="s => cLayout.component = s[0]">
+    <v-list-item
+      v-for="n in Object.keys(componentMap)"
+      :title="n"
+      :value="n"
+      density="compact"
+    />
+  </v-list>
 </template>
 
 <style scoped lang="css">
@@ -279,8 +325,6 @@ const removePane = (event: { target: HTMLElement }) => {
   justify-content: center;
   align-items: center;
   display: flex;
-  min-width: 40px;
-  min-height: 40px;
 }
 .splitpanes__pane.last-generation {
   background-color: rgba(255, 255, 255, 0.3);
@@ -296,25 +340,30 @@ const removePane = (event: { target: HTMLElement }) => {
   background: linear-gradient(#ccc, #111);
 }
 
+.splitpanes__pane.on-hold,
 .split-panes-layer.on-hold {
   outline: 6px solid red;
   outline-offset: -6px;
 }
 
+.splitpanes__pane.on-hold-up,
 .split-panes-layer.on-hold-up {
-  box-shadow: 0 6px 0 0 red inset;
+  border-top: 6px solid red;
 }
 
+.splitpanes__pane.on-hold-down,
 .split-panes-layer.on-hold-down {
-  box-shadow: 0 -6px 0 0 red inset;
+  border-bottom: 6px solid red;
 }
 
+.splitpanes__pane.on-hold-left,
 .split-panes-layer.on-hold-left {
-  box-shadow: 6px 0 0 0 red inset;
+  border-left: 6px solid red;
 }
 
+.splitpanes__pane.on-hold-right,
 .split-panes-layer.on-hold-right {
-  box-shadow: -6px 0 0 0 red inset;
+  border-right: 6px solid red;
 }
 
 .v-select__selection-text {

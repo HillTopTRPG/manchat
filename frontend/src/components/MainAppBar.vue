@@ -1,20 +1,26 @@
 <script setup lang="ts">
-import HelloWorld from "./HelloWorld.vue";
 import {ref} from "vue";
-const showBar = ref(true)
+import SplitPanesLayer, {Layout} from "./SplitPanesLayer.vue";
+const showBar = ref(false)
 const isDrawerOpen = ref(true)
 const isRail = ref(true)
 const fgx = (val: number) => {
   console.log(val)
 }
+
+interface Props {
+  layout: Layout
+}
+
+defineProps<Props>()
 </script>
 
 <template>
   <v-layout>
     <v-navigation-drawer
-        v-model="isDrawerOpen"
-        :rail="isRail"
-        rail-width="55"
+      v-model="isDrawerOpen"
+      :rail="isRail"
+      rail-width="55"
     >
       <v-list class="overflow-hidden" shaped>
         <v-list-item v-ripple :prepend-icon="isRail ? 'mdi-chevron-right' : 'mdi-chevron-left'" @click="isRail = !isRail" />
@@ -40,12 +46,12 @@ const fgx = (val: number) => {
 
       <v-spacer />
 
-      <v-btn size="small" icon="mdi-tooltip-edit-outline" @click="showBar = !showBar"></v-btn>
+      <v-btn size="small" icon="mdi-pencil-ruler" @click="showBar = !showBar"></v-btn>
       <v-btn icon="mdi-dots-vertical" />
     </v-app-bar>
 
     <v-main>
-      <HelloWorld :show-bar="showBar" />
+      <split-panes-layer :layout="layout" :root-layout="layout" :show-bar="showBar" />
     </v-main>
   </v-layout>
 </template>
