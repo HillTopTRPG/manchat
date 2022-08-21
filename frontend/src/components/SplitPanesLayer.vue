@@ -5,6 +5,7 @@ export default defineComponent({});
 export interface Layout {
   type: string
   uuid: string
+  componentGroup?: string
   component?: string
   size?: number
   panes: Layout[]
@@ -262,18 +263,38 @@ const onResizedPanes = (event: { size: number }[]) => event.forEach(({size}, idx
                 </v-row>
               </v-container>
             </v-menu>
-            <v-menu v-if="pane.type !== 'horizontal' && pane.type !== 'vertical' && pane.component" open-on-hover>
+            <v-menu v-if="pane.type !== 'horizontal' && pane.type !== 'vertical' && pane.component" :close-on-content-click="false">
               <template v-slot:activator="{ props: menu }">
                 <v-btn size="x-small" color="secondary" v-bind="menu" icon="mdi-package-variant-closed" />
               </template>
-              <v-list @update:selected="s => pane.component = s[0]">
-                <v-list-item
-                  v-for="n in Object.keys(componentMap)"
-                  :title="n"
-                  :value="n"
-                  density="compact"
-                  :active="n === pane.component"
-                />
+              <v-list density="compact">
+                <template
+                  v-for="g in componentMap"
+                  :key="g.group"
+                >
+                  <v-list-group v-if="g.group">
+                    <template v-slot:activator="{ props }">
+                      <v-list-item v-bind="props" :title="g.group" />
+                    </template>
+
+                    <v-list-item
+                      v-for="n in Object.keys(g.items)"
+                      :title="n"
+                      :value="n"
+                      :active="n === pane.component && g.group === pane.componentGroup"
+                      @click="pane.component = n; pane.componentGroup = g.group"
+                    />
+                  </v-list-group>
+                  <template v-else>
+                    <v-list-item
+                      v-for="n in Object.keys(g.items)"
+                      :title="n"
+                      :value="n"
+                      :active="n === pane.component && g.group === pane.componentGroup"
+                      @click="pane.component = n; pane.componentGroup = g.group"
+                    />
+                  </template>
+                </template>
               </v-list>
             </v-menu>
             <template v-if="(cLayout.panes?.length || 0) > 1">
@@ -294,15 +315,24 @@ const onResizedPanes = (event: { size: number }[]) => event.forEach(({size}, idx
     </pane>
   </splitpanes>
   <keep-alive v-else-if="cLayout.component">
-    <component :is="componentMap[cLayout.component]" />
+    <component :is="componentMap.find(p => p.group === cLayout.componentGroup)?.items[cLayout.component]" />
   </keep-alive>
-  <v-list v-else @update:selected="s => cLayout.component = s[0]">
-    <v-list-item
-      v-for="n in Object.keys(componentMap)"
-      :title="n"
-      :value="n"
-      density="compact"
-    />
+  <v-list v-else>
+    <v-list-group
+      v-for="g in componentMap"
+      :key="g.group"
+    >
+      <template v-slot:activator="{ props }">
+        <v-list-subheader v-bind="props" :title="g.group || '無印'" />
+      </template>
+
+      <v-list-item
+        v-for="n in Object.keys(g.items)"
+        :title="n"
+        :value="n"
+        @click="cLayout.component = n; cLayout.componentGroup = g.group"
+      />
+    </v-list-group>
   </v-list>
 </template>
 
