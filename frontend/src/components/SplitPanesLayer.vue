@@ -42,7 +42,7 @@ const addChildPane = (idx: number, isAfter: boolean) => {
     cLayout.value.panes[idx].type = cLayout.value.type === "horizontal" ? "vertical" : "horizontal"
     const sUuid = cLayout.value.panes[idx].uuid
     cLayout.value.panes[idx].uuid = uuid.v4()
-    cLayout.value.panes[idx].panes.push({ type: "normal", uuid: sUuid, panes: [], component: cLayout.value.panes[idx].component })
+    cLayout.value.panes[idx].panes.push({ type: "normal", uuid: sUuid, panes: [], componentGroup: cLayout.value.panes[idx].componentGroup, component: cLayout.value.panes[idx].component })
     cLayout.value.panes[idx].component = ""
   }
   if (isAfter)
@@ -123,6 +123,7 @@ const removePane = (event: { target: HTMLElement }) => {
     cLayout.value.uuid = remain.uuid
     cLayout.value.type = remain.type
     cLayout.value.component = remain.component
+    cLayout.value.componentGroup = remain.componentGroup
   } else {
     cLayout.value.panes.splice(idx, 1)
   }
@@ -317,22 +318,32 @@ const onResizedPanes = (event: { size: number }[]) => event.forEach(({size}, idx
   <keep-alive v-else-if="cLayout.component">
     <component :is="componentMap.find(p => p.group === cLayout.componentGroup)?.items[cLayout.component]" />
   </keep-alive>
-  <v-list v-else>
-    <v-list-group
+  <v-list v-else density="compact">
+    <template
       v-for="g in componentMap"
       :key="g.group"
     >
-      <template v-slot:activator="{ props }">
-        <v-list-subheader v-bind="props" :title="g.group || '無印'" />
-      </template>
+      <v-list-group v-if="g.group">
+        <template v-slot:activator="{ props }">
+          <v-list-item v-bind="props" :title="g.group" />
+        </template>
 
-      <v-list-item
-        v-for="n in Object.keys(g.items)"
-        :title="n"
-        :value="n"
-        @click="cLayout.component = n; cLayout.componentGroup = g.group"
-      />
-    </v-list-group>
+        <v-list-item
+          v-for="n in Object.keys(g.items)"
+          :title="n"
+          :value="n"
+          @click="cLayout.component = n; cLayout.componentGroup = g.group"
+        />
+      </v-list-group>
+      <template v-else>
+        <v-list-item
+          v-for="n in Object.keys(g.items)"
+          :title="n"
+          :value="n"
+          @click="cLayout.component = n; cLayout.componentGroup = g.group"
+        />
+      </template>
+    </template>
   </v-list>
 </template>
 
