@@ -1,6 +1,6 @@
 <script setup lang='ts'>
 import 'splitpanes/dist/splitpanes.css'
-import SplitPanesLayer from "./SplitPanesLayer.vue"
+import SplitPanesLayer, {Layout} from "./SplitPanesLayer.vue"
 import {ref} from "vue"
 import { uuid } from "vue-uuid"
 
@@ -10,32 +10,27 @@ interface Props {
 
 defineProps<Props>()
 
-type LayoutData = {
-  type: string
-  uuid: string
-  panes: LayoutData[]
-}
-
-const layoutData = ref<LayoutData>({
+const layoutData = ref<Layout>({
   type: "vertical",
   uuid: uuid.v4(),
   panes: [
     {
       type: "horizontal",
       uuid: uuid.v4(),
+      size: 90,
       panes: [
         {
           type: "vertical",
           uuid: uuid.v4(),
           panes: [
-            { type: "normal", uuid: uuid.v4(), panes: [] },
-            { type: "normal", uuid: uuid.v4(), panes: [] },
+            { type: "normal", uuid: uuid.v4(), panes: [], component: "サンプルペイン1", size: 30 },
+            { type: "normal", uuid: uuid.v4(), panes: [], component: "サンプルペイン2" },
           ]
         },
-        { type: "normal", uuid: uuid.v4(), panes: [] },
+        { type: "normal", uuid: uuid.v4(), panes: [], component: "サンプルペイン1", size: 20 },
       ]
     },
-    { type: "normal", uuid: uuid.v4(), panes: [] },
+    { type: "normal", uuid: uuid.v4(), panes: [], component: "サンプルペイン2" },
   ]
 })
 </script>

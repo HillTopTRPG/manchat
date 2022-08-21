@@ -1,29 +1,34 @@
 <script lang='ts'>
-export default { name: 'SplitPanesLayer' }
+import { defineComponent } from "@vue/runtime-core";
+export default defineComponent({});
+
+export interface Layout {
+  type: string
+  uuid: string
+  component?: string
+  size?: number
+  panes: Layout[]
+}
 </script>
 <script setup lang='ts'>
 import { Splitpanes, Pane } from 'splitpanes'
 import 'splitpanes/dist/splitpanes.css'
-import Sample from "./Sample.vue"
-import {ref} from "vue"
+import { ref } from "vue"
 import { uuid } from 'vue-uuid'
-
-interface Layout {
-  type: string
-  uuid: string
-  panes: Layout[]
-}
+import { componentMap } from "./panes"
 
 interface Props {
   layout: Layout
   rootLayout: Layout
   isNest?: boolean
   showBar?: boolean
+  componentTarget?: string
 }
 
 const props = withDefaults(defineProps<Props>(), {
   isNest: false,
-  showBar: true
+  showBar: true,
+  componentTarget: ""
 })
 
 const cLayout = ref(props.layout)
@@ -36,7 +41,8 @@ const addChildPane = (idx: number, isAfter: boolean) => {
     cLayout.value.panes[idx].type = cLayout.value.type === "horizontal" ? "vertical" : "horizontal"
     const sUuid = cLayout.value.panes[idx].uuid
     cLayout.value.panes[idx].uuid = uuid.v4()
-    cLayout.value.panes[idx].panes.push({ type: "normal", uuid: sUuid, panes: [] })
+    cLayout.value.panes[idx].panes.push({ type: "normal", uuid: sUuid, panes: [], component: cLayout.value.panes[idx].component })
+    cLayout.value.panes[idx].component = ""
   }
   if (isAfter)
     cLayout.value.panes[idx].panes.push({ type: "normal", uuid: uuid.v4(), panes: [] })
@@ -98,6 +104,7 @@ const removePane = (event: { target: HTMLElement }) => {
     cLayout.value.panes = remain.panes
     cLayout.value.uuid = remain.uuid
     cLayout.value.type = remain.type
+    cLayout.value.component = remain.component
   } else {
     cLayout.value.panes.splice(idx, 1)
   }
@@ -110,14 +117,16 @@ const removePane = (event: { target: HTMLElement }) => {
     :class="isNest ? null : 'root'"
     :horizontal="cLayout.type === 'horizontal' || undefined"
     :first-splitter="(cLayout.panes?.length || 0) > 1"
+    :key="cLayout.uuid"
     v-if="cLayout.type === 'horizontal' || cLayout.type === 'vertical'"
   >
     <pane
-        v-for="(pane, idx) in cLayout.panes"
-        :key="idx"
-        class="d-flex justify-start align-start"
-        :class="(pane.type !== 'horizontal' && pane.type !== 'vertical') ? 'last-generation' : null"
-        :style="{ 'overflow': (pane.type === 'horizontal' || pane.type === 'vertical') ? 'hidden' : 'auto' }"
+      v-for="(pane, idx) in cLayout.panes"
+      :key="idx"
+      class="d-flex justify-start align-start"
+      :class="(pane.type !== 'horizontal' && pane.type !== 'vertical') ? 'last-generation' : null"
+      :style="{ 'overflow': (pane.type === 'horizontal' || pane.type === 'vertical') ? 'hidden' : 'auto' }"
+      :size="pane.size === undefined ? 100 - (cLayout.panes.reduce((p, c) => (c.size || 0) + p, 0)) : pane.size"
     >
       <div
         class="split-panes-layer d-flex w-100 h-100"
@@ -138,9 +147,20 @@ const removePane = (event: { target: HTMLElement }) => {
               <v-btn size="x-small" icon="mdi-view-split-vertical" v-if="pane.type !== 'horizontal'" @click="pane.type = 'horizontal'"></v-btn>
               <v-btn size="x-small" icon="mdi-view-split-horizontal" v-if="pane.type !== 'vertical'" @click="pane.type = 'vertical'"></v-btn>
             </template>
-            <template v-else>
-              <v-btn size="x-small" icon="mdi-magnify"></v-btn>
-            </template>
+            <v-menu v-if="pane.type !== 'horizontal' && pane.type !== 'vertical'" open-on-hover>
+              <template v-slot:activator="{ props: menu }">
+                <v-btn size="x-small" color="secondary" v-bind="menu" icon="mdi-package-variant-closed" />
+              </template>
+              <v-list @update:selected="s => pane.component = s[0]">
+                <v-list-item
+                  v-for="n in Object.keys(componentMap)"
+                  :title="n"
+                  :value="n"
+                  density="compact"
+                  :active="n === pane.component"
+                />
+              </v-list>
+            </v-menu>
             <v-menu location="center">
               <template v-slot:activator="{ props: menu }">
                 <v-btn size="x-small" color="primary" v-bind="menu" icon="mdi-plus" />
@@ -180,6 +200,7 @@ const removePane = (event: { target: HTMLElement }) => {
                   <v-col class="pa-0">
                     <v-btn
                       icon=""
+                      v-ripple="false"
                       :rounded="0"
                       variant="plain"
                     ></v-btn>
@@ -230,11 +251,13 @@ const removePane = (event: { target: HTMLElement }) => {
             </template>
           </div>
         </v-sheet>
-        <SplitPanesLayer :key="pane.uuid" :layout="pane" :root-layout="layout" :is-nest="true" :show-bar="showBar" />
+        <SplitPanesLayer :key="pane.uuid" :layout="pane" :root-layout="layout" :is-nest="true" :show-bar="showBar" :component-target="pane.component" />
       </div>
     </pane>
   </splitpanes>
-  <Sample :key="cLayout.uuid" v-else />
+  <keep-alive v-else>
+    <component :is="componentMap[componentTarget]" />
+  </keep-alive>
 </template>
 
 <style scoped lang="css">
@@ -243,7 +266,6 @@ const removePane = (event: { target: HTMLElement }) => {
 <style deep lang="css">
 .splitpanes.root {
   height: calc(100vh - 64px) !important;
-  /*background-image: linear-gradient(-45deg, #eea2a2 0%, #bbc1bf 19%, #57c6e1 42%, #b49fda 79%, #7ac5d8 100%);*/
   background-image: linear-gradient(-45deg, #d5dee7 0%, #ffafbd 0%, #c9ffbf 100%);
 }
 
@@ -293,5 +315,12 @@ const removePane = (event: { target: HTMLElement }) => {
 
 .split-panes-layer.on-hold-right {
   box-shadow: -6px 0 0 0 red inset;
+}
+
+.v-select__selection-text {
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  overflow: hidden;
+  width: 100%;
 }
 </style>
