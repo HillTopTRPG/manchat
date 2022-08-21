@@ -1,5 +1,5 @@
 import {App} from 'vue'
-import Panes from "../panes"
+import Panes from "./index"
 
 export const register = (app: App<Element>): void => {
   Object.entries(Panes).forEach(([path, component]) => {

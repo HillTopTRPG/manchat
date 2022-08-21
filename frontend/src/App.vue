@@ -17,14 +17,14 @@ const layoutData = ref<Layout>({
           type: "vertical",
           uuid: uuid.v4(),
           panes: [
-            { type: "normal", uuid: uuid.v4(), panes: [], component: "サンプルペイン1", size: 30 },
-            { type: "normal", uuid: uuid.v4(), panes: [], component: "サンプルペイン2" },
+            { type: "normal", uuid: uuid.v4(), panes: [], componentGroup: "smpl1", component: "サンプルペイン1", size: 30 },
+            { type: "normal", uuid: uuid.v4(), panes: [], componentGroup: "smpl1", component: "サンプルペイン2" },
           ]
         },
-        { type: "normal", uuid: uuid.v4(), panes: [], component: "サンプルペイン1", size: 20 },
+        { type: "normal", uuid: uuid.v4(), panes: [], componentGroup: "smpl1", component: "サンプルペイン1", size: 20 },
       ]
     },
-    { type: "normal", uuid: uuid.v4(), panes: [], component: "サンプルペイン2" },
+    { type: "normal", uuid: uuid.v4(), panes: [], componentGroup: "smpl1", component: "サンプルペイン2" },
   ]
 })
 </script>
