@@ -3,6 +3,9 @@ import MainAppBar from './components/MainAppBar.vue'
 import {ref} from "vue";
 import {Layout} from "./components/SplitPanesLayer.vue";
 import {uuid} from "vue-uuid";
+import provideAll from "~/data"
+
+provideAll()
 
 const layoutData = ref<Layout>({
   type: "vertical",

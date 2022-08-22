@@ -1,9 +1,11 @@
 import samplePanes from './sample'
 import samplePanes2 from './sample2'
+import userPanes from './user'
 
 const panes = [
   ...samplePanes,
-  ...samplePanes2
+  ...samplePanes2,
+  ...userPanes,
 ]
 
 export default panes.map(p => p.component)
@@ -28,5 +30,4 @@ groups.forEach(g => {
         .replace(/([a-z0–9])([A-Z])/g, '$1-$2').toLowerCase()
     })
 })
-console.log(JSON.stringify(map, null, "  "))
 export const componentMap = map
