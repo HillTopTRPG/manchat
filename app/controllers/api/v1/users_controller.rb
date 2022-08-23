@@ -4,6 +4,11 @@ class Api::V1::UsersController < ApplicationController
   # GET /api/v1/users or /api/v1/users.json
   def index
     @api_v1_users = Api::V1::User.all
+
+    respond_to do |format|
+      format.html { render :index }
+      format.json { render json: @api_v1_users }
+    end
   end
 
   # GET /api/v1/users/1 or /api/v1/users/1.json
