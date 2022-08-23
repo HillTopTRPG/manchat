@@ -4,6 +4,7 @@ Rails.application.routes.draw do
   # Defines the root path route ("/")
   # root "articles#index"
   namespace :api do
+    mount ActionCable.server => '/cable'
     namespace :v1 do
       resources :users
       post "users/:id/verify", to: "users#verify", as: "verify"

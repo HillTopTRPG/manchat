@@ -19,6 +19,10 @@
 <% @api_v1_users.each do |api_v1_user| %>
   <%= render api_v1_user %>
 <% end %>
+<form>
+  <label>Say something:</label><br>
+  <input type="text" data-behavior="room_speaker">
+</form>
 </tbody>
 </table>
 
