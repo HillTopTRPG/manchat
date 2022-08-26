@@ -1,0 +1,25 @@
+#api_v1_rooms {
+  text-align: left;
+  border-collapse: collapse;
+  border-spacing: 0;
+
+  th {
+    padding: 10px;
+    background: #e9faf9;
+    border-top: solid 3px #778ca3;
+    border-right: solid 3px #778ca3;
+
+    &:last-child {
+      border-right: none;
+    }
+  }
+
+  td {
+    padding: 10px;
+    border-right: solid 3px #778ca3;
+
+    &:last-child {
+      border-right: none;
+    }
+  }
+}

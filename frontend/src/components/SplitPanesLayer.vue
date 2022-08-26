@@ -1,7 +1,4 @@
 <script lang='ts'>
-import { defineComponent } from "@vue/runtime-core";
-export default defineComponent({});
-
 export interface Layout {
   type: string
   uuid: string

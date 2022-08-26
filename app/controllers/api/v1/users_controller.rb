@@ -7,7 +7,7 @@ class Api::V1::UsersController < ApplicationController
 
     respond_to do |format|
       format.html { render :index }
-      format.json { render json: @api_v1_users }
+      format.json { render json: @api_v1_users.to_json(:except => [:password, :uuid]) }
     end
   end
 
@@ -30,8 +30,8 @@ class Api::V1::UsersController < ApplicationController
 
     respond_to do |format|
       if @api_v1_user.save
-        format.html { redirect_to api_v1_user_url(@api_v1_user), notice: "User was successfully created." }
-        format.json { render :show, status: :created, location: @api_v1_user }
+        format.html { redirect_to api_v1_users_url, notice: "User was successfully created." }
+        format.json { render json: @api_v1_user.to_json(:only => [:id, :uuid, :name]), status: :created }
       else
         format.html { render :new, status: :unprocessable_entity }
         format.json { render json: @api_v1_user.errors, status: :unprocessable_entity }
@@ -43,7 +43,7 @@ class Api::V1::UsersController < ApplicationController
   def update
     respond_to do |format|
       if @api_v1_user.update(api_v1_user_params)
-        format.html { redirect_to api_v1_user_url(@api_v1_user), notice: "User was successfully updated." }
+        format.html { redirect_to api_v1_users_url, notice: "User was successfully updated." }
         format.json { render :show, status: :ok, location: @api_v1_user }
       else
         format.html { render :edit, status: :unprocessable_entity }
@@ -52,12 +52,12 @@ class Api::V1::UsersController < ApplicationController
     end
   end
 
-  # POST /api/v1/users/1/verify or /api/v1/users/1/verify.json
+  # POST /api/v1/users/1/verify
   def verify
-    $res = BCrypt::Password.new(@api_v1_user.password).is_password?(params[:password]).to_s
-    $pwd = @api_v1_user.password
-    $pwd2 = params[:password]
-    render json: { res: $res, pwd: $pwd, pwd2: $pwd2 }, status: :created
+    verified = BCrypt::Password.new(@api_v1_user.password).is_password?(params[:password])
+    result = { :verify => verified ? "success" : "failed" }
+    result[:uuid] = @api_v1_user.uuid if verified
+    render json: result
   end
 
   # DELETE /api/v1/users/1 or /api/v1/users/1.json
@@ -78,6 +78,6 @@ class Api::V1::UsersController < ApplicationController
 
     # Only allow a list of trusted parameters through.
     def api_v1_user_params
-      params.require(:api_v1_user).permit(:uuid, :name, :password, :last_logged_in)
+      params.require(:api_v1_user).permit(:uuid, :name, :password, :room_uuid, :last_logged_in)
     end
 end

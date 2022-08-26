@@ -1,4 +1,4 @@
-class Api::V1::User < ApplicationRecord
+class Api::V1::User < Api::V1::SynchronizeRecord
   before_create -> {
     self.uuid = SecureRandom.uuid
     self.password = BCrypt::Password.create(self.password)

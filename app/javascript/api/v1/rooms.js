@@ -10,7 +10,7 @@ async function fetch_verify(id, password) {
 
 $(() => {
     $("#verify_form input[type='submit']").click(event => {
-        const id = $("#api_v1_users tbody tr:first-child td:first-child").text()
+        const id = $("#api_v1_rooms tbody tr:first-child td:first-child").text()
         const password = $("#password").val()
         console.log(id, password)
         fetch_verify(id, password)

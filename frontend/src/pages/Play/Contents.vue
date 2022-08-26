@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import {ref} from "vue";
-import SplitPanesLayer, {Layout} from "./SplitPanesLayer.vue";
+import SplitPanesLayer, {Layout} from "~/components/SplitPanesLayer.vue";
 const showBar = ref(false)
 const isDrawerOpen = ref(true)
 const isRail = ref(true)
@@ -9,6 +9,7 @@ const fgx = (val: number) => {
 }
 
 interface Props {
+  user_uuid: string
   layout: Layout
 }
 
@@ -26,7 +27,7 @@ defineProps<Props>()
         <v-list-item v-ripple :prepend-icon="isRail ? 'mdi-chevron-right' : 'mdi-chevron-left'" @click="isRail = !isRail" />
       </v-list>
 
-      <v-divider></v-divider>
+      <v-divider />
 
       <v-list density="compact" nav class="overflow-hidden" rounded>
         <v-list-item v-ripple prepend-icon="mdi-folder" title="My Files" @click="fgx(111)"></v-list-item>
@@ -38,7 +39,7 @@ defineProps<Props>()
     <v-app-bar
       color="teal-darken-4"
       image="https://picsum.photos/1920/1080?random"
-      title="Title"
+      :title="`Room: ${user_uuid}`"
     >
       <template v-slot:image>
         <v-img gradient="to top right, rgba(19,84,122,.8), rgba(128,208,199,.8)"></v-img>
