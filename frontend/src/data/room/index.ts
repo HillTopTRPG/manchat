@@ -2,6 +2,7 @@ import {reactive, InjectionKey, inject, watch} from "vue"
 
 export default function RoomStore() {
   const state = reactive<{
+    ready: boolean;
     autoSynchronize: boolean;
     rooms: {
       id: number;
@@ -13,6 +14,7 @@ export default function RoomStore() {
       updated_at: Date;
     }[];
   }>({
+    ready: false,
     autoSynchronize: true,
     rooms: [],
   })
@@ -33,7 +35,9 @@ export default function RoomStore() {
       console.log(JSON.stringify(err, null, "  "))
     }
   }
-  reloadRoomList().then()
+  reloadRoomList().then(() => {
+    state.ready = true
+  })
 
   watch(() => state.autoSynchronize, (newValue) => {
     if (newValue) {

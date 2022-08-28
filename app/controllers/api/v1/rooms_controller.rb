@@ -34,8 +34,10 @@ class Api::V1::RoomsController < ApplicationController
 
     respond_to do |format|
       if @api_v1_room.save
+        api_v1_token = Api::V1::Token.new(:target_type => 'room', :room_uuid => @api_v1_room.uuid)
+        api_v1_token.save
         format.html { redirect_to api_v1_rooms_path, notice: "Room was successfully created." }
-        format.json { render json: @api_v1_room.to_json(:only => [:id, :uuid, :name]), status: :created }
+        format.json { render json: {:token => api_v1_token.token, :room => @api_v1_room}.to_json(:only => [:token, :room, :id, :uuid, :name]), status: :created }
       else
         format.html { render :new, status: :unprocessable_entity }
         format.json { render json: @api_v1_room.errors, status: :unprocessable_entity }
@@ -59,12 +61,33 @@ class Api::V1::RoomsController < ApplicationController
   # POST /api/v1/rooms/1/verify
   def verify
     verified = BCrypt::Password.new(@api_v1_room.password).is_password?(params[:password])
+
     result = { :verify => verified ? "success" : "failed" }
     if verified
+      api_v1_token = Api::V1::Token.new(:target_type => 'room', :room_uuid => @api_v1_room.uuid)
+      api_v1_token.save
+      result[:token] = api_v1_token.token
       result[:uuid] = @api_v1_room.uuid
       result[:users] = Api::V1::User.select(:id, :name).where(:room_uuid => @api_v1_room.uuid)
     end
     render json: result
+  end
+
+  # POST /api/v1/token/verify/rooms
+  def verifyToken
+    room_uuid = params[:room_uuid]
+    token = params[:token]
+    verified = Api::V1::Token.valid.where(:target_type => "room", :room_uuid => room_uuid, :token => token).count > 0
+    result = { :verify => verified ? "success" : "failed" }
+    if verified
+      result[:users] = Api::V1::User.select(:id, :name).where(:room_uuid => room_uuid)
+    end
+    render json: result
+  end
+
+  def detailByUUid
+    @api_v1_room = Api::V1::Room.find_by(:uuid => params[:room_uuid])
+    render json: @api_v1_room
   end
 
   # DELETE /api/v1/rooms/1 or /api/v1/rooms/1.json

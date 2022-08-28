@@ -1,0 +1,11 @@
+<tr id="<%= dom_id token %>">
+  <td><%= token.id %></td>
+  <td><%= token.target_type %></td>
+  <td><%= token.room_uuid %></td>
+  <td><%= token.user_uuid %></td>
+  <td><%= token.token %></td>
+  <td><%= token.created_at < Date.current.in_time_zone ? token.created_at.to_fs(:default) : token.created_at.to_fs(:today) %></td>
+  <td><%= token.updated_at < Date.current.in_time_zone ? token.updated_at.to_fs(:default) : token.updated_at.to_fs(:today) %></td>
+  <td><%= link_to "Edit", edit_api_v1_token_path(token) %></td>
+  <td><%= button_to "Destroy", token, method: :delete %></td>
+</tr>

@@ -10,7 +10,7 @@ const appRoom = consumer.subscriptions.create("RoomChannel", {
 
   received(data) {
     // Called when there's incoming data on the websocket for this channel
-    return alert(data['message']);
+    return alert(JSON.stringify(data, null, "  "));
   },
 
   speak: function(message) {

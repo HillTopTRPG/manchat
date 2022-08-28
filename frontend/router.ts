@@ -1,5 +1,6 @@
 import { createRouter,createWebHistory } from 'vue-router';
 import Play from '~/pages/Play/Main.vue'
+import Room from '~/pages/Room/Main.vue'
 import Lobby from '~/pages/Lobby/Main.vue'
 import NotFoundRoom from '~/pages/Error/NotFoundRoom.vue'
 
@@ -8,31 +9,35 @@ const router = createRouter({
   routes: [
     {
       path: '/lobby',
-      component: Lobby
+      name: 'lobby',
+      component: Lobby,
+      props: route => ({ id: route.query.r })
     },
     {
-      path: '/not_found_room',
-      component: NotFoundRoom
+      path: '/r/:room_uuid',
+      name: 'room',
+      component: Room,
+      props: true
     },
     {
-      path: '/not_found_user',
-      component: NotFoundRoom
-    },
-    {
-      path: '/:user_uuid',
+      path: '/p/:user_uuid',
+      name: 'play',
       component: Play,
       props: true
     },
     {
-      path: '/',
-      redirect: (uri: any) => {
-        if (!uri.query.user) return { path: '/lobby', query: {} }
-        return { path: `/${uri.query.user}`, query: {} }
-      },
+      path: '/r/not_found',
+      name: 'not_found_room',
+      component: NotFoundRoom
+    },
+    {
+      path: '/p/not_found',
+      name: 'not_found_play',
+      component: NotFoundRoom
     },
     {
       path: '/:catchAll(.*)',
-      redirect: '/lobby'
+      redirect: { name: 'lobby' }
     },
   ],
 })

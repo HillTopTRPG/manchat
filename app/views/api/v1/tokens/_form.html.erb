@@ -1,0 +1,32 @@
+<%= form_with(model: api_v1_token) do |form| %>
+  <% if api_v1_token.errors.any? %>
+    <div style="color: red">
+      <h2><%= pluralize(api_v1_token.errors.count, "error") %> prohibited this api_v1_token from being saved:</h2>
+
+      <ul>
+        <% api_v1_token.errors.each do |error| %>
+          <li><%= error.full_message %></li>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
+
+  <div>
+    <%= form.label :target_type, style: "display: block" %>
+    <%= form.select :target_type, [['room', 'room'], ['user', 'user']], { include_blank: false, selected: 1 }, { id: "target_type" } %>
+  </div>
+
+  <div>
+    <%= form.label :room_uuid, style: "display: block" %>
+    <%= form.text_field :room_uuid %>
+  </div>
+
+  <div>
+    <%= form.label :user_uuid, style: "display: block" %>
+    <%= form.text_field :user_uuid %>
+  </div>
+
+  <div>
+    <%= form.submit %>
+  </div>
+<% end %>
