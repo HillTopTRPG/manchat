@@ -1,24 +1,22 @@
 <script setup lang='ts'>
-import {InjectionKeySymbol as roomKey, StoreType as RoomStore} from '~/data/room'
-import {computed, inject, ref, watch} from 'vue'
-import { useRouter } from 'vue-router'
-const router = useRouter()
+import { InjectionKeySymbol as roomKey, StoreType as RoomStore } from '~/data/room'
+import { inject } from 'vue'
 const roomState = inject(roomKey) as RoomStore
 const axios = inject('axios') as any
 
-interface Props {
-  opened_room_id?: string
-}
-const props = defineProps<Props>()
+import { useRouter } from 'vue-router'
+const router = useRouter()
 
+const props = defineProps<{
+  opened_room_id?: string
+}>()
+
+import { computed, ref } from 'vue'
 const loginDialog = ref(false)
 const createRoomDialog = ref(false)
-const roomShowPassword = ref(false)
+const showPassword = ref(false)
 const roomPassword = ref('')
-const roomUuid = ref('')
-const roomToken = ref('')
 const createRoomName = ref('')
-const users = ref<any[]>([])
 const loginRoomId = ref(0)
 const selectedRoomName = computed(() => roomState.state.rooms.find(r => r.id === loginRoomId.value)?.name || null)
 const loading = ref(false)
@@ -26,6 +24,7 @@ const loginResult = ref('')
 const roomPasswordInput = ref<HTMLInputElement>()
 const userPasswordInput = ref<HTMLInputElement>()
 
+import { watch } from 'vue'
 watch(() => roomState.state.ready, async value => {
   if (!value || props.opened_room_id === undefined) return
   if (!roomState.state.rooms.some(r => r.id === parseInt(props.opened_room_id || '0'))) {
@@ -66,7 +65,6 @@ const showRoomLogin = async (id: number) => {
   loginResult.value = ''
   loading.value = false
   roomPassword.value = ''
-  users.value = []
 }
 
 const createRoom = async () => {
@@ -95,15 +93,13 @@ const roomLogin = async () => {
   localStorage.setItem(uuid, JSON.stringify({token}))
   localStorage.setItem(`room:${id}`, JSON.stringify({uuid, token}))
   const verified = result.data.verify === 'success'
-  roomUuid.value = verified ? uuid : ''
-  roomToken.value = verified ? token : ''
-  users.value = verified ? result.data.users : []
+  const roomUuid = verified ? uuid : ''
   loading.value = false
   if (!verified) {
     loginResult.value = '部屋パスワードが違います'
     roomPasswordInput.value?.select()
   } else {
-    await router.push({ name: 'room', params: { room_uuid: roomUuid.value } })
+    await router.push({ name: 'room', params: { room_uuid: roomUuid } })
   }
 }
 </script>
@@ -131,7 +127,7 @@ const roomLogin = async () => {
               <td class='text-right'>{{ room.id }}</td>
               <td>
                 <v-card elevation='0' variant='text' class='mb-2'>
-                  <v-card-title>{{room.name}}</v-card-title>
+                  <v-card-title>{{ room.name }}</v-card-title>
                   <v-card-subtitle>最終ログイン: {{ $d(room.last_logged_in, 'long') }}</v-card-subtitle>
                 </v-card>
               </td>
@@ -161,11 +157,11 @@ const roomLogin = async () => {
           v-if='loginResult'
         ></v-alert>
         <v-text-field
-          :append-icon='roomShowPassword ? "mdi-eye" : "mdi-eye-off"'
+          :append-icon='showPassword ? "mdi-eye" : "mdi-eye-off"'
           label='パスワード'
-          :type='roomShowPassword ? "text" : "password"'
+          :type='showPassword ? "text" : "password"'
           v-model='roomPassword'
-          @click:append='roomShowPassword = !roomShowPassword'
+          @click:append='showPassword = !showPassword'
           @keydown.enter='roomLogin'
           :autofocus='true'
           @keydown.esc='loginDialog = false'
@@ -199,11 +195,11 @@ const roomLogin = async () => {
         <v-text-field prepend-icon='mdi-home-variant' v-model='createRoomName' append-icon='empty' label='部屋名' :autofocus='true'></v-text-field>
         <v-text-field
           prepend-icon='mdi-lock'
-          :append-icon='roomShowPassword ? "mdi-eye" : "mdi-eye-off"'
+          :append-icon='showPassword ? "mdi-eye" : "mdi-eye-off"'
           label='パスワード'
-          :type='roomShowPassword ? "text" : "password"'
+          :type='showPassword ? "text" : "password"'
           v-model='roomPassword'
-          @click:append='roomShowPassword = !roomShowPassword'
+          @click:append='showPassword = !showPassword'
           @keydown.enter='createRoom'
           ref='userPasswordInput'
         ></v-text-field>

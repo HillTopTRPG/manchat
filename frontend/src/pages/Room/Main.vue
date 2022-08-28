@@ -1,16 +1,10 @@
 <script setup lang='ts'>
-import provideAll from '~/data/Lobby'
-provideAll()
-
 defineProps<{
   room_uuid: string
 }>()
 
 import Contents from '~/pages/Room/Contents.vue'
 import RoomName from '~/pages/Room/RoomName.vue'
-
-import { inject } from 'vue'
-const axios = inject('axios') as any
 
 import { useTheme } from 'vuetify'
 const theme = useTheme()

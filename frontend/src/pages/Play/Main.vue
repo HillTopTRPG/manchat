@@ -1,14 +1,13 @@
-<script setup lang="ts">
-import provideAll from "~/data/Play"
+<script setup lang='ts'>
+import provideAll from '~/data/Play'
 provideAll()
 
-import Contents from "./Contents.vue"
-import defaultLayout from "./DefaultLayout";
+import Contents from './Contents.vue'
+import defaultLayout from './DefaultLayout';
 
-interface Props {
+defineProps<{
   user_uuid: string
-}
-defineProps<Props>()
+}>()
 
 import { useTheme } from 'vuetify'
 const theme = useTheme()
@@ -20,5 +19,5 @@ const toggleTheme = () => {
 </script>
 
 <template>
-  <Contents :layout="defaultLayout" :user_uuid="user_uuid" />
+  <Contents :layout='defaultLayout' :user_uuid='user_uuid' />
 </template>

@@ -2,21 +2,21 @@
 import provideAll from '~/data/Lobby'
 provideAll()
 
+defineProps<{
+  id: string
+}>()
+
 import Contents from '~/pages/Lobby/Contents.vue'
-import { ref } from 'vue';
+
 import { useTheme } from 'vuetify'
 const theme = useTheme()
-
 theme.global.name.value = localStorage.getItem('view.theme') || 'light'
 const toggleTheme = () => {
   theme.global.name.value = theme.global.current.value.dark ? 'light' : 'dark'
   localStorage.setItem('view.theme', theme.global.name.value)
 }
 
-defineProps<{
-  id: string
-}>()
-
+import { ref } from 'vue'
 const drawer = ref(false)
 </script>
 
