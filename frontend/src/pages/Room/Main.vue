@@ -1,6 +1,7 @@
 <script setup lang='ts'>
 defineProps<{
-  room_uuid: string
+  room_uuid: string;
+  user_id?: string;
 }>()
 
 import Contents from '~/pages/Room/Contents.vue'
@@ -43,7 +44,7 @@ const drawer = ref(false)
     </v-app-bar>
     <v-main>
       <suspense>
-        <contents :room_uuid='room_uuid' />
+        <contents :room_uuid='room_uuid' :user_id='user_id' />
       </suspense>
     </v-main>
   </v-layout>

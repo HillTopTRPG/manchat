@@ -95,16 +95,41 @@ class Api::V1::UsersController < ApplicationController
 
   # POST /api/v1/token/verify/users
   def verifyToken
-    user_uuid = params[:user_uuid]
-    token = params[:token]
-    verified = Api::V1::Token.valid.where(:target_type => "user", :user_uuid => user_uuid, :token => token).count > 0
-    result = { :verify => verified ? "success" : "failed" }
+    result = { :verify => "success", :reasons => [] }
+    room_token_row = Api::V1::Token.valid.find_by(:target_type => "room", :room_uuid => params[:room_uuid], :token => params[:room_token])
+    if room_token_row.nil?
+      result[:verify] = "failed"
+      api_v1_room = Api::V1::Room.find_by(:uuid => params[:room_uuid])
+      if api_v1_room.nil?
+        result[:reasons] << "not_found_room"
+      else
+        result[:reasons] << "expired_room_token"
+        result[:room_id] = api_v1_room[:id]
+        result[:room_uuid] = api_v1_room[:uuid]
+      end
+    end
+    user_token_row = Api::V1::Token.valid.find_by(:target_type => "user", :user_uuid => params[:user_uuid], :token => params[:user_token])
+    if user_token_row.nil?
+      result[:verify] = "failed"
+      api_v1_user = Api::V1::User.find_by(:uuid => params[:user_uuid])
+      if api_v1_user.nil?
+        result[:reasons] << "not_found_user"
+      else
+        result[:reasons] << "expired_user_token"
+        result[:user_id] = api_v1_user[:id]
+      end
+    else
+      if user_token_row.room_uuid != params[:room_uuid]
+        result[:verify] = "failed"
+        result[:reasons] << "different_room_uuid"
+      end
+    end
     render json: result
   end
 
   def detailByUUid
     @api_v1_user = Api::V1::User.find_by(:uuid => params[:user_uuid])
-    render json: @api_v1_user
+    render json: @api_v1_user.to_json(:except => ["password"])
   end
 
   # DELETE /api/v1/users/1 or /api/v1/users/1.json

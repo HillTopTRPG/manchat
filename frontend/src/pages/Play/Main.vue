@@ -19,5 +19,7 @@ const toggleTheme = () => {
 </script>
 
 <template>
-  <Contents :layout='defaultLayout' :user_uuid='user_uuid' />
+  <suspense>
+    <Contents :layout='defaultLayout' :user_uuid='user_uuid' />
+  </suspense>
 </template>

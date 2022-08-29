@@ -75,19 +75,20 @@ class Api::V1::RoomsController < ApplicationController
 
   # POST /api/v1/token/verify/rooms
   def verifyToken
-    room_uuid = params[:room_uuid]
-    token = params[:token]
-    verified = Api::V1::Token.valid.where(:target_type => "room", :room_uuid => room_uuid, :token => token).count > 0
-    result = { :verify => verified ? "success" : "failed" }
-    if verified
-      result[:users] = Api::V1::User.select(:id, :name).where(:room_uuid => room_uuid)
+    token_row = Api::V1::Token.valid.find_by(:target_type => "room", :room_uuid => params[:room_uuid], :token => params[:token])
+    result = { :verify => "success" }
+    if token_row.nil?
+      result[:verify] = "failed"
+      result[:reason] = "expired_room_token"
+    else
+      result[:users] = Api::V1::User.select(:id, :name).where(:room_uuid => params[:room_uuid])
     end
     render json: result
   end
 
   def detailByUUid
     @api_v1_room = Api::V1::Room.find_by(:uuid => params[:room_uuid])
-    render json: @api_v1_room
+    render json: @api_v1_room.to_json(:except => ["password"])
   end
 
   # DELETE /api/v1/rooms/1 or /api/v1/rooms/1.json

@@ -11,13 +11,13 @@ const router = createRouter({
       path: '/lobby',
       name: 'lobby',
       component: Lobby,
-      props: route => ({ id: route.query.r })
+      props: route => ({ room_id: route.query.r, user_id: route.query.u })
     },
     {
       path: '/r/:room_uuid',
       name: 'room',
       component: Room,
-      props: true
+      props: route => ({ room_uuid: route.params.room_uuid, user_id: route.query.u })
     },
     {
       path: '/p/:user_uuid',

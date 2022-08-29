@@ -8,7 +8,8 @@ import { useRouter } from 'vue-router'
 const router = useRouter()
 
 const props = defineProps<{
-  opened_room_id?: string
+  opened_room_id?: string;
+  user_id?: string;
 }>()
 
 import { computed, ref } from 'vue'
@@ -32,7 +33,7 @@ watch(() => roomState.state.ready, async value => {
     return
   }
   loginRoomId.value = parseInt(props.opened_room_id)
-  if (await preRoomLogin(loginRoomId.value)) return
+  if (await preRoomLogin(false, loginRoomId.value)) return
   loginDialog.value = true
 })
 
@@ -44,22 +45,29 @@ const showCreateRoom = () => {
   loading.value = false
 }
 
-const preRoomLogin = async (id: number) => {
+const preRoomLogin = async (push: boolean, id: number) => {
   let skipAble = false
   const localStorageData = localStorage.getItem(`room:${id}`)
   if (localStorageData) {
     const {uuid, token} = JSON.parse(localStorageData)
-    const result = await axios.post(`/api/v1/token/verify/rooms.json`, { room_uuid: uuid, token, })
+    const result = await axios.post(`/api/v1/token/verify/rooms`, { room_uuid: uuid, token, })
     skipAble = result.data.verify === 'success'
     if (skipAble) {
-      await router.replace({ name: 'room', params: { room_uuid: uuid } })
+      if (push) {
+        router.push({ name: 'room', params: { room_uuid: uuid }, query: { u: props.user_id } }).then()
+      } else {
+        router.replace({ name: 'room', params: { room_uuid: uuid }, query: { u: props.user_id } }).then()
+      }
+    } else {
+      localStorage.removeItem(`room:${id}`)
+      localStorage.removeItem(uuid)
     }
   }
   return skipAble
 }
 
 const showRoomLogin = async (id: number) => {
-  if (await preRoomLogin(id)) return
+  if (await preRoomLogin(true, id)) return
   loginRoomId.value = id
   loginDialog.value = true
   loginResult.value = ''
@@ -78,9 +86,9 @@ const createRoom = async () => {
   const token = result.data.token
   const uuid = result.data.room.uuid
   const id = result.data.room.id
-  localStorage.setItem(uuid, JSON.stringify({token}))
+  localStorage.setItem(uuid, JSON.stringify({token, room_id: id}))
   localStorage.setItem(`room:${id}`, JSON.stringify({uuid, token}))
-  router.push({ name: 'room', params: { room_uuid: uuid } }).then()
+  router.push({ name: 'room', params: { room_uuid: uuid }, query: { u: props.user_id } }).then()
 }
 
 const roomLogin = async () => {
@@ -90,7 +98,7 @@ const roomLogin = async () => {
   const token = result.data.token
   const uuid = result.data.uuid
   const id = loginRoomId.value
-  localStorage.setItem(uuid, JSON.stringify({token}))
+  localStorage.setItem(uuid, JSON.stringify({token, room_id: id}))
   localStorage.setItem(`room:${id}`, JSON.stringify({uuid, token}))
   const verified = result.data.verify === 'success'
   const roomUuid = verified ? uuid : ''
@@ -99,7 +107,7 @@ const roomLogin = async () => {
     loginResult.value = '部屋パスワードが違います'
     roomPasswordInput.value?.select()
   } else {
-    await router.push({ name: 'room', params: { room_uuid: roomUuid } })
+    await router.push({ name: 'room', params: { room_uuid: roomUuid }, query: { u: props.user_id } })
   }
 }
 </script>

@@ -3,7 +3,8 @@ import provideAll from '~/data/Lobby'
 provideAll()
 
 defineProps<{
-  id: string
+  room_id?: string;
+  user_id?: string;
 }>()
 
 import Contents from '~/pages/Lobby/Contents.vue'
@@ -48,7 +49,7 @@ const drawer = ref(false)
       <v-btn variant='text' icon='mdi-brightness-6' @click='toggleTheme'></v-btn>
     </v-app-bar>
     <v-main>
-      <contents :opened_room_id='id' />
+      <contents :opened_room_id='room_id' :user_id='user_id' />
     </v-main>
   </v-layout>
 </template>

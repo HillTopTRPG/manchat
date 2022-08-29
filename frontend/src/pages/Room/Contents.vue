@@ -1,6 +1,7 @@
 <script setup lang='ts'>
 const props = defineProps<{
   room_uuid: string;
+  user_id?: string;
 }>()
 
 import { useRouter } from 'vue-router'
@@ -10,8 +11,8 @@ import { inject } from 'vue'
 const axios = inject('axios') as any
 
 let roomToken = ''
-let userToken = ''
-let userUuid = ''
+let user_token = ''
+let user_uuid = ''
 
 import { computed, ref } from 'vue'
 const users = ref<{ id: number; name: string; }[]>([]);
@@ -25,38 +26,69 @@ const loading = ref(false)
 const loginResult = ref('')
 const userPasswordInput = ref<HTMLInputElement>()
 
+if (props.user_id !== undefined) {
+  userId.value = parseInt(props.user_id)
+}
+
+const preUserLogin = async (push: boolean, id?: number) => {
+  if (id === undefined) return false
+  let skipAble = false
+  const localStorageUserDataString = localStorage.getItem(`user:${id}`)
+  if (localStorageUserDataString) {
+    const { user_uuid, user_token } = JSON.parse(localStorageUserDataString)
+    const localStorageRoomDataString = localStorage.getItem(props.room_uuid)
+    const room_token = (localStorageRoomDataString ? JSON.parse(localStorageRoomDataString) : null)?.token
+    const result = await axios.post(`/api/v1/token/verify/users`, { room_uuid: props.room_uuid, user_uuid, user_token, room_token, })
+    skipAble = result.data.verify === 'success'
+    if (skipAble) {
+      if (push) {
+        router.push({ name: 'play', params: { user_uuid } }).then()
+      } else {
+        router.replace({ name: 'play', params: { user_uuid } }).then()
+      }
+      return skipAble
+    } else {
+      localStorage.removeItem(`user:${id}`)
+      localStorage.removeItem(user_uuid)
+    }
+  }
+  return skipAble
+}
+
 await (async () => {
   let loggedIn = false
   const localStorageDataString = localStorage.getItem(props.room_uuid)
   if (localStorageDataString) {
-    const { token } = JSON.parse(localStorageDataString)
+    const { token, room_id } = JSON.parse(localStorageDataString)
     roomToken = token
-    const result = await axios.post(`/api/v1/token/verify/rooms.json`, { room_uuid: props.room_uuid, token, })
+    const result = await axios.post(`/api/v1/token/verify/rooms`, { room_uuid: props.room_uuid, token, })
     loggedIn = result.data.verify === 'success'
     if (loggedIn) {
       users.value.push(...result.data.users)
+      if (props.user_id !== undefined) {
+        if (!users.value.some(u => u.id === parseInt(props.user_id || '0'))) {
+          router.replace({ name: 'room', params: { room_uuid: props.room_uuid } }).then()
+          return
+        } else {
+          if (await preUserLogin(false, parseInt(props.user_id))) return
+          loginDialog.value = true
+        }
+      }
+    } else {
+      localStorage.removeItem(props.room_uuid)
+      localStorage.removeItem(`room:${room_id}`)
     }
   }
 
   if (!loggedIn) {
     const result = await axios.get(`/api/v1/rooms/u/${props.room_uuid}`)
-    router.replace({ name: 'lobby', query: { r: result.data?.id } }).then()
+    router.replace({ name: 'lobby', query: { r: result.data?.id, u: props.user_id } }).then()
   }
 })()
 
 const showUserLogin = async (id?: number) => {
+  if (await preUserLogin(true, id)) return
   userId.value = id
-  if (id !== undefined) {
-    const localStorageUserData = localStorage.getItem(`user:${id}`)
-    if (localStorageUserData) {
-      const { uuid, token } = JSON.parse(localStorageUserData)
-      const result = await axios.post(`/api/v1/token/verify/users`, { room_uuid: props.room_uuid, user_uuid: uuid, token, })
-      if (result.data.verify === 'success') {
-        await router.push({ name: 'play', params: { user_uuid: uuid } })
-        return
-      }
-    }
-  }
   loginDialog.value = true
   loginResult.value = ''
   loading.value = false
@@ -65,13 +97,13 @@ const showUserLogin = async (id?: number) => {
 
 const userLogin = async () => {
   loginResult.value = ''
-  userUuid = ''
+  user_uuid = ''
   if (userId.value !== undefined) {
     loading.value = true
     const result = await axios.post(`/api/v1/users/${userId.value}/verify`, { password: userPassword.value, room_token: roomToken, })
     const verified = result.data.verify === 'success'
-    userUuid = verified ? result.data.uuid : ''
-    userToken = verified ? result.data.token : ''
+    user_uuid = verified ? result.data.uuid : ''
+    user_token = verified ? result.data.token : ''
     if (!verified) {
       loading.value = false
       if (result.data.reason === 'expire_room_token') loginResult.value = '部屋トークンが有効期限切れです'
@@ -102,8 +134,8 @@ const userLogin = async () => {
     })
     const verified = result.data.verify === 'success'
     userId.value = verified ? result.data.user.id : ''
-    userUuid = verified ? result.data.user.uuid : ''
-    userToken = verified ? result.data.token : ''
+    user_uuid = verified ? result.data.user.uuid : ''
+    user_token = verified ? result.data.token : ''
     if (!verified) {
       if (result.data.reason === 'expire_room_token') loginResult.value = '部屋トークンが有効期限切れです'
       else loginResult.value = `Un supported error. ${result.data.reason}`
@@ -112,9 +144,9 @@ const userLogin = async () => {
       return
     }
   }
-  localStorage.setItem(userUuid, JSON.stringify({token: userToken}))
-  localStorage.setItem(`user:${userId.value}`, JSON.stringify({uuid: userUuid, token: userToken}))
-  router.push({ name: 'play', params: { user_uuid: userUuid } }).then()
+  localStorage.setItem(user_uuid, JSON.stringify({ user_token, room_uuid: props.room_uuid, user_id: userId.value }))
+  localStorage.setItem(`user:${userId.value}`, JSON.stringify({ user_uuid, user_token }))
+  router.push({ name: 'play', params: { user_uuid } }).then()
 }
 </script>
 

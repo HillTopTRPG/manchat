@@ -1,10 +1,59 @@
 <script setup lang='ts'>
 import SplitPanesLayer, { Layout } from '~/components/SplitPanesLayer.vue'
 
-defineProps<{
+const props = defineProps<{
   user_uuid: string
   layout: Layout
 }>()
+
+import { useRouter } from 'vue-router'
+const router = useRouter()
+
+import { inject } from 'vue'
+const axios = inject('axios') as any
+
+let userToken = ''
+await (async () => {
+  let loggedIn = false
+  const localStorageUserDataString = localStorage.getItem(props.user_uuid)
+  if (localStorageUserDataString) {
+    const { user_token, room_uuid, user_id } = JSON.parse(localStorageUserDataString)
+    const localStorageRoomDataString = localStorage.getItem(room_uuid)
+    const room_token = (localStorageRoomDataString ? JSON.parse(localStorageRoomDataString) : null)?.token
+    userToken = user_token
+    const result = await axios.post(`/api/v1/token/verify/users`, { room_uuid, user_uuid: props.user_uuid, user_token, room_token, })
+    loggedIn = result.data.verify === 'success'
+    if (!loggedIn) {
+      localStorage.removeItem(props.user_uuid)
+      localStorage.removeItem(`user:${user_id}`)
+      const hasReason = (reason: string) => result.data.reasons.some((r: string) => r === reason)
+      if (hasReason("different_room_uuid") || hasReason("not_found_room")) {
+        router.replace({ name: 'lobby' }).then()
+        return
+      }
+      const query: any = { r: result.data.room_id, u: result.data.user_id }
+      if (hasReason("expired_room_token")) {
+        router.replace({ name: 'lobby', query }).then()
+        return
+      }
+      if (hasReason("not_found_user") || hasReason("expired_user_token")) {
+        router.replace({ name: 'room', query, params: { room_uuid } }).then()
+        return
+      }
+    }
+  }
+
+  if (!loggedIn) {
+    const result = await axios.get(`/api/v1/users/u/${props.user_uuid}`)
+    if (result.data) {
+      const room_uuid = result.data.room_uuid
+      const u = result.data.id
+      router.replace({ name: 'room', params: { room_uuid }, query: { u } }).then()
+    } else {
+      router.replace({ name: 'lobby' }).then()
+    }
+  }
+})()
 
 import { ref } from 'vue'
 const showBar = ref(false)
