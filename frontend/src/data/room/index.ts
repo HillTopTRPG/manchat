@@ -4,11 +4,11 @@ export default function RoomStore() {
   const state = reactive<{
     ready: boolean;
     autoSynchronize: boolean;
+    favoriteRooms: number[];
+    loggedInRooms: number[];
     rooms: {
       id: number;
-      uuid: string;
       name: string;
-      password: string;
       last_logged_in: Date;
       created_at: Date;
       updated_at: Date;
@@ -16,6 +16,8 @@ export default function RoomStore() {
   }>({
     ready: false,
     autoSynchronize: true,
+    favoriteRooms: [],
+    loggedInRooms: [],
     rooms: [],
   })
 
@@ -31,6 +33,30 @@ export default function RoomStore() {
         .catch((err: any) => {
         })
       state.rooms.push(...response.data)
+      state.loggedInRooms
+        .filter(fid => !state.rooms.some(r => r.id === fid))
+        .forEach(dId => {
+          state.loggedInRooms.splice(state.loggedInRooms.findIndex(id => id === dId), 1)
+          const roomNoKey = `room:${dId}`
+          const localStorageData = localStorage.getItem(roomNoKey)
+          if (localStorageData) {
+            const { uuid } = JSON.parse(localStorageData)
+            localStorage.removeItem(uuid)
+          }
+          localStorage.removeItem(roomNoKey)
+        })
+      state.favoriteRooms
+        .filter(fid => !state.rooms.some(r => r.id === fid))
+        .forEach(dId => {
+          state.favoriteRooms.splice(state.favoriteRooms.findIndex(id => id === dId), 1)
+          const roomNoKey = `room:${dId}`
+          const localStorageData = localStorage.getItem(roomNoKey)
+          if (localStorageData) {
+            const { uuid } = JSON.parse(localStorageData)
+            localStorage.removeItem(uuid)
+          }
+          localStorage.removeItem(roomNoKey)
+        })
     } catch (err) {
       console.log(JSON.stringify(err, null, "  "))
     }
@@ -41,9 +67,36 @@ export default function RoomStore() {
 
   watch(() => state.autoSynchronize, (newValue) => {
     if (newValue) {
-      reloadRoomList()
+      reloadRoomList().then()
     }
   })
+
+  const localStorageFavoriteRoomsString = localStorage.getItem('favorite-rooms')
+  if (localStorageFavoriteRoomsString) {
+    state.favoriteRooms = JSON.parse(localStorageFavoriteRoomsString)
+    state.favoriteRooms.sort()
+  } else {
+    localStorage.setItem('favorite-rooms', '[]')
+  }
+
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i)
+    if (!key) continue
+    if (!key.match(/room:[0-9]+/)) continue
+    const roomId = parseInt(key.replace('room:', ''))
+    state.loggedInRooms.push(roomId)
+  }
+  state.loggedInRooms.sort()
+
+  watch(() => state.favoriteRooms, () => localStorage.setItem('favorite-rooms', JSON.stringify(state.favoriteRooms)), { deep: true })
+  const changeRoomFavorite = (roomId: number) => {
+    if (state.favoriteRooms.some(id => id === roomId)) {
+      state.favoriteRooms.splice(state.favoriteRooms.findIndex(id => id === roomId), 1)
+    } else {
+      state.favoriteRooms.push(roomId)
+    }
+    state.favoriteRooms.sort((id1, id2) => id1 > id2 ? 1 : -1)
+  }
 
   const cable: any = inject('cable')
   cable.subscriptions.create({ channel: "RoomsChannel" }, {
@@ -65,6 +118,7 @@ export default function RoomStore() {
     state,
     changeAutoSynchronize,
     reloadRoomList,
+    changeRoomFavorite,
   }
 }
 

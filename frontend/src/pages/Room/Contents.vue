@@ -2,6 +2,8 @@
 const props = defineProps<{
   room_uuid: string;
   user_id?: string;
+  user_name?: string;
+  user_password?: string;
 }>()
 
 import { useRouter } from 'vue-router'
@@ -23,12 +25,10 @@ const userName = ref('')
 const userPassword = ref('')
 const userShowPassword = ref(false)
 const loading = ref(false)
-const loginResult = ref('')
+const loginAlertType = ref('error')
+const loginAlertIcon = ref('$info')
+const loginAlertText = ref('')
 const userPasswordInput = ref<HTMLInputElement>()
-
-if (props.user_id !== undefined) {
-  userId.value = parseInt(props.user_id)
-}
 
 const preUserLogin = async (push: boolean, id?: number) => {
   if (id === undefined) return false
@@ -47,9 +47,6 @@ const preUserLogin = async (push: boolean, id?: number) => {
         router.replace({ name: 'play', params: { user_uuid } }).then()
       }
       return skipAble
-    } else {
-      localStorage.removeItem(`user:${id}`)
-      localStorage.removeItem(user_uuid)
     }
   }
   return skipAble
@@ -66,6 +63,7 @@ await (async () => {
     if (loggedIn) {
       users.value.push(...result.data.users)
       if (props.user_id !== undefined) {
+        userId.value = parseInt(props.user_id)
         if (!users.value.some(u => u.id === parseInt(props.user_id || '0'))) {
           router.replace({ name: 'room', params: { room_uuid: props.room_uuid } }).then()
           return
@@ -74,15 +72,20 @@ await (async () => {
           loginDialog.value = true
         }
       }
-    } else {
-      localStorage.removeItem(props.room_uuid)
-      localStorage.removeItem(`room:${room_id}`)
+      if (props.user_name !== undefined) {
+        userName.value = props.user_name
+        loginDialog.value = true
+
+        if (props.user_password !== undefined) {
+          userPassword.value = props.user_password
+        }
+      }
     }
   }
 
   if (!loggedIn) {
     const result = await axios.get(`/api/v1/rooms/u/${props.room_uuid}`)
-    router.replace({ name: 'lobby', query: { r: result.data?.id, u: props.user_id } }).then()
+    router.replace({ name: 'lobby', query: { r: result.data?.id, u: props.user_id, n: props.user_name, p: props.user_password } }).then()
   }
 })()
 
@@ -90,40 +93,53 @@ const showUserLogin = async (id?: number) => {
   if (await preUserLogin(true, id)) return
   userId.value = id
   loginDialog.value = true
-  loginResult.value = ''
+  loginAlertText.value = ''
   loading.value = false
   userPassword.value = ''
 }
 
 const userLogin = async () => {
-  loginResult.value = ''
+  loginAlertText.value = ''
   user_uuid = ''
   if (userId.value !== undefined) {
     loading.value = true
+    loginAlertType.value = 'info'
+    loginAlertText.value = 'ログイン中'
     const result = await axios.post(`/api/v1/users/${userId.value}/verify`, { password: userPassword.value, room_token: roomToken, })
     const verified = result.data.verify === 'success'
     user_uuid = verified ? result.data.uuid : ''
     user_token = verified ? result.data.token : ''
     if (!verified) {
       loading.value = false
-      if (result.data.reason === 'expire_room_token') loginResult.value = '部屋トークンが有効期限切れです'
-      if (result.data.reason === 'different_room_uuid') loginResult.value = '違う部屋のユーザーにログインしようとしました'
+      if (result.data.reason === 'expire_room_token') {
+        loginAlertType.value = 'error'
+        loginAlertText.value = '部屋トークンが有効期限切れです'
+      }
+      if (result.data.reason === 'different_room_uuid') {
+        loginAlertType.value = 'error'
+        loginAlertText.value = '違う部屋のユーザーにログインしようとしました'
+      }
       if (result.data.reason === 'invalid_password') {
-        loginResult.value = 'ユーザーパスワードが違います'
+        loginAlertType.value = 'error'
+        loginAlertText.value = 'ユーザーパスワードが違います'
         userPasswordInput.value?.select()
       }
       return
     }
   } else {
     if (!userName.value) {
-      alert('ユーザー名を入力してください。')
+      loginAlertType.value = 'warning'
+      loginAlertText.value = 'ユーザー名を入力してください。'
       return
     }
     if (users.value.some(u => u.name === userName.value)) {
-      alert('名前が重複しています。')
+      loginAlertType.value = 'warning'
+      loginAlertText.value = '名前が重複しています。'
       return
     }
     loading.value = true
+    loginAlertType.value = 'info'
+    loginAlertText.value = 'ログイン中'
     const result = await axios.post(`/api/v1/users`, {
       api_v1_user: {
         name: userName.value,
@@ -133,12 +149,13 @@ const userLogin = async () => {
       room_token: roomToken,
     })
     const verified = result.data.verify === 'success'
-    userId.value = verified ? result.data.user.id : ''
+    userId.value = verified ? result.data.user.id : undefined
     user_uuid = verified ? result.data.user.uuid : ''
     user_token = verified ? result.data.token : ''
     if (!verified) {
-      if (result.data.reason === 'expire_room_token') loginResult.value = '部屋トークンが有効期限切れです'
-      else loginResult.value = `Un supported error. ${result.data.reason}`
+      if (result.data.reason === 'expire_room_token') {
+        router.replace({ name: 'lobby', query: { r: result.data.room_id, n: userName.value, p: userPassword.value } })
+      } else loginAlertText.value = `Un supported error. ${result.data.reason}`
       loading.value = false
       userPasswordInput.value?.select()
       return
@@ -182,25 +199,26 @@ const userLogin = async () => {
     </v-row>
   </v-container>
   <v-dialog :model-value='loginDialog'>
-    <v-card class='mx-auto mt-5 pa-3'>
+    <v-card class='mx-auto mt-5 pa-3' :loading='loading'>
       <v-card-title v-text='userId !== undefined ? existsUserName : "新規参入"' />
       <v-card-subtitle v-text='"ログイン"' />
       <v-card-text>
         <v-alert
           colored-border
-          type='error'
+          :type='loginAlertType'
           elevation='2'
-          icon='$info'
+          :icon='loginAlertIcon'
           density='compact'
           class='mb-5'
-          :text='loginResult'
-          v-if='loginResult'
+          :text='loginAlertText'
+          v-if='loginAlertText'
         ></v-alert>
         <v-text-field
           v-model='userName'
           append-icon='empty'
           :autofocus='userId === undefined'
           @keydown.esc='loginDialog = false'
+          @keydown.enter='userPasswordInput.focus()'
           v-if='userId === undefined'
         >
           <template #label>
@@ -227,7 +245,7 @@ const userLogin = async () => {
             variant='flat'
             @click='userLogin'
             :loading='loading'
-            :disabled='!userName || users.some(u => u.name === userName)'
+            :disabled='userId === undefined && (!userName || users.some(u => u.name === userName))'
             :append-icon='userId === undefined ? "mdi-account-plus" : "mdi-login"'
           >{{userId === undefined ? '新規登録' : 'ログイン'}}</v-btn>
           <v-btn color='secondary' variant='flat' @click='loginDialog = false'>キャンセル</v-btn>

@@ -24,8 +24,6 @@ await (async () => {
     const result = await axios.post(`/api/v1/token/verify/users`, { room_uuid, user_uuid: props.user_uuid, user_token, room_token, })
     loggedIn = result.data.verify === 'success'
     if (!loggedIn) {
-      localStorage.removeItem(props.user_uuid)
-      localStorage.removeItem(`user:${user_id}`)
       const hasReason = (reason: string) => result.data.reasons.some((r: string) => r === reason)
       if (hasReason("different_room_uuid") || hasReason("not_found_room")) {
         router.replace({ name: 'lobby' }).then()

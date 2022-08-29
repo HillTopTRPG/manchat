@@ -2,6 +2,8 @@
 defineProps<{
   room_uuid: string;
   user_id?: string;
+  user_name?: string;
+  user_password?: string;
 }>()
 
 import Contents from '~/pages/Room/Contents.vue'
@@ -44,7 +46,7 @@ const drawer = ref(false)
     </v-app-bar>
     <v-main>
       <suspense>
-        <contents :room_uuid='room_uuid' :user_id='user_id' />
+        <contents :room_uuid='room_uuid' :user_id='user_id' :user_name='user_name' :user_password='user_password' />
       </suspense>
     </v-main>
   </v-layout>

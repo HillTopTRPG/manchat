@@ -8,8 +8,10 @@ import { useRouter } from 'vue-router'
 const router = useRouter()
 
 const props = defineProps<{
-  opened_room_id?: string;
+  room_id?: string;
   user_id?: string;
+  user_name?: string;
+  user_password?: string;
 }>()
 
 import { computed, ref } from 'vue'
@@ -21,24 +23,27 @@ const createRoomName = ref('')
 const loginRoomId = ref(0)
 const selectedRoomName = computed(() => roomState.state.rooms.find(r => r.id === loginRoomId.value)?.name || null)
 const loading = ref(false)
-const loginResult = ref('')
+const loginAlertType = ref('error')
+const loginAlertIcon = ref('$info')
+const loginAlertText = ref('')
 const roomPasswordInput = ref<HTMLInputElement>()
 const userPasswordInput = ref<HTMLInputElement>()
 
 import { watch } from 'vue'
 watch(() => roomState.state.ready, async value => {
-  if (!value || props.opened_room_id === undefined) return
-  if (!roomState.state.rooms.some(r => r.id === parseInt(props.opened_room_id || '0'))) {
-    router.replace({ name: 'lobby' }).then()
-    return
+  if (value && props.room_id !== undefined) {
+    if (!roomState.state.rooms.some(r => r.id === parseInt(props.room_id || '0'))) {
+      router.replace({ name: 'lobby' }).then()
+      return
+    }
+    loginRoomId.value = parseInt(props.room_id)
+    if (await preRoomLogin(false, loginRoomId.value)) return
+    loginDialog.value = true
   }
-  loginRoomId.value = parseInt(props.opened_room_id)
-  if (await preRoomLogin(false, loginRoomId.value)) return
-  loginDialog.value = true
 })
 
 const showCreateRoom = () => {
-  loginResult.value = ''
+  loginAlertText.value = ''
   createRoomName.value = ''
   roomPassword.value = ''
   createRoomDialog.value = true
@@ -54,13 +59,10 @@ const preRoomLogin = async (push: boolean, id: number) => {
     skipAble = result.data.verify === 'success'
     if (skipAble) {
       if (push) {
-        router.push({ name: 'room', params: { room_uuid: uuid }, query: { u: props.user_id } }).then()
+        router.push({ name: 'room', params: { room_uuid: uuid }, query: { u: props.user_id, n: props.user_name, p: props.user_password } }).then()
       } else {
-        router.replace({ name: 'room', params: { room_uuid: uuid }, query: { u: props.user_id } }).then()
+        router.replace({ name: 'room', params: { room_uuid: uuid }, query: { u: props.user_id, n: props.user_name, p: props.user_password } }).then()
       }
-    } else {
-      localStorage.removeItem(`room:${id}`)
-      localStorage.removeItem(uuid)
     }
   }
   return skipAble
@@ -70,7 +72,7 @@ const showRoomLogin = async (id: number) => {
   if (await preRoomLogin(true, id)) return
   loginRoomId.value = id
   loginDialog.value = true
-  loginResult.value = ''
+  loginAlertText.value = ''
   loading.value = false
   roomPassword.value = ''
 }
@@ -88,12 +90,13 @@ const createRoom = async () => {
   const id = result.data.room.id
   localStorage.setItem(uuid, JSON.stringify({token, room_id: id}))
   localStorage.setItem(`room:${id}`, JSON.stringify({uuid, token}))
-  router.push({ name: 'room', params: { room_uuid: uuid }, query: { u: props.user_id } }).then()
+  router.push({ name: 'room', params: { room_uuid: uuid }, query: { u: props.user_id, n: props.user_name, p: props.user_password } }).then()
 }
 
 const roomLogin = async () => {
   loading.value = true
-  loginResult.value = ''
+  loginAlertType.value = 'info'
+  loginAlertText.value = 'ログイン中'
   const result = await axios.post(`/api/v1/rooms/${loginRoomId.value}/verify`, { password: roomPassword.value })
   const token = result.data.token
   const uuid = result.data.uuid
@@ -104,12 +107,19 @@ const roomLogin = async () => {
   const roomUuid = verified ? uuid : ''
   loading.value = false
   if (!verified) {
-    loginResult.value = '部屋パスワードが違います'
+    loginAlertType.value = 'error'
+    loginAlertText.value = '部屋パスワードが違います'
     roomPasswordInput.value?.select()
   } else {
-    await router.push({ name: 'room', params: { room_uuid: roomUuid }, query: { u: props.user_id } })
+    await router.push({ name: 'room', params: { room_uuid: roomUuid }, query: { u: props.user_id, n: props.user_name, p: props.user_password } })
   }
 }
+
+defineExpose({
+  login: (roomId: number) => {
+    showRoomLogin(roomId).then()
+  },
+})
 </script>
 
 <template>
@@ -132,11 +142,17 @@ const roomLogin = async () => {
             </thead>
             <tbody>
             <tr v-for='room in roomState.state.rooms' :key='room.uuid'>
-              <td class='text-right'>{{ room.id }}</td>
+              <td class='text-right'>#{{ room.id }}</td>
               <td>
                 <v-card elevation='0' variant='text' class='mb-2'>
                   <v-card-title>{{ room.name }}</v-card-title>
                   <v-card-subtitle>最終ログイン: {{ $d(room.last_logged_in, 'long') }}</v-card-subtitle>
+                  <v-checkbox
+                    :model-value="roomState.state.favoriteRooms.some(id => id === room.id)"
+                    true-icon='mdi-star'
+                    false-icon='mdi-star-outline'
+                    @click="roomState.changeRoomFavorite(room.id)"
+                  />
                 </v-card>
               </td>
               <td class='text-right'>
@@ -150,19 +166,19 @@ const roomLogin = async () => {
     </v-row>
   </v-container>
   <v-dialog :model-value='loginDialog'>
-    <v-card class='mx-auto mt-5 pa-3'>
+    <v-card class='mx-auto mt-5 pa-3' :loading='loading'>
       <v-card-title v-text='`#${loginRoomId} ${selectedRoomName}`' />
       <v-card-subtitle>入室</v-card-subtitle>
       <v-card-text>
         <v-alert
           colored-border
-          type='error'
+          :type='loginAlertType'
           elevation='2'
-          icon='$info'
+          :icon='loginAlertIcon'
           density='compact'
-          :text='loginResult'
+          :text='loginAlertText'
           class='mb-5'
-          v-if='loginResult'
+          v-if='loginAlertText'
         ></v-alert>
         <v-text-field
           :append-icon='showPassword ? "mdi-eye" : "mdi-eye-off"'
@@ -192,13 +208,13 @@ const roomLogin = async () => {
       <v-card-text>
         <v-alert
           colored-border
-          type='error'
+          :type='loginAlertType'
           elevation='2'
-          icon='$info'
+          :icon='loginAlertIcon'
           density='compact'
-          :text='loginResult'
+          :text='loginAlertText'
           class='mb-5'
-          :style='{visibility: loginResult ? "visible" : "hidden"}'
+          v-if='loginAlertText'
         ></v-alert>
         <v-text-field prepend-icon='mdi-home-variant' v-model='createRoomName' append-icon='empty' label='部屋名' :autofocus='true'></v-text-field>
         <v-text-field
