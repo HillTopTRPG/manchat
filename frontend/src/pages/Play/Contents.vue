@@ -28,21 +28,28 @@ await (async () => {
 
   const { user_token } = JSON.parse(localStorage.getItem(props.user_uuid) || '{}')
   if (user_token) {
-    const { data } = await axios.post(`/api/v1/users/${props.user_uuid}/token/${user_token}/check`, { room_uuid: props.room_uuid, room_token, })
+    const { data } = await axios.post(
+      `/api/v1/users/${props.user_uuid}/token/${user_token}/check`,
+      { room_uuid: props.room_uuid, room_token, }
+    )
     loggedIn = data.verify === 'success'
     if (!loggedIn) {
       const hasReason = (reason: string) => data.reasons.some((r: string) => r === reason)
-      if (hasReason("different_room_uuid") || hasReason("not_found_room")) {
+      if (hasReason('different_room_uuid') || hasReason('not_found_room')) {
         router.replace({ name: 'lobby' }).then()
         return
       }
       const query: any = { r: props.room_uuid, u: props.user_uuid }
-      if (hasReason("expired_room_token")) {
+      if (hasReason('expired_room_token')) {
         router.replace({ name: 'lobby', query }).then()
         return
       }
-      if (hasReason("not_found_user") || hasReason("expired_user_token")) {
-        router.replace({ name: 'room-user', params: { room_uuid: props.room_uuid, user_uuid: props.user_uuid, }, query: { auto_play: 1 } }).then()
+      if (hasReason('not_found_user') || hasReason('expired_user_token')) {
+        router.replace({
+          name: 'room-user',
+          params: { room_uuid: props.room_uuid, user_uuid: props.user_uuid, },
+          query: { auto_play: 1 }
+        }).then()
         return
       }
     }
@@ -78,15 +85,19 @@ const fgx = (val: number) => {
       rail-width='55'
     >
       <v-list class='overflow-hidden' shaped>
-        <v-list-item v-ripple :prepend-icon='isRail ? "mdi-chevron-right" : "mdi-chevron-left"' @click='isRail = !isRail' />
+        <v-list-item
+          v-ripple
+          :prepend-icon='isRail ? "mdi-chevron-right" : "mdi-chevron-left"'
+          @click='isRail = !isRail'
+        />
       </v-list>
 
       <v-divider />
 
       <v-list density='compact' nav class='overflow-hidden' rounded>
-        <v-list-item v-ripple prepend-icon='mdi-folder' title='My Files' @click='fgx(111)'></v-list-item>
-        <v-list-item v-ripple prepend-icon='mdi-account-multiple' title='Shared with me' @click='fgx(222)'></v-list-item>
-        <v-list-item v-ripple prepend-icon='mdi-star' title='Starred' @click='fgx(333)'></v-list-item>
+        <v-list-item v-ripple prepend-icon='mdi-folder' title='My Files' @click='fgx(111)' />
+        <v-list-item v-ripple prepend-icon='mdi-account-multiple' title='Shared with me' @click='fgx(222)' />
+        <v-list-item v-ripple prepend-icon='mdi-star' title='Starred' @click='fgx(333)' />
       </v-list>
     </v-navigation-drawer>
 
@@ -94,7 +105,7 @@ const fgx = (val: number) => {
       color='teal-darken-4'
       image='https://picsum.photos/1920/1080?random'
       :title='`Room: ${user_uuid}`'
-      elevation="1"
+      elevation='1'
     >
       <template #image>
         <v-img gradient='to top right, rgba(19,84,122,.8), rgba(128,208,199,.8)'></v-img>

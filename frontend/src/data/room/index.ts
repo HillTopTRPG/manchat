@@ -1,9 +1,8 @@
-import {reactive, InjectionKey, inject, watch} from "vue"
+import {reactive, InjectionKey, inject, watch} from 'vue'
 
 export default function RoomStore() {
   const state = reactive<{
     ready: boolean;
-    autoSynchronize: boolean;
     favoriteRooms: string[];
     loggedInRooms: string[];
     rooms: {
@@ -16,62 +15,14 @@ export default function RoomStore() {
     }[];
   }>({
     ready: false,
-    autoSynchronize: true,
     favoriteRooms: [],
     loggedInRooms: [],
     rooms: [],
   })
 
-  const changeAutoSynchronize = (autoSynchronize: boolean) => {
-    state.autoSynchronize = autoSynchronize
-  }
-
-  const axios: any = inject('axios')
-  const reloadRoomList = async () => {
-    try {
-      state.rooms.splice(0, state.rooms.length)
-      const response: { data: any } = await axios.get("http://localhost:81/api/v1/rooms.json")
-      state.rooms.push(...response.data)
-      state.loggedInRooms
-        .filter(fUuid => !state.rooms.some(r => r.uuid === fUuid))
-        .forEach(dUuid => {
-          state.loggedInRooms.splice(state.loggedInRooms.findIndex(id => id === dUuid), 1)
-          const localStorageData = localStorage.getItem(dUuid)
-          if (localStorageData) {
-            const { id } = JSON.parse(localStorageData)
-            localStorage.removeItem(`room:${id}`)
-          }
-          localStorage.removeItem(dUuid)
-        })
-      state.favoriteRooms
-        .filter(fUuid => !state.rooms.some(r => r.uuid === fUuid))
-        .forEach(dUuid => {
-          state.favoriteRooms.splice(state.favoriteRooms.findIndex(uuid => uuid === dUuid), 1)
-          const localStorageData = localStorage.getItem(dUuid)
-          if (localStorageData) {
-            const { id } = JSON.parse(localStorageData)
-            localStorage.removeItem(`room:${id}`)
-          }
-          localStorage.removeItem(dUuid)
-        })
-    } catch (err) {
-      console.log(JSON.stringify(err, null, "  "))
-    }
-  }
-  reloadRoomList().then(() => {
-    state.ready = true
-  })
-
-  watch(() => state.autoSynchronize, (newValue) => {
-    if (newValue) {
-      reloadRoomList().then()
-    }
-  })
-
   const localStorageFavoriteRoomsString = localStorage.getItem('favorite-rooms')
   if (localStorageFavoriteRoomsString) {
     state.favoriteRooms = JSON.parse(localStorageFavoriteRoomsString)
-    state.favoriteRooms.sort()
   } else {
     localStorage.setItem('favorite-rooms', '[]')
   }
@@ -79,11 +30,42 @@ export default function RoomStore() {
   for (let i = 0; i < localStorage.length; i++) {
     const key = localStorage.key(i)
     if (!key) continue
-    if (!key.match(/room:[0-9]+/)) continue
-    const { uuid } = JSON.parse(localStorage.getItem(key) || '{}')
-    state.loggedInRooms.push(uuid)
+    try {
+      const { room_token } = JSON.parse(localStorage.getItem(key) || '{}')
+      if (room_token) state.loggedInRooms.push(key)
+    } catch (err) {
+      // Nothing
+    }
   }
-  state.loggedInRooms.sort()
+
+  const axios: any = inject('axios')
+  const reloadRoomList = async () => {
+    try {
+      state.rooms.splice(0, state.rooms.length)
+      const response: { data: any } = await axios.get('http://localhost:81/api/v1/rooms.json')
+      state.rooms.push(...response.data)
+      state.loggedInRooms
+        .filter(room => !state.rooms.some(r => r.uuid === room))
+        .forEach(dRoom => {
+          state.loggedInRooms.splice(state.loggedInRooms.findIndex(r => r === dRoom), 1)
+          localStorage.removeItem(dRoom)
+        })
+      state.favoriteRooms
+        .filter(room => !state.rooms.some(r => r.uuid === room))
+        .forEach(dRoom => {
+          state.favoriteRooms.splice(state.favoriteRooms.findIndex(r => r === dRoom), 1)
+          localStorage.removeItem(dRoom)
+        })
+      const sortFunc = (u1: string, u2: string) => (state.rooms.find(r => r.uuid === u1)?.id || 0) > (state.rooms.find(r => r.uuid === u2)?.id || 0) ? 1 : -1
+      state.loggedInRooms.sort(sortFunc)
+      state.favoriteRooms.sort(sortFunc)
+    } catch (err) {
+      console.log(JSON.stringify(err, null, '  '))
+    }
+  }
+  reloadRoomList().then(() => {
+    state.ready = true
+  })
 
   watch(() => state.favoriteRooms, () => localStorage.setItem('favorite-rooms', JSON.stringify(state.favoriteRooms)), { deep: true })
   const changeRoomFavorite = (room_uuid: string) => {
@@ -96,24 +78,21 @@ export default function RoomStore() {
   }
 
   const cable: any = inject('cable')
-  cable.subscriptions.create({ channel: "RoomsChannel" }, {
+  cable.subscriptions.create({ channel: 'RoomsChannel' }, {
     connected() {},
     disconnected() {},
     received(data: any) {
-      if (state.autoSynchronize) {
-        if (data.type === "create-data") {
-          state.rooms.push(data.data)
-        }
-        if (data.type === "destroy-data") {
-          state.rooms.splice(state.rooms.findIndex(r => r.uuid === data.uuid), 1)
-        }
+      if (data.type === 'create-data') {
+        state.rooms.push(data.data)
+      }
+      if (data.type === 'destroy-data') {
+        state.rooms.splice(state.rooms.findIndex(r => r.uuid === data.uuid), 1)
       }
     },
   })
 
   return {
     state,
-    changeAutoSynchronize,
     reloadRoomList,
     changeRoomFavorite,
   }

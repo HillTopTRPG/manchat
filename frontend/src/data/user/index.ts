@@ -1,4 +1,4 @@
-import { reactive, InjectionKey, inject } from "vue"
+import { reactive, InjectionKey, inject } from 'vue'
 
 export default function UserStore(room_uuid: string) {
 
@@ -24,29 +24,29 @@ export default function UserStore(room_uuid: string) {
       console.log(JSON.stringify(state.users, null, '  '))
     })
     .catch((err: any) => {
-      console.log(JSON.stringify(err, null, "  "))
+      console.log(JSON.stringify(err, null, '  '))
     })
 
   const cable: any = inject('cable')
-  const channel = cable.subscriptions.create({ channel: "RoomChannel", room_uuid }, {
+  const channel = cable.subscriptions.create({ channel: 'RoomChannel', room_uuid }, {
     connected() {
-      console.log("- RoomChannel Connected ----------at user")
+      console.log('- RoomChannel Connected ----------at user')
     },
 
     disconnected() {
-      console.log("- RoomChannel Disconnected ----------")
+      console.log('- RoomChannel Disconnected ----------')
     },
 
     received(data: any) {
-      console.log("- RoomChannel Received ----------")
-      console.log(JSON.stringify(data, null, "  "))
-      if (data.type === "create-data") {
+      console.log('- RoomChannel Received ----------')
+      console.log(JSON.stringify(data, null, '  '))
+      if (data.type === 'create-data') {
         state.users.push(data.data)
       }
-      if (data.type === "destroy-data") {
+      if (data.type === 'destroy-data') {
         state.users.splice(state.users.findIndex(r => r.uuid === data.uuid), 1)
       }
-      console.log("- RoomChannel Received ----------")
+      console.log('- RoomChannel Received ----------')
     },
 
     speak(message: string) {

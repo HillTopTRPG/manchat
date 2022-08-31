@@ -39,7 +39,10 @@ const preUserLogin = async (push: boolean, user_uuid?: string) => {
   const { user_token, room_uuid } = JSON.parse(localStorage.getItem(user_uuid || '') || '{}')
   if (user_token && room_uuid) {
     const { room_token } = JSON.parse(localStorage.getItem(room_uuid) || '{}')
-    const { data } = await axios.post(`/api/v1/users/${user_uuid}/token/${user_token}/check`, { room_uuid: props.room_uuid, room_token, })
+    const { data } = await axios.post(
+      `/api/v1/users/${user_uuid}/token/${user_token}/check`,
+      { room_uuid: props.room_uuid, room_token, }
+    )
     skipAble = data.verify === 'success'
     if (skipAble) {
       const name = props.auto_play ? 'play' : 'room-user'
@@ -92,7 +95,10 @@ await (async () => {
 
   if (!loggedIn) {
     const result = await axios.get(`/api/v1/rooms/${props.room_uuid}`)
-    router.replace({ name: 'lobby', query: { r: result.data?.uuid, u: props.user_uuid, n: props.user_name, p: props.user_password } }).then()
+    router.replace({
+      name: 'lobby',
+      query: { r: result.data?.uuid, u: props.user_uuid, n: props.user_name, p: props.user_password }
+    }).then()
   }
 })()
 
@@ -166,7 +172,10 @@ const userLogin = async () => {
     user_token = verified ? data.token : ''
     if (!verified) {
       if (data.reason === 'expire_room_token') {
-        router.replace({ name: 'lobby', query: { r: props.room_uuid, n: userName.value, p: userPassword.value } }).then()
+        router.replace({
+          name: 'lobby',
+          query: { r: props.room_uuid, n: userName.value, p: userPassword.value }
+        }).then()
         return
       }
       loginAlertText.value = `Un supported error. ${data.reason}`
@@ -189,7 +198,7 @@ const copy = (text: string) => {
   copiedNotify.value = false
   navigator.clipboard.writeText(text)
     .then(() => {
-      console.log("Text copied to clipboard...")
+      console.log('Text copied to clipboard...')
     })
     .catch(err => {
       console.log('Something went wrong', err);
@@ -204,7 +213,7 @@ const copy = (text: string) => {
   }, 100)
 }
 
-const inviteUrl = location.host + router.resolve({ name: "room", params: { room_uuid: props.room_uuid } })?.href
+const inviteUrl = location.host + router.resolve({ name: 'room', params: { room_uuid: props.room_uuid } })?.href
 
 const gotoPlay = () => {
   router.push({ name: 'play', params: { room_uuid: props.room_uuid, user_uuid: props.user_uuid } }).then()
@@ -212,29 +221,38 @@ const gotoPlay = () => {
 </script>
 
 <template>
-  <v-list class="ma-4">
+  <v-list class='ma-4'>
     <v-list-item @click='copy(inviteUrl)'>
       <template #prepend>
         <v-icon>mdi-account-plus</v-icon>
         部屋への招待URL
       </template>
-      <span class="ml-5">{{ inviteUrl }}</span>
-      <v-icon class="ml-1">mdi-content-copy</v-icon>
-      <v-tooltip v-model="copiedNotify" v-if="copiedNotify" location="right">
-        <template v-slot:activator="{ props }">
-          <span v-bind="props"></span>
+      <span class='ml-5' style='white-space: nowrap;'>{{ inviteUrl }}</span>
+      <v-icon class='ml-1'>mdi-content-copy</v-icon>
+      <v-tooltip v-model='copiedNotify' v-if='copiedNotify' location='right'>
+        <template v-slot:activator='{ props }'>
+          <span v-bind='props'></span>
         </template>
         <span>コピーしました</span>
       </v-tooltip>
     </v-list-item>
   </v-list>
 
-  <v-btn class="ma-4" color="yellow-accent-1" elevation="3" location="top" v-if="user_uuid" @click="gotoPlay()" size="x-large" prepend-icon="mdi-dice-multiple">プレイ</v-btn>
+  <v-btn
+    class='ma-4'
+    color='yellow-accent-1'
+    elevation='3'
+    location='top'
+    v-if='user_uuid'
+    @click='gotoPlay()'
+    size='x-large'
+    prepend-icon='mdi-dice-multiple'
+  >プレイ</v-btn>
 
   <v-dialog :model-value='loginDialog'>
     <v-card class='mx-auto mt-5 pa-3' :loading='loading'>
-      <v-card-title v-text='userUuid !== undefined ? existsUserName : "新規参入"' />
-      <v-card-subtitle v-text='"ログイン"' />
+      <v-card-title v-text='userUuid !== undefined ? existsUserName : "新しいユーザー"' />
+      <v-card-subtitle>ログイン</v-card-subtitle>
       <v-card-text>
         <v-alert
           colored-border

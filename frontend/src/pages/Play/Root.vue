@@ -1,14 +1,16 @@
 <script setup lang='ts'>
 import provideAll from '~/data/Play'
-provideAll()
 
 import Main from './Main.vue'
 
-defineProps<{
+const props = defineProps<{
+  room_uuid: string;
   user_uuid: string;
 }>()
+
+provideAll(props.room_uuid)
 </script>
 
 <template>
-  <Main :user_uuid='user_uuid' />
+  <Main :room_uuid='room_uuid' :user_uuid='user_uuid' />
 </template>

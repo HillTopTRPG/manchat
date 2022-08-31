@@ -84,7 +84,10 @@ const roomLoginFunc = async (room_uuid?: string) => {
   let room_token = ''
   if (room_uuid !== undefined) {
     const { token } = JSON.parse(localStorage.getItem(room_uuid) || '{}')
-    const { data } = await axios.post(`/api/v1/rooms/${room_uuid}/login`, { password: roomPassword.value, room_token: token })
+    const { data } = await axios.post(
+      `/api/v1/rooms/${room_uuid}/login`,
+      { password: roomPassword.value, room_token: token }
+    )
     loading.value = false
     if (data.verify !== 'success') {
       loginAlertType.value = 'error'
@@ -102,13 +105,13 @@ const roomLoginFunc = async (room_uuid?: string) => {
         password: roomPassword.value,
       }
     })
-    console.log(JSON.stringify(data, null, "  "))
+    console.log(JSON.stringify(data, null, '  '))
     loading.value = false
     room_token = data.room_token
     room_uuid = data.room.uuid
   }
 
-  console.log(JSON.stringify({room_uuid, room_token}, null, "  "))
+  console.log(JSON.stringify({room_uuid, room_token}, null, '  '))
   localStorage.setItem(room_uuid || '', JSON.stringify( { room_token }))
   router.push({
     name: 'room',
@@ -129,7 +132,7 @@ defineExpose({
     <v-row :no-gutters='true'>
       <v-col>
         <v-card class='overflow-auto' max-height='100%' height='calc(100vh - 80px)' :loading='!roomState.state.ready'>
-          <v-table :fixed-header='true' class="h-100" v-if='roomState.state.ready'>
+          <v-table :fixed-header='true' class='h-100' v-if='roomState.state.ready'>
             <thead>
             <tr>
               <th class='text-right'>#</th>
@@ -141,12 +144,12 @@ defineExpose({
             </thead>
             <tbody>
             <tr v-for='room in roomState.state.rooms' :key='room.uuid'>
-              <td class="text-center" style="min-width: 70px; box-sizing: border-box;">
+              <td class='text-center' style='min-width: 70px; box-sizing: border-box;'>
                 <v-checkbox
-                  :model-value="roomState.state.favoriteRooms.some(uuid => uuid === room.uuid)"
+                  :model-value='roomState.state.favoriteRooms.some(uuid => uuid === room.uuid)'
                   true-icon='mdi-star'
                   false-icon='mdi-star-outline'
-                  @click="roomState.changeRoomFavorite(room.uuid)"
+                  @click='roomState.changeRoomFavorite(room.uuid)'
                 />
               </td>
               <td>
@@ -216,7 +219,13 @@ defineExpose({
           class='mb-5'
           v-if='loginAlertText'
         ></v-alert>
-        <v-text-field prepend-icon='mdi-home-variant' v-model='createRoomName' append-icon='empty' label='部屋名' :autofocus='true'></v-text-field>
+        <v-text-field
+          prepend-icon='mdi-home-variant'
+          v-model='createRoomName'
+          append-icon='empty'
+          label='部屋名'
+          :autofocus='true'
+        />
         <v-text-field
           prepend-icon='mdi-lock'
           :append-icon='showPassword ? "mdi-eye" : "mdi-eye-off"'
@@ -228,7 +237,14 @@ defineExpose({
           ref='userPasswordInput'
         ></v-text-field>
         <v-card-actions>
-          <v-btn color='primary' variant='flat' @click='roomLoginFunc()' :loading='loading' :disabled='!createRoomName' append-icon='mdi-shape-rectangle-plus'>新規登録</v-btn>
+          <v-btn
+            color='primary'
+            variant='flat'
+            @click='roomLoginFunc()'
+            :loading='loading'
+            :disabled='!createRoomName'
+            append-icon='mdi-shape-rectangle-plus'
+          >新規登録</v-btn>
           <v-btn color='secondary' variant='flat' @click='createRoomDialog = false'>キャンセル</v-btn>
         </v-card-actions>
       </v-card-text>

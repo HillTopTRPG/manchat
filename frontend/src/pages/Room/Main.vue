@@ -1,7 +1,7 @@
 <script setup lang='ts'>
 import { InjectionKeySymbol as userKey, StoreType as UserStore } from '~/data/user'
 import { InjectionKeySymbol as roomKey, StoreType as RoomStore } from '~/data/room'
-import {computed, inject, readonly, watch} from 'vue'
+import { computed, inject, readonly, watch } from 'vue'
 const userState = inject(userKey) as UserStore
 const roomState = inject(roomKey) as RoomStore
 
@@ -41,13 +41,18 @@ watch(() => props.user_uuid, () => {
 })
 
 const gotoLobby = () => {
-  router.push({ name: 'lobby' })
+  router.push({ name: 'lobby' }).then()
+}
+
+const logout = () => {
+  router.push({ name: 'room', params: { room_uuid: props.room_uuid } }).then()
+  selectedUser.value.splice(0, selectedUser.value.length)
 }
 </script>
 
 <template>
   <v-layout>
-    <v-app-bar prominent elevation='1' density="compact">
+    <v-app-bar prominent elevation='1' density='compact'>
       <v-app-bar-nav-icon variant='text' @click.stop='drawer = !drawer' :icon='drawer ? "mdi-chevron-right" : "mdi-chevron-left"'></v-app-bar-nav-icon>
       <v-avatar image='https://quoridorn.com/img/mascot/normal/mascot_normal.png' class='ml-3' />
       <v-toolbar-title>
@@ -59,45 +64,59 @@ const gotoLobby = () => {
       <v-btn variant='text' icon='mdi-brightness-6' @click='toggleTheme'></v-btn>
     </v-app-bar>
 
-    <v-navigation-drawer v-model="drawer2" :rail='drawer' rail-width="80" :permanent="true">
+    <v-navigation-drawer v-model='drawer2' :rail='drawer' rail-width='80' :permanent='true'>
       <v-list nav :selected='readonly(selectedUser)'>
-        <v-list-item @click="gotoLobby">
+        <v-list-item @click='gotoLobby'>
           <template #prepend>
-            <v-icon size="x-large" class="mr-2">mdi-home-group</v-icon>
+            <v-icon size='x-large' class='mr-2'>mdi-home-group</v-icon>
           </template>
-          <transition name="fade">
-            <v-list-item-title class="pl-7" v-if="!drawer">ロビー</v-list-item-title>
+          <transition name='fade'>
+            <v-list-item-title class='pl-7' v-if='!drawer'>ロビー</v-list-item-title>
           </transition>
         </v-list-item>
+
+        <v-list-item @click='logout()' v-if='user_uuid'>
+          <template #prepend>
+            <v-icon size='x-large' class='mr-2'>mdi-logout-variant</v-icon>
+          </template>
+          <transition name='fade'>
+            <v-list-item-title class='pl-7' v-if='!drawer'>ユーザーログアウト</v-list-item-title>
+          </transition>
+        </v-list-item>
+
         <v-divider />
-        <v-list-subheader>{{ drawer ? 'Log in' : 'ログインユーザー' }}</v-list-subheader>
-        <v-list-item @click='contentRef.addUser()' v-if="!user_uuid">
+
+        <v-list-subheader v-if='user_uuid'>{{ drawer ? 'User' : 'ユーザー' }}</v-list-subheader>
+        <v-list-subheader v-else>{{ drawer ? 'Log in' : 'ユーザーログイン' }}</v-list-subheader>
+
+        <v-list-item @click='contentRef.addUser()' v-if='!user_uuid'>
           <template #prepend>
-            <v-icon size="x-large" class="mr-2">mdi-login-variant</v-icon>
+            <v-icon size='x-large' class='mr-2'>mdi-login-variant</v-icon>
           </template>
-          <transition name="fade">
-            <v-list-item-title class="pl-7" v-if="!drawer">新しいユーザー</v-list-item-title>
+          <transition name='fade'>
+            <v-list-item-title class='pl-7' v-if='!drawer'>新しいユーザー</v-list-item-title>
           </transition>
         </v-list-item>
+
         <v-list-item
           v-for='user in userState.state.users'
           :key='user.uuid'
           :value='user.uuid'
           @click='contentRef.loginUser(user.uuid)'
-          class="py-2"
+          class='py-2'
         >
           <template #prepend>
-            <v-badge color="red-accent-1" bordered location="right top" content="GM" style="box-sizing: border-box">
-              <v-badge color="text-grey-darken-3" location="right bottom" icon="mdi-circle">
+            <v-badge color='red-accent-1' bordered location='right top' content='GM' style='box-sizing: border-box'>
+              <v-badge color='text-grey-darken-3' location='right bottom' icon='mdi-circle'>
                 <template #badge>
-                  <v-icon class="text-grey-darken-5">mdi-circle</v-icon>
+                  <v-icon class='text-grey-darken-5'>mdi-circle</v-icon>
                 </template>
-                <v-icon class="pa-5 bg-cyan-accent-1" size="x-large" style="border-radius: 50%">mdi-account</v-icon>
+                <v-icon class='pa-5 bg-cyan-accent-1' size='x-large' style='border-radius: 50%'>mdi-account</v-icon>
               </v-badge>
             </v-badge>
           </template>
-          <transition name="fade">
-            <v-list-item-title class="pl-7" v-if="!drawer">{{user.name}}</v-list-item-title>
+          <transition name='fade'>
+            <v-list-item-title class='pl-7' v-if='!drawer'>{{user.name}}</v-list-item-title>
           </transition>
         </v-list-item>
       </v-list>

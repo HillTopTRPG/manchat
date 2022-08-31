@@ -39,44 +39,44 @@ const contentRef = ref()
       </v-list>
       <v-list density='compact'>
         <v-list-subheader>お気に入り</v-list-subheader>
-        <template v-for="favoriteRoomId in roomState.state.favoriteRooms" :key="favoriteRoomId">
+        <template v-for='favoriteRoomUuid in roomState.state.favoriteRooms' :key='favoriteRoomUuid'>
           <v-list-item
             class='px-2 py-0'
-            :disabled="!roomState.state.rooms.some(r => r.uuid === favoriteRoomId)"
-            :value="`favorite-${favoriteRoomId}`"
-            @click="contentRef.login(favoriteRoomId)"
+            :disabled='!roomState.state.rooms.some(r => r.uuid === favoriteRoomUuid)'
+            :value='`favorite-${favoriteRoomUuid}`'
+            @click='contentRef.login(favoriteRoomUuid)'
           >
             <template #prepend>
-              <v-icon color="accent" class='ml-3 mr-1' :icon='roomState.state.rooms.some(r => r.id === favoriteRoomId) ? "mdi-folder-home" : "mdi-home-alert"'></v-icon>
+              <v-icon color='accent' class='ml-3 mr-1' :icon='roomState.state.rooms.some(r => r.uuid === favoriteRoomUuid) ? "mdi-folder-home" : "mdi-home-alert"'></v-icon>
             </template>
             <v-list-item-title>
-              #{{favoriteRoomId}} {{roomState.state.rooms.find(r => r.id === favoriteRoomId)?.name || 'もう存在しない'}}
+              #{{roomState.state.rooms.find(r => r.uuid === favoriteRoomUuid)?.id || ''}} {{roomState.state.rooms.find(r => r.uuid === favoriteRoomUuid)?.name || 'もう存在しない'}}
             </v-list-item-title>
           </v-list-item>
         </template>
-        <v-list-item prepend-icon='empty' v-if="roomState.state.favoriteRooms.length === 0">なし</v-list-item>
+        <v-list-item prepend-icon='empty' v-if='roomState.state.favoriteRooms.length === 0'>なし</v-list-item>
         <v-divider class='my-2' />
         <v-list-subheader>過去に入室した部屋</v-list-subheader>
-        <template v-for="loggedInRoomId in roomState.state.loggedInRooms" :key="loggedInRoomId">
+        <template v-for='loggedInRoomUuid in roomState.state.loggedInRooms' :key='loggedInRoomUuid'>
           <v-list-item
             class='px-2 py-0'
-            :disabled="!roomState.state.rooms.some(r => r.uuid === loggedInRoomId)"
-            :value="`logged-in-${loggedInRoomId}`"
-            @click="contentRef.login(loggedInRoomId)"
+            :disabled='!roomState.state.rooms.some(r => r.uuid === loggedInRoomUuid)'
+            :value='`logged-in-${loggedInRoomUuid}`'
+            @click='contentRef.login(loggedInRoomUuid)'
           >
             <template #prepend>
-              <v-icon color="accent" class='ml-3 mr-1' :icon='roomState.state.rooms.some(r => r.id === loggedInRoomId) ? "mdi-folder-home" : "mdi-home-alert"'></v-icon>
+              <v-icon color='accent' class='ml-3 mr-1' :icon='roomState.state.rooms.some(r => r.uuid === loggedInRoomUuid) ? "mdi-folder-home" : "mdi-home-alert"'></v-icon>
             </template>
             <v-list-item-title>
-              #{{loggedInRoomId}} {{roomState.state.rooms.find(r => r.id === loggedInRoomId)?.name || 'もう存在しない'}}
+              #{{roomState.state.rooms.find(r => r.uuid === loggedInRoomUuid)?.id || ''}} {{roomState.state.rooms.find(r => r.uuid === loggedInRoomUuid)?.name || 'もう存在しない'}}
             </v-list-item-title>
           </v-list-item>
         </template>
-        <v-list-item prepend-icon='empty' v-if="roomState.state.loggedInRooms.length === 0">なし</v-list-item>
+        <v-list-item prepend-icon='empty' v-if='roomState.state.loggedInRooms.length === 0'>なし</v-list-item>
       </v-list>
     </v-navigation-drawer>
 
-    <v-app-bar prominent elevation='1' density="compact">
+    <v-app-bar prominent elevation='1' density='compact'>
       <v-app-bar-nav-icon variant='text' @click.stop='drawer = !drawer'></v-app-bar-nav-icon>
 
       <v-avatar image='https://quoridorn.com/img/mascot/normal/mascot_normal.png' class='ml-3' />
@@ -93,7 +93,7 @@ const contentRef = ref()
         :user_name='user_name'
         :user_password='user_password'
         :auto_play='auto_play'
-        ref="contentRef"
+        ref='contentRef'
       />
     </v-main>
   </v-layout>
