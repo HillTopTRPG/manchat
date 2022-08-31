@@ -11,16 +11,40 @@ const router = createRouter({
       path: '/lobby',
       name: 'lobby',
       component: Lobby,
-      props: route => ({ room_id: route.query.r, user_id: route.query.u, user_name: route.query.n, user_password: route.query.p })
+      props: r => ({
+        room_uuid: r.query.r,
+        user_uuid: r.query.u,
+        user_name: r.query.n,
+        user_password: r.query.p,
+        auto_play: r.query.auto_play,
+      })
     },
     {
       path: '/r/:room_uuid',
       name: 'room',
       component: Room,
-      props: route => ({ room_uuid: route.params.room_uuid, user_id: route.query.u, user_name: route.query.n, user_password: route.query.p })
+      props: r => ({
+        room_uuid: r.params.room_uuid,
+        user_uuid: r.query.u,
+        user_name: r.query.n,
+        user_password: r.query.p,
+        auto_play: r.query.auto_play,
+      })
     },
     {
-      path: '/p/:user_uuid',
+      path: '/r/:room_uuid/u/:user_uuid',
+      name: 'room-user',
+      component: Room,
+      props: route => ({
+        room_uuid: route.params.room_uuid,
+        user_uuid: route.params.user_uuid,
+        user_name: route.query.n,
+        user_password: route.query.p,
+        auto_play: route.query.auto_play,
+      })
+    },
+    {
+      path: '/r/:room_uuid/u/:user_uuid/p',
       name: 'play',
       component: Play,
       props: true

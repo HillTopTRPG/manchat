@@ -4,11 +4,12 @@ export default function RoomStore() {
   const state = reactive<{
     ready: boolean;
     autoSynchronize: boolean;
-    favoriteRooms: number[];
-    loggedInRooms: number[];
+    favoriteRooms: string[];
+    loggedInRooms: string[];
     rooms: {
       id: number;
       name: string;
+      uuid: string;
       last_logged_in: Date;
       created_at: Date;
       updated_at: Date;
@@ -30,32 +31,28 @@ export default function RoomStore() {
     try {
       state.rooms.splice(0, state.rooms.length)
       const response: { data: any } = await axios.get("http://localhost:81/api/v1/rooms.json")
-        .catch((err: any) => {
-        })
       state.rooms.push(...response.data)
       state.loggedInRooms
-        .filter(fid => !state.rooms.some(r => r.id === fid))
-        .forEach(dId => {
-          state.loggedInRooms.splice(state.loggedInRooms.findIndex(id => id === dId), 1)
-          const roomNoKey = `room:${dId}`
-          const localStorageData = localStorage.getItem(roomNoKey)
+        .filter(fUuid => !state.rooms.some(r => r.uuid === fUuid))
+        .forEach(dUuid => {
+          state.loggedInRooms.splice(state.loggedInRooms.findIndex(id => id === dUuid), 1)
+          const localStorageData = localStorage.getItem(dUuid)
           if (localStorageData) {
-            const { uuid } = JSON.parse(localStorageData)
-            localStorage.removeItem(uuid)
+            const { id } = JSON.parse(localStorageData)
+            localStorage.removeItem(`room:${id}`)
           }
-          localStorage.removeItem(roomNoKey)
+          localStorage.removeItem(dUuid)
         })
       state.favoriteRooms
-        .filter(fid => !state.rooms.some(r => r.id === fid))
-        .forEach(dId => {
-          state.favoriteRooms.splice(state.favoriteRooms.findIndex(id => id === dId), 1)
-          const roomNoKey = `room:${dId}`
-          const localStorageData = localStorage.getItem(roomNoKey)
+        .filter(fUuid => !state.rooms.some(r => r.uuid === fUuid))
+        .forEach(dUuid => {
+          state.favoriteRooms.splice(state.favoriteRooms.findIndex(uuid => uuid === dUuid), 1)
+          const localStorageData = localStorage.getItem(dUuid)
           if (localStorageData) {
-            const { uuid } = JSON.parse(localStorageData)
-            localStorage.removeItem(uuid)
+            const { id } = JSON.parse(localStorageData)
+            localStorage.removeItem(`room:${id}`)
           }
-          localStorage.removeItem(roomNoKey)
+          localStorage.removeItem(dUuid)
         })
     } catch (err) {
       console.log(JSON.stringify(err, null, "  "))
@@ -83,19 +80,19 @@ export default function RoomStore() {
     const key = localStorage.key(i)
     if (!key) continue
     if (!key.match(/room:[0-9]+/)) continue
-    const roomId = parseInt(key.replace('room:', ''))
-    state.loggedInRooms.push(roomId)
+    const { uuid } = JSON.parse(localStorage.getItem(key) || '{}')
+    state.loggedInRooms.push(uuid)
   }
   state.loggedInRooms.sort()
 
   watch(() => state.favoriteRooms, () => localStorage.setItem('favorite-rooms', JSON.stringify(state.favoriteRooms)), { deep: true })
-  const changeRoomFavorite = (roomId: number) => {
-    if (state.favoriteRooms.some(id => id === roomId)) {
-      state.favoriteRooms.splice(state.favoriteRooms.findIndex(id => id === roomId), 1)
+  const changeRoomFavorite = (room_uuid: string) => {
+    if (state.favoriteRooms.some(uuid => uuid === room_uuid)) {
+      state.favoriteRooms.splice(state.favoriteRooms.findIndex(uuid => uuid === room_uuid), 1)
     } else {
-      state.favoriteRooms.push(roomId)
+      state.favoriteRooms.push(room_uuid)
     }
-    state.favoriteRooms.sort((id1, id2) => id1 > id2 ? 1 : -1)
+    state.favoriteRooms.sort((uuid1, uuid2) => (state.rooms.find(r => r.uuid === uuid1)?.id || 0) > (state.rooms.find(r => r.uuid === uuid2)?.id || 0) ? 1 : -1)
   }
 
   const cable: any = inject('cable')
@@ -108,7 +105,7 @@ export default function RoomStore() {
           state.rooms.push(data.data)
         }
         if (data.type === "destroy-data") {
-          state.rooms.splice(state.rooms.findIndex(r => r.id === data.id), 1)
+          state.rooms.splice(state.rooms.findIndex(r => r.uuid === data.uuid), 1)
         }
       }
     },

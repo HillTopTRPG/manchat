@@ -2,8 +2,9 @@
 import SplitPanesLayer, { Layout } from '~/components/SplitPanesLayer.vue'
 
 const props = defineProps<{
-  user_uuid: string
-  layout: Layout
+  room_uuid: string;
+  user_uuid: string;
+  layout: Layout;
 }>()
 
 import { useRouter } from 'vue-router'
@@ -12,37 +13,43 @@ const router = useRouter()
 import { inject } from 'vue'
 const axios = inject('axios') as any
 
-let userToken = ''
 await (async () => {
   let loggedIn = false
-  const localStorageUserDataString = localStorage.getItem(props.user_uuid)
-  if (localStorageUserDataString) {
-    const { user_token, room_uuid, user_id } = JSON.parse(localStorageUserDataString)
-    const localStorageRoomDataString = localStorage.getItem(room_uuid)
-    const room_token = (localStorageRoomDataString ? JSON.parse(localStorageRoomDataString) : null)?.token
-    userToken = user_token
-    const result = await axios.post(`/api/v1/token/verify/users`, { room_uuid, user_uuid: props.user_uuid, user_token, room_token, })
-    loggedIn = result.data.verify === 'success'
+
+  const { room_token } = JSON.parse(localStorage.getItem(props.room_uuid) || '{}')
+  if (room_token) {
+    const { data } = await axios.post(`/api/v1/rooms/${props.room_uuid}/token/${room_token}/check`)
+    loggedIn = data.verify === 'success'
     if (!loggedIn) {
-      const hasReason = (reason: string) => result.data.reasons.some((r: string) => r === reason)
+      router.replace({ name: 'lobby', query: { r: props.room_uuid, u: props.user_uuid, auto_play: 1, } }).then()
+      return
+    }
+  }
+
+  const { user_token } = JSON.parse(localStorage.getItem(props.user_uuid) || '{}')
+  if (user_token) {
+    const { data } = await axios.post(`/api/v1/users/${props.user_uuid}/token/${user_token}/check`, { room_uuid: props.room_uuid, room_token, })
+    loggedIn = data.verify === 'success'
+    if (!loggedIn) {
+      const hasReason = (reason: string) => data.reasons.some((r: string) => r === reason)
       if (hasReason("different_room_uuid") || hasReason("not_found_room")) {
         router.replace({ name: 'lobby' }).then()
         return
       }
-      const query: any = { r: result.data.room_id, u: result.data.user_id }
+      const query: any = { r: props.room_uuid, u: props.user_uuid }
       if (hasReason("expired_room_token")) {
         router.replace({ name: 'lobby', query }).then()
         return
       }
       if (hasReason("not_found_user") || hasReason("expired_user_token")) {
-        router.replace({ name: 'room', query, params: { room_uuid } }).then()
+        router.replace({ name: 'room-user', params: { room_uuid: props.room_uuid, user_uuid: props.user_uuid, }, query: { auto_play: 1 } }).then()
         return
       }
     }
   }
 
   if (!loggedIn) {
-    const result = await axios.get(`/api/v1/users/u/${props.user_uuid}`)
+    const result = await axios.get(`/api/v1/users/${props.user_uuid}`)
     if (result.data) {
       const room_uuid = result.data.room_uuid
       const u = result.data.id
@@ -87,6 +94,7 @@ const fgx = (val: number) => {
       color='teal-darken-4'
       image='https://picsum.photos/1920/1080?random'
       :title='`Room: ${user_uuid}`'
+      elevation="1"
     >
       <template #image>
         <v-img gradient='to top right, rgba(19,84,122,.8), rgba(128,208,199,.8)'></v-img>

@@ -5,7 +5,7 @@ provideAll()
 import Main from './Main.vue'
 
 defineProps<{
-  user_uuid: string
+  user_uuid: string;
 }>()
 </script>
 

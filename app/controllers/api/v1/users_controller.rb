@@ -1,13 +1,18 @@
 class Api::V1::UsersController < ApplicationController
-  before_action :set_api_v1_user, only: %i[ show edit update verify destroy ]
+  before_action :set_api_v1_user, only: %i[ show edit update destroy ]
 
   # GET /api/v1/users or /api/v1/users.json
   def index
-    @api_v1_users = Api::V1::User.all
+    @api_v1_users = []
+    if params[:room_uuid].nil?
+      @api_v1_users = Api::V1::User.all
+    else
+      @api_v1_users = Api::V1::User.where(:room_uuid => params[:room_uuid])
+    end
 
     respond_to do |format|
       format.html { render :index }
-      format.json { render json: @api_v1_users.to_json(:except => [:password, :uuid]) }
+      format.json { render json: @api_v1_users.to_json(:except => [:password]) }
     end
   end
 
@@ -27,7 +32,7 @@ class Api::V1::UsersController < ApplicationController
   # POST /api/v1/users
   def create
     result = {}
-    token_row = Api::V1::Token.valid.room(params[:room_token]).first
+    token_row = Api::V1::Token.valid.check_room(params[:api_v1_user][:room_uuid], params[:room_token])
     if token_row.nil?
       result[:verify] = "failed"
       result[:reason] = "expire_room_token"
@@ -69,34 +74,40 @@ class Api::V1::UsersController < ApplicationController
   end
 
   # POST /api/v1/users/1/verify
-  def verify
+  def login
     result = {}
-    token_row = Api::V1::Token.valid.room(params[:room_token]).first
+    token_row = Api::V1::Token.valid.check_room(params[:room_uuid], params[:room_token])
     if token_row.nil?
       result[:verify] = "failed"
       result[:reason] = "expire_room_token"
     else
-      if BCrypt::Password.new(@api_v1_user.password).is_password?(params[:password])
-        if @api_v1_user.room_uuid != token_row[:room_uuid]
-          result[:verify] = "failed"
-          result[:reason] = "different_room_uuid"
-        else
-          api_v1_token = Api::V1::Token.new(:target_type => 'user', :room_uuid => @api_v1_user.room_uuid, :user_uuid => @api_v1_user.uuid)
-          api_v1_token.save
-          result[:verify] = "success"
-          result[:token] = api_v1_token.token
-          result[:uuid] = @api_v1_user.uuid
-        end
-      else
+      api_v1_user = Api::V1::User.find_by(:uuid => params[:user_uuid])
+      if api_v1_user.nil?
         result[:verify] = "failed"
-        result[:reason] = "invalid_password"
+        result[:reason] = "no_such_user"
+      else
+        if BCrypt::Password.new(api_v1_user.password).is_password?(params[:password])
+          if api_v1_user.room_uuid != params[:room_uuid]
+            result[:verify] = "failed"
+            result[:reason] = "different_room_uuid"
+          else
+            api_v1_token = Api::V1::Token.new(:target_type => 'user', :room_uuid => params[:room_uuid], :user_uuid => params[:user_uuid])
+            api_v1_token.save
+            result[:verify] = "success"
+            result[:token] = api_v1_token.token
+            result[:uuid] = api_v1_user.uuid
+          end
+        else
+          result[:verify] = "failed"
+          result[:reason] = "invalid_password"
+        end
       end
     end
     render json: result
   end
 
   # POST /api/v1/token/verify/users
-  def verifyToken
+  def check_token
     result = { :verify => "success", :reasons => [] }
     room_token_row = Api::V1::Token.valid.find_by(:target_type => "room", :room_uuid => params[:room_uuid], :token => params[:room_token])
     if room_token_row.nil?
@@ -129,9 +140,13 @@ class Api::V1::UsersController < ApplicationController
     render json: result
   end
 
-  def detailByUUid
+  def detail
     api_v1_user = Api::V1::User.find_by(:uuid => params[:user_uuid])
-    render json: api_v1_user.to_json(:except => ["password"])
+    if api_v1_user.nil?
+      render json: nil
+    else
+      render json: api_v1_user.to_json(:except => ['password'])
+    end
   end
 
   # DELETE /api/v1/users/1 or /api/v1/users/1.json

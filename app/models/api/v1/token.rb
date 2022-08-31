@@ -4,14 +4,14 @@ class Api::V1::Token < ApplicationRecord
   }
 
   def self.valid
-    where("updated_at > ?", Time.zone.now.ago(Settings.token.ttl.second))
+    where('updated_at > ?', Time.zone.now.ago(Settings.token.ttl.second))
   end
 
-  def self.room(room_token)
-    where(:target_type => "room", :token => room_token)
+  def self.check_room(room_uuid, room_token)
+    find_by(:target_type => 'room', :room_uuid => room_uuid, :token => room_token)
   end
 
-  def self.user(user_token)
-    where(:target_type => "user", :token => user_token)
+  def self.check_user(room_uuid, user_uuid, user_token)
+    find_by(:target_type => 'user', :room_uuid => room_uuid, :user_uuid => user_uuid, :token => user_token)
   end
 end

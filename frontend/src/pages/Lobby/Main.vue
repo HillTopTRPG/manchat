@@ -4,10 +4,11 @@ import { inject } from 'vue'
 const roomState = inject(roomKey) as RoomStore
 
 defineProps<{
-  room_id?: string;
-  user_id?: string;
+  room_uuid?: string;
+  user_uuid?: string;
   user_name?: string;
   user_password?: string;
+  auto_play?: number;
 }>()
 
 import Contents from '~/pages/Lobby/Contents.vue'
@@ -23,18 +24,11 @@ const toggleTheme = () => {
 import { ref } from 'vue'
 const drawer = ref(false)
 const contentRef = ref()
-
-const loginRoom = (roomId: number) => {
-  contentRef.value.login(roomId)
-}
 </script>
 
 <template>
   <v-layout>
-    <v-navigation-drawer
-      v-model='drawer'
-      :temporary='true'
-    >
+    <v-navigation-drawer v-model='drawer' :temporary='true'>
       <v-list>
         <v-list-item class='px-2 py-0'>
           <template #prepend>
@@ -48,9 +42,9 @@ const loginRoom = (roomId: number) => {
         <template v-for="favoriteRoomId in roomState.state.favoriteRooms" :key="favoriteRoomId">
           <v-list-item
             class='px-2 py-0'
-            :disabled="!roomState.state.rooms.some(r => r.id === favoriteRoomId)"
+            :disabled="!roomState.state.rooms.some(r => r.uuid === favoriteRoomId)"
             :value="`favorite-${favoriteRoomId}`"
-            @click="loginRoom(favoriteRoomId)"
+            @click="contentRef.login(favoriteRoomId)"
           >
             <template #prepend>
               <v-icon color="accent" class='ml-3 mr-1' :icon='roomState.state.rooms.some(r => r.id === favoriteRoomId) ? "mdi-folder-home" : "mdi-home-alert"'></v-icon>
@@ -66,9 +60,9 @@ const loginRoom = (roomId: number) => {
         <template v-for="loggedInRoomId in roomState.state.loggedInRooms" :key="loggedInRoomId">
           <v-list-item
             class='px-2 py-0'
-            :disabled="!roomState.state.rooms.some(r => r.id === loggedInRoomId)"
+            :disabled="!roomState.state.rooms.some(r => r.uuid === loggedInRoomId)"
             :value="`logged-in-${loggedInRoomId}`"
-            @click="loginRoom(loggedInRoomId)"
+            @click="contentRef.login(loggedInRoomId)"
           >
             <template #prepend>
               <v-icon color="accent" class='ml-3 mr-1' :icon='roomState.state.rooms.some(r => r.id === loggedInRoomId) ? "mdi-folder-home" : "mdi-home-alert"'></v-icon>
@@ -82,7 +76,7 @@ const loginRoom = (roomId: number) => {
       </v-list>
     </v-navigation-drawer>
 
-    <v-app-bar prominent elevation='0'>
+    <v-app-bar prominent elevation='1' density="compact">
       <v-app-bar-nav-icon variant='text' @click.stop='drawer = !drawer'></v-app-bar-nav-icon>
 
       <v-avatar image='https://quoridorn.com/img/mascot/normal/mascot_normal.png' class='ml-3' />
@@ -93,7 +87,14 @@ const loginRoom = (roomId: number) => {
       <v-btn variant='text' icon='mdi-brightness-6' @click='toggleTheme'></v-btn>
     </v-app-bar>
     <v-main>
-      <contents :room_id='room_id' :user_id='user_id' :user_name='user_name' :user_password='user_password' ref="contentRef" />
+      <Contents
+        :room_uuid='room_uuid'
+        :user_uuid='user_uuid'
+        :user_name='user_name'
+        :user_password='user_password'
+        :auto_play='auto_play'
+        ref="contentRef"
+      />
     </v-main>
   </v-layout>
 </template>

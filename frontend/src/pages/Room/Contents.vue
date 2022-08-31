@@ -1,25 +1,28 @@
 <script setup lang='ts'>
 const props = defineProps<{
   room_uuid: string;
-  user_id?: string;
+  user_uuid?: string;
   user_name?: string;
   user_password?: string;
+  auto_play?: number;
 }>()
 
 import { useRouter } from 'vue-router'
 const router = useRouter()
 
-import { inject } from 'vue'
+import {inject, watch} from 'vue'
 const axios = inject('axios') as any
 
-let roomToken = ''
+watch(() => props.user_uuid, () => {
+  console.log(props.user_uuid)
+}, { immediate: true })
+
 let user_token = ''
-let user_uuid = ''
 
 import { computed, ref } from 'vue'
-const users = ref<{ id: number; name: string; }[]>([]);
-const userId = ref<number | undefined>(undefined)
-const existsUserName = computed(() => users.value.find(u => u.id === userId.value)?.name || "")
+const users = ref<{ id: number; uuid: string; name: string; }[]>([])
+const userUuid = ref<string | undefined>(undefined)
+const existsUserName = computed(() => users.value.find(u => u.uuid === userUuid.value)?.name || '')
 const loginDialog = ref(false)
 const userName = ref('')
 const userPassword = ref('')
@@ -30,45 +33,49 @@ const loginAlertIcon = ref('$info')
 const loginAlertText = ref('')
 const userPasswordInput = ref<HTMLInputElement>()
 
-const preUserLogin = async (push: boolean, id?: number) => {
-  if (id === undefined) return false
+const preUserLogin = async (push: boolean, user_uuid?: string) => {
+  if (user_uuid === undefined) return false
   let skipAble = false
-  const localStorageUserDataString = localStorage.getItem(`user:${id}`)
-  if (localStorageUserDataString) {
-    const { user_uuid, user_token } = JSON.parse(localStorageUserDataString)
-    const localStorageRoomDataString = localStorage.getItem(props.room_uuid)
-    const room_token = (localStorageRoomDataString ? JSON.parse(localStorageRoomDataString) : null)?.token
-    const result = await axios.post(`/api/v1/token/verify/users`, { room_uuid: props.room_uuid, user_uuid, user_token, room_token, })
-    skipAble = result.data.verify === 'success'
+  const { user_token, room_uuid } = JSON.parse(localStorage.getItem(user_uuid || '') || '{}')
+  if (user_token && room_uuid) {
+    const { room_token } = JSON.parse(localStorage.getItem(room_uuid) || '{}')
+    const { data } = await axios.post(`/api/v1/users/${user_uuid}/token/${user_token}/check`, { room_uuid: props.room_uuid, room_token, })
+    skipAble = data.verify === 'success'
     if (skipAble) {
-      if (push) {
-        router.push({ name: 'play', params: { user_uuid } }).then()
-      } else {
-        router.replace({ name: 'play', params: { user_uuid } }).then()
-      }
-      return skipAble
+      const name = props.auto_play ? 'play' : 'room-user'
+      const params = { room_uuid: props.room_uuid, user_uuid, }
+      if (push) router.push({ name, params }).then()
+      else router.replace({ name, params }).then()
+      loginDialog.value = false
     }
   }
   return skipAble
 }
 
+defineExpose({
+  addUser: () => {
+    showUserLogin().then()
+  },
+  loginUser: (user_uuid: string) => {
+    showUserLogin(user_uuid).then()
+  },
+})
+
 await (async () => {
   let loggedIn = false
-  const localStorageDataString = localStorage.getItem(props.room_uuid)
-  if (localStorageDataString) {
-    const { token, room_id } = JSON.parse(localStorageDataString)
-    roomToken = token
-    const result = await axios.post(`/api/v1/token/verify/rooms`, { room_uuid: props.room_uuid, token, })
-    loggedIn = result.data.verify === 'success'
+  const { room_token } = JSON.parse(localStorage.getItem(props.room_uuid) || '{}')
+  if (room_token) {
+    const { data } = await axios.post(`/api/v1/rooms/${props.room_uuid}/token/${room_token}/check`)
+    loggedIn = data.verify === 'success'
     if (loggedIn) {
-      users.value.push(...result.data.users)
-      if (props.user_id !== undefined) {
-        userId.value = parseInt(props.user_id)
-        if (!users.value.some(u => u.id === parseInt(props.user_id || '0'))) {
+      users.value.push(...data.users)
+      if (props.user_uuid !== undefined) {
+        userUuid.value = props.user_uuid
+        if (!users.value.some(u => u.uuid === props.user_uuid)) {
           router.replace({ name: 'room', params: { room_uuid: props.room_uuid } }).then()
           return
         } else {
-          if (await preUserLogin(false, parseInt(props.user_id))) return
+          if (await preUserLogin(false, props.user_uuid)) return
           loginDialog.value = true
         }
       }
@@ -84,14 +91,14 @@ await (async () => {
   }
 
   if (!loggedIn) {
-    const result = await axios.get(`/api/v1/rooms/u/${props.room_uuid}`)
-    router.replace({ name: 'lobby', query: { r: result.data?.id, u: props.user_id, n: props.user_name, p: props.user_password } }).then()
+    const result = await axios.get(`/api/v1/rooms/${props.room_uuid}`)
+    router.replace({ name: 'lobby', query: { r: result.data?.uuid, u: props.user_uuid, n: props.user_name, p: props.user_password } }).then()
   }
 })()
 
-const showUserLogin = async (id?: number) => {
-  if (await preUserLogin(true, id)) return
-  userId.value = id
+const showUserLogin = async (user_uuid?: string) => {
+  if (await preUserLogin(true, user_uuid)) return
+  userUuid.value = user_uuid
   loginDialog.value = true
   loginAlertText.value = ''
   loading.value = false
@@ -100,26 +107,31 @@ const showUserLogin = async (id?: number) => {
 
 const userLogin = async () => {
   loginAlertText.value = ''
-  user_uuid = ''
-  if (userId.value !== undefined) {
+  let user_uuid = ''
+  const { room_token } = JSON.parse(localStorage.getItem(props.room_uuid) || '{}')
+  if (userUuid.value !== undefined) {
     loading.value = true
     loginAlertType.value = 'info'
     loginAlertText.value = 'ログイン中'
-    const result = await axios.post(`/api/v1/users/${userId.value}/verify`, { password: userPassword.value, room_token: roomToken, })
-    const verified = result.data.verify === 'success'
-    user_uuid = verified ? result.data.uuid : ''
-    user_token = verified ? result.data.token : ''
+    const { data } = await axios.post(`/api/v1/users/${userUuid.value}/login`, {
+      password: userPassword.value,
+      room_uuid: props.room_uuid,
+      room_token,
+    })
+    const verified = data.verify === 'success'
+    user_uuid = verified ? data.uuid : ''
+    user_token = verified ? data.token : ''
     if (!verified) {
       loading.value = false
-      if (result.data.reason === 'expire_room_token') {
+      if (data.reason === 'expire_room_token') {
         loginAlertType.value = 'error'
         loginAlertText.value = '部屋トークンが有効期限切れです'
       }
-      if (result.data.reason === 'different_room_uuid') {
+      if (data.reason === 'different_room_uuid') {
         loginAlertType.value = 'error'
         loginAlertText.value = '違う部屋のユーザーにログインしようとしました'
       }
-      if (result.data.reason === 'invalid_password') {
+      if (data.reason === 'invalid_password') {
         loginAlertType.value = 'error'
         loginAlertText.value = 'ユーザーパスワードが違います'
         userPasswordInput.value?.select()
@@ -140,67 +152,88 @@ const userLogin = async () => {
     loading.value = true
     loginAlertType.value = 'info'
     loginAlertText.value = 'ログイン中'
-    const result = await axios.post(`/api/v1/users`, {
+    const { data } = await axios.post(`/api/v1/users`, {
       api_v1_user: {
         name: userName.value,
         password: userPassword.value,
         room_uuid: props.room_uuid,
       },
-      room_token: roomToken,
+      room_token,
     })
-    const verified = result.data.verify === 'success'
-    userId.value = verified ? result.data.user.id : undefined
-    user_uuid = verified ? result.data.user.uuid : ''
-    user_token = verified ? result.data.token : ''
+    console.log(JSON.stringify(data, null, '  '))
+    const verified = data.verify === 'success'
+    user_uuid = verified ? data.user.uuid : ''
+    user_token = verified ? data.token : ''
     if (!verified) {
-      if (result.data.reason === 'expire_room_token') {
-        router.replace({ name: 'lobby', query: { r: result.data.room_id, n: userName.value, p: userPassword.value } })
-      } else loginAlertText.value = `Un supported error. ${result.data.reason}`
+      if (data.reason === 'expire_room_token') {
+        router.replace({ name: 'lobby', query: { r: props.room_uuid, n: userName.value, p: userPassword.value } }).then()
+        return
+      }
+      loginAlertText.value = `Un supported error. ${data.reason}`
       loading.value = false
       userPasswordInput.value?.select()
       return
     }
   }
-  localStorage.setItem(user_uuid, JSON.stringify({ user_token, room_uuid: props.room_uuid, user_id: userId.value }))
-  localStorage.setItem(`user:${userId.value}`, JSON.stringify({ user_uuid, user_token }))
-  router.push({ name: 'play', params: { user_uuid } }).then()
+  localStorage.setItem(user_uuid, JSON.stringify({ user_token, room_uuid: props.room_uuid }))
+  router.push({
+    name: props.auto_play ? 'play' : 'room-user',
+    params: { room_uuid: props.room_uuid, user_uuid }
+  }).then()
+  loginDialog.value = false
+}
+
+const copiedNotify = ref(false)
+let copyToolTipTimeoutId: number | undefined = undefined
+const copy = (text: string) => {
+  copiedNotify.value = false
+  navigator.clipboard.writeText(text)
+    .then(() => {
+      console.log("Text copied to clipboard...")
+    })
+    .catch(err => {
+      console.log('Something went wrong', err);
+    })
+  setTimeout(() => {
+    copiedNotify.value = true
+    if (copyToolTipTimeoutId !== undefined) clearTimeout(copyToolTipTimeoutId)
+    copyToolTipTimeoutId = setTimeout(() => {
+      copiedNotify.value = false
+      copyToolTipTimeoutId = undefined
+    }, 2000)
+  }, 100)
+}
+
+const inviteUrl = location.host + router.resolve({ name: "room", params: { room_uuid: props.room_uuid } })?.href
+
+const gotoPlay = () => {
+  router.push({ name: 'play', params: { room_uuid: props.room_uuid, user_uuid: props.user_uuid } }).then()
 }
 </script>
 
 <template>
-  <v-container class='h-100'>
-    <v-row :no-gutters='true'>
-      <v-col>
-        <v-card class='overflow-auto' max-height='100%'>
-          <v-table :fixed-header='true' height='calc(100vh - 158px)'>
-            <thead>
-            <tr>
-              <th class='text-left' style='width: 100%'>ユーザー名</th>
-              <th class='text-left text-right'>
-                <v-btn append-icon='mdi-shape-rectangle-plus' color='primary' @click='showUserLogin()'>新規参入</v-btn>
-              </th>
-            </tr>
-            </thead>
-            <tbody>
-            <tr v-for='user in users' :key='user.id'>
-              <td>
-                <v-card elevation='0' variant='text' class='mb-2'>
-                  <v-card-title>{{user.name}}</v-card-title>
-                </v-card>
-              </td>
-              <td class='text-right'>
-                <v-btn append-icon='mdi-login' color='secondary' @click='showUserLogin(user.id)'>入室</v-btn>
-              </td>
-            </tr>
-            </tbody>
-          </v-table>
-        </v-card>
-      </v-col>
-    </v-row>
-  </v-container>
+  <v-list class="ma-4">
+    <v-list-item @click='copy(inviteUrl)'>
+      <template #prepend>
+        <v-icon>mdi-account-plus</v-icon>
+        部屋への招待URL
+      </template>
+      <span class="ml-5">{{ inviteUrl }}</span>
+      <v-icon class="ml-1">mdi-content-copy</v-icon>
+      <v-tooltip v-model="copiedNotify" v-if="copiedNotify" location="right">
+        <template v-slot:activator="{ props }">
+          <span v-bind="props"></span>
+        </template>
+        <span>コピーしました</span>
+      </v-tooltip>
+    </v-list-item>
+  </v-list>
+
+  <v-btn class="ma-4" color="yellow-accent-1" elevation="3" location="top" v-if="user_uuid" @click="gotoPlay()" size="x-large" prepend-icon="mdi-dice-multiple">プレイ</v-btn>
+
   <v-dialog :model-value='loginDialog'>
     <v-card class='mx-auto mt-5 pa-3' :loading='loading'>
-      <v-card-title v-text='userId !== undefined ? existsUserName : "新規参入"' />
+      <v-card-title v-text='userUuid !== undefined ? existsUserName : "新規参入"' />
       <v-card-subtitle v-text='"ログイン"' />
       <v-card-text>
         <v-alert
@@ -216,13 +249,13 @@ const userLogin = async () => {
         <v-text-field
           v-model='userName'
           append-icon='empty'
-          :autofocus='userId === undefined'
+          :autofocus='userUuid === undefined'
           @keydown.esc='loginDialog = false'
           @keydown.enter='userPasswordInput.focus()'
-          v-if='userId === undefined'
+          v-if='userUuid === undefined'
         >
           <template #label>
-            <v-icon icon='mdi-account-circle'></v-icon>ユーザー名
+            <v-icon>mdi-account-circle</v-icon>ユーザー名
           </template>
         </v-text-field>
         <v-text-field
@@ -232,11 +265,11 @@ const userLogin = async () => {
           @click:append='userShowPassword = !userShowPassword'
           @keydown.enter='userLogin'
           @keydown.esc='loginDialog = false'
-          :autofocus='userId !== undefined'
+          :autofocus='userUuid !== undefined'
           ref='userPasswordInput'
         >
           <template #label>
-            <v-icon icon='mdi-lock'></v-icon>パスワード
+            <v-icon>mdi-lock</v-icon>パスワード
           </template>
         </v-text-field>
         <v-card-actions>
@@ -245,9 +278,9 @@ const userLogin = async () => {
             variant='flat'
             @click='userLogin'
             :loading='loading'
-            :disabled='userId === undefined && (!userName || users.some(u => u.name === userName))'
-            :append-icon='userId === undefined ? "mdi-account-plus" : "mdi-login"'
-          >{{userId === undefined ? '新規登録' : 'ログイン'}}</v-btn>
+            :disabled='userUuid=== undefined && (!userName || users.some(u => u.name === userName))'
+            :append-icon='userUuid === undefined ? "mdi-account-plus" : "mdi-login"'
+          >{{userUuid === undefined ? '新規登録' : 'ログイン'}}</v-btn>
           <v-btn color='secondary' variant='flat' @click='loginDialog = false'>キャンセル</v-btn>
         </v-card-actions>
       </v-card-text>

@@ -3,7 +3,8 @@ import Contents from './Contents.vue'
 import defaultLayout from './DefaultLayout';
 
 defineProps<{
-  user_uuid: string
+  room_uuid: string;
+  user_uuid: string;
 }>()
 
 import { useTheme } from 'vuetify'
@@ -17,6 +18,6 @@ const toggleTheme = () => {
 
 <template>
   <suspense>
-    <Contents :layout='defaultLayout' :user_uuid='user_uuid' />
+    <Contents :layout='defaultLayout' :room_uuid='room_uuid' :user_uuid='user_uuid' />
   </suspense>
 </template>

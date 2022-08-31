@@ -1,13 +1,19 @@
 <script setup lang='ts'>
-defineProps<{
+import { InjectionKeySymbol as userKey, StoreType as UserStore } from '~/data/user'
+import { InjectionKeySymbol as roomKey, StoreType as RoomStore } from '~/data/room'
+import {computed, inject, readonly, watch} from 'vue'
+const userState = inject(userKey) as UserStore
+const roomState = inject(roomKey) as RoomStore
+
+const props = defineProps<{
   room_uuid: string;
-  user_id?: string;
+  user_uuid?: string;
   user_name?: string;
   user_password?: string;
+  auto_play?: number;
 }>()
 
 import Contents from '~/pages/Room/Contents.vue'
-import RoomName from '~/pages/Room/RoomName.vue'
 
 import { useTheme } from 'vuetify'
 const theme = useTheme()
@@ -17,37 +23,112 @@ const toggleTheme = () => {
   localStorage.setItem('view.theme', theme.global.name.value)
 }
 
+import { useRouter } from 'vue-router'
+const router = useRouter()
+
 import { ref } from 'vue'
 const drawer = ref(false)
+const drawer2 = ref(true)
+const contentRef = ref()
+const roomData = computed(() => roomState.state.rooms.find(r => r.uuid === props.room_uuid))
+
+const selectedUser = ref<string[]>(props.user_uuid ? [props.user_uuid] : [])
+
+watch(() => props.user_uuid, () => {
+  if (props.user_uuid) {
+    selectedUser.value.splice(0, selectedUser.value.length, props.user_uuid)
+  }
+})
+
+const gotoLobby = () => {
+  router.push({ name: 'lobby' })
+}
 </script>
 
 <template>
   <v-layout>
-    <v-navigation-drawer v-model='drawer' :temporary='true'>
-      <v-list>
-        <v-list-item class='px-2 py-0'>
+    <v-app-bar prominent elevation='1' density="compact">
+      <v-app-bar-nav-icon variant='text' @click.stop='drawer = !drawer' :icon='drawer ? "mdi-chevron-right" : "mdi-chevron-left"'></v-app-bar-nav-icon>
+      <v-avatar image='https://quoridorn.com/img/mascot/normal/mascot_normal.png' class='ml-3' />
+      <v-toolbar-title>
+        部屋
+        <template v-if='roomData'>#{{ roomData?.id || '' }} - {{ roomData?.name || '' }}</template>
+        <template v-if='userState.state.users.some(u => u.uuid === user_uuid)'> > {{ userState.state.users.find(u => u.uuid === user_uuid)?.name }}</template>
+      </v-toolbar-title>
+      <v-spacer></v-spacer>
+      <v-btn variant='text' icon='mdi-brightness-6' @click='toggleTheme'></v-btn>
+    </v-app-bar>
+
+    <v-navigation-drawer v-model="drawer2" :rail='drawer' rail-width="80" :permanent="true">
+      <v-list nav :selected='readonly(selectedUser)'>
+        <v-list-item @click="gotoLobby">
           <template #prepend>
-            <v-btn icon='mdi-menu' elevation='0' @click='drawer = false'></v-btn>
+            <v-icon size="x-large" class="mr-2">mdi-home-group</v-icon>
           </template>
-          <v-avatar image='https://quoridorn.com/img/mascot/normal/mascot_normal.png' class='ml-3' />
+          <transition name="fade">
+            <v-list-item-title class="pl-7" v-if="!drawer">ロビー</v-list-item-title>
+          </transition>
+        </v-list-item>
+        <v-divider />
+        <v-list-subheader>{{ drawer ? 'Log in' : 'ログインユーザー' }}</v-list-subheader>
+        <v-list-item @click='contentRef.addUser()' v-if="!user_uuid">
+          <template #prepend>
+            <v-icon size="x-large" class="mr-2">mdi-login-variant</v-icon>
+          </template>
+          <transition name="fade">
+            <v-list-item-title class="pl-7" v-if="!drawer">新しいユーザー</v-list-item-title>
+          </transition>
+        </v-list-item>
+        <v-list-item
+          v-for='user in userState.state.users'
+          :key='user.uuid'
+          :value='user.uuid'
+          @click='contentRef.loginUser(user.uuid)'
+          class="py-2"
+        >
+          <template #prepend>
+            <v-badge color="red-accent-1" bordered location="right top" content="GM" style="box-sizing: border-box">
+              <v-badge color="text-grey-darken-3" location="right bottom" icon="mdi-circle">
+                <template #badge>
+                  <v-icon class="text-grey-darken-5">mdi-circle</v-icon>
+                </template>
+                <v-icon class="pa-5 bg-cyan-accent-1" size="x-large" style="border-radius: 50%">mdi-account</v-icon>
+              </v-badge>
+            </v-badge>
+          </template>
+          <transition name="fade">
+            <v-list-item-title class="pl-7" v-if="!drawer">{{user.name}}</v-list-item-title>
+          </transition>
         </v-list-item>
       </v-list>
     </v-navigation-drawer>
 
-    <v-app-bar prominent elevation='0'>
-      <v-app-bar-nav-icon variant='text' @click.stop='drawer = !drawer'></v-app-bar-nav-icon>
-
-      <v-avatar image='https://quoridorn.com/img/mascot/normal/mascot_normal.png' class='ml-3' />
-      <v-toolbar-title>部屋<suspense><room-name :room_uuid='room_uuid'/></suspense></v-toolbar-title>
-
-      <v-spacer></v-spacer>
-
-      <v-btn variant='text' icon='mdi-brightness-6' @click='toggleTheme'></v-btn>
-    </v-app-bar>
     <v-main>
       <suspense>
-        <contents :room_uuid='room_uuid' :user_id='user_id' :user_name='user_name' :user_password='user_password' />
+        <contents
+          :room_uuid='room_uuid'
+          :user_uuid='user_uuid'
+          :user_name='user_name'
+          :user_password='user_password'
+          :auto_play='auto_play'
+          ref='contentRef'
+        />
       </suspense>
     </v-main>
   </v-layout>
 </template>
+
+<style deep lang='css'>
+.v-list-item__prepend > .v-icon {
+  margin-right: 5px;
+}
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.5s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+</style>

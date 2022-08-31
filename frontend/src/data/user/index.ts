@@ -1,34 +1,34 @@
 import { reactive, InjectionKey, inject } from "vue"
 
-export default function UserStore() {
+export default function UserStore(room_uuid: string) {
 
   const state = reactive<{
-    json: {
+    users: {
       id: number;
       uuid: string;
       name: string;
-      password: string;
       room_uuid: string;
       last_logged_in: Date;
       created_at: Date;
       updated_at: Date;
     }[];
   }>({
-    json: []
+    users: []
   })
 
   const axios: any = inject('axios')
   axios
-    .get("http://localhost:81/api/v1/users.json")
+    .get(`http://localhost:81/api/v1/users.json?room_uuid=${room_uuid}`)
     .then((response: { data: any }) => {
-      state.json.push(...response.data)
+      state.users.push(...response.data)
+      console.log(JSON.stringify(state.users, null, '  '))
     })
     .catch((err: any) => {
       console.log(JSON.stringify(err, null, "  "))
     })
 
   const cable: any = inject('cable')
-  const channel = cable.subscriptions.create({ channel: "RoomChannel", room_uuid: "room-001" }, {
+  const channel = cable.subscriptions.create({ channel: "RoomChannel", room_uuid }, {
     connected() {
       console.log("- RoomChannel Connected ----------at user")
     },
@@ -40,6 +40,12 @@ export default function UserStore() {
     received(data: any) {
       console.log("- RoomChannel Received ----------")
       console.log(JSON.stringify(data, null, "  "))
+      if (data.type === "create-data") {
+        state.users.push(data.data)
+      }
+      if (data.type === "destroy-data") {
+        state.users.splice(state.users.findIndex(r => r.uuid === data.uuid), 1)
+      }
       console.log("- RoomChannel Received ----------")
     },
 

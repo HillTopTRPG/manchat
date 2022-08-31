@@ -1,5 +1,5 @@
 class Api::V1::RoomsController < ApplicationController
-  before_action :set_api_v1_room, only: %i[ show edit update verify destroy ]
+  before_action :set_api_v1_room, only: %i[ edit update destroy ]
 
   # GET /api/v1/rooms or /api/v1/rooms.json
   def index
@@ -7,41 +7,29 @@ class Api::V1::RoomsController < ApplicationController
 
     respond_to do |format|
       format.html { render :index }
-      format.json { render json: @api_v1_rooms.to_json(:except => [:password, :uuid]) }
+      format.json { render json: @api_v1_rooms.to_json(:except => [:password]) }
     end
   end
 
-  # GET /api/v1/rooms/1 or /api/v1/rooms/1.json
-  def show
-    respond_to do |format|
-      format.html { render :show }
-      format.json { render json: @api_v1_room.to_json(:except => [:password, :uuid]) }
+  # GET /api/v1/rooms/:room_uuid
+  def detail
+    api_v1_room = Api::V1::Room.find_by(:uuid => params[:room_uuid])
+    if api_v1_room.nil?
+      render json: nil
+    else
+      render json: api_v1_room.to_json(:except => ['password'])
     end
   end
 
-  # GET /api/v1/rooms/new
-  def new
-    @api_v1_room = Api::V1::Room.new
-  end
-
-  # GET /api/v1/rooms/1/edit
-  def edit
-  end
-
-  # POST /api/v1/rooms or /api/v1/rooms.json
+  # POST /api/v1/rooms
   def create
-    @api_v1_room = Api::V1::Room.new(api_v1_room_params)
-
-    respond_to do |format|
-      if @api_v1_room.save
-        api_v1_token = Api::V1::Token.new(:target_type => 'room', :room_uuid => @api_v1_room.uuid)
-        api_v1_token.save
-        format.html { redirect_to api_v1_rooms_path, notice: "Room was successfully created." }
-        format.json { render json: {:token => api_v1_token.token, :room => @api_v1_room}.to_json(:only => [:token, :room, :id, :uuid, :name]), status: :created }
-      else
-        format.html { render :new, status: :unprocessable_entity }
-        format.json { render json: @api_v1_room.errors, status: :unprocessable_entity }
-      end
+    api_v1_room = Api::V1::Room.new(api_v1_room_params)
+    if api_v1_room.save
+      api_v1_token = Api::V1::Token.new(:target_type => 'room', :room_uuid => api_v1_room.uuid)
+      api_v1_token.save
+      render json: {:room_token => api_v1_token.token, :room => api_v1_room}.to_json(:only => [:room_token, :room, :id, :uuid, :name])
+    else
+      render json: api_v1_room.errors
     end
   end
 
@@ -58,37 +46,42 @@ class Api::V1::RoomsController < ApplicationController
     end
   end
 
-  # POST /api/v1/rooms/1/verify
-  def verify
-    verified = BCrypt::Password.new(@api_v1_room.password).is_password?(params[:password])
+  # POST api/v1/rooms/:room_uuid/login
+  def login
+    result = { :verify => 'failed' }
 
-    result = { :verify => verified ? "success" : "failed" }
-    if verified
-      api_v1_token = Api::V1::Token.new(:target_type => 'room', :room_uuid => @api_v1_room.uuid)
-      api_v1_token.save
-      result[:token] = api_v1_token.token
-      result[:uuid] = @api_v1_room.uuid
-      result[:users] = Api::V1::User.select(:id, :name).where(:room_uuid => @api_v1_room.uuid)
-    end
-    render json: result
-  end
-
-  # POST /api/v1/token/verify/rooms
-  def verifyToken
-    token_row = Api::V1::Token.valid.find_by(:target_type => "room", :room_uuid => params[:room_uuid], :token => params[:token])
-    result = { :verify => "success" }
-    if token_row.nil?
-      result[:verify] = "failed"
-      result[:reason] = "expired_room_token"
+    api_v1_room = Api::V1::Room.find_by(:uuid => params[:room_uuid])
+    if api_v1_room.nil?
+      result[:reason] = 'no_such_room_uuid'
     else
-      result[:users] = Api::V1::User.select(:id, :name).where(:room_uuid => params[:room_uuid])
+      if BCrypt::Password.new(api_v1_room.password).is_password?(params[:password])
+        result[:verify] = 'success'
+        api_v1_token = Api::V1::Token.valid.find_by(:target_type => "room", :room_uuid => params[:room_uuid], :token => params[:room_token])
+        if api_v1_token.nil?
+          api_v1_token = Api::V1::Token.new(:target_type => 'room', :room_uuid => params[:room_uuid])
+          api_v1_token.save
+        end
+        result[:room_token] = api_v1_token.token
+        result[:users] = Api::V1::User.select(:id, :uuid, :name).where(:room_uuid => params[:room_uuid])
+      else
+        result[:reason] = 'invalid_password'
+      end
     end
     render json: result
   end
 
-  def detailByUUid
-    @api_v1_room = Api::V1::Room.find_by(:uuid => params[:room_uuid])
-    render json: @api_v1_room.to_json(:except => ["password"])
+  # POST api/v1/rooms/:room_uuid/token/:room_token/check
+  def check_token
+    result = {}
+    token_row = Api::V1::Token.valid.check_room(params[:room_uuid], params[:room_token])
+    if token_row.nil?
+      result[:verify] = 'failed'
+      result[:reason] = 'expired_room_token'
+    else
+      result[:verify] = 'success'
+      result[:users] = Api::V1::User.select(:id, :uuid, :name).where(:room_uuid => params[:room_uuid])
+    end
+    render json: result
   end
 
   # DELETE /api/v1/rooms/1 or /api/v1/rooms/1.json

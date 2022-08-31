@@ -16,7 +16,7 @@ const userState = inject(userKey) as UserStore
   <v-card
     class="mx-auto"
   >
-    <pre style="display: block"><code>{{ JSON.stringify(userState.state.json, null, "  ") }}</code></pre>
+    <pre style="display: block"><code>{{ JSON.stringify(userState.state.users, null, "  ") }}</code></pre>
     <span>{{counterState.state.count}}</span>
   </v-card>
   <v-text-field @keydown.enter="userState.speak($event.target.value);$event.target.value = ''" />
