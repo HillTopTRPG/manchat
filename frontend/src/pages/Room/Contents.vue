@@ -13,10 +13,6 @@ const router = useRouter()
 import {inject, watch} from 'vue'
 const axios = inject('axios') as any
 
-watch(() => props.user_uuid, () => {
-  console.log(props.user_uuid)
-}, { immediate: true })
-
 let user_token = ''
 
 import { computed, ref } from 'vue'
@@ -32,84 +28,96 @@ const loginAlertType = ref('error')
 const loginAlertIcon = ref('$info')
 const loginAlertText = ref('')
 const userPasswordInput = ref<HTMLInputElement>()
+const userLoggedInFlg = ref(false)
+let isInitialLogin = false
 
-const preUserLogin = async (push: boolean, user_uuid?: string) => {
+watch(() => props.user_uuid, () => {
+  console.log(props.user_uuid)
+  if (!props.user_uuid) {
+    userLoggedInFlg.value = false
+  }
+}, { immediate: true })
+
+const preUserLogin = async (user_uuid?: string) => {
   if (user_uuid === undefined) return false
-  let skipAble = false
   const { user_token, room_uuid } = JSON.parse(localStorage.getItem(user_uuid || '') || '{}')
+  console.log({ user_token, room_uuid })
   if (user_token && room_uuid) {
     const { room_token } = JSON.parse(localStorage.getItem(room_uuid) || '{}')
     const { data } = await axios.post(
       `/api/v1/users/${user_uuid}/token/${user_token}/check`,
       { room_uuid: props.room_uuid, room_token, }
     )
-    skipAble = data.verify === 'success'
-    if (skipAble) {
+    console.log(JSON.stringify(data, null, '  '))
+    if (data.verify === 'success') {
       const name = props.auto_play ? 'play' : 'room-user'
       const params = { room_uuid: props.room_uuid, user_uuid, }
-      if (push) router.push({ name, params }).then()
-      else router.replace({ name, params }).then()
+      userLoggedInFlg.value = true
       loginDialog.value = false
+      if (isInitialLogin) router.replace({ name, params }).then()
+      else router.push({ name, params }).then()
+      return true
     }
   }
-  return skipAble
+  return false
 }
 
 defineExpose({
   addUser: () => {
-    showUserLogin().then()
+    showUserLogin(false).then()
   },
   loginUser: (user_uuid: string) => {
-    showUserLogin(user_uuid).then()
+    showUserLogin(false, user_uuid).then()
   },
 })
 
-await (async () => {
-  let loggedIn = false
-  const { room_token } = JSON.parse(localStorage.getItem(props.room_uuid) || '{}')
-  if (room_token) {
-    const { data } = await axios.post(`/api/v1/rooms/${props.room_uuid}/token/${room_token}/check`)
-    loggedIn = data.verify === 'success'
-    if (loggedIn) {
-      users.value.push(...data.users)
-      if (props.user_uuid !== undefined) {
-        userUuid.value = props.user_uuid
-        if (!users.value.some(u => u.uuid === props.user_uuid)) {
-          router.replace({ name: 'room', params: { room_uuid: props.room_uuid } }).then()
-          return
-        } else {
-          if (await preUserLogin(false, props.user_uuid)) return
-          loginDialog.value = true
-        }
-      }
-      if (props.user_name !== undefined) {
-        userName.value = props.user_name
-        loginDialog.value = true
-
-        if (props.user_password !== undefined) {
-          userPassword.value = props.user_password
-        }
-      }
-    }
-  }
-
-  if (!loggedIn) {
-    const result = await axios.get(`/api/v1/rooms/${props.room_uuid}`)
-    router.replace({
-      name: 'lobby',
-      query: { r: result.data?.uuid, u: props.user_uuid, n: props.user_name, p: props.user_password }
-    }).then()
-  }
-})()
-
-const showUserLogin = async (user_uuid?: string) => {
-  if (await preUserLogin(true, user_uuid)) return
-  userUuid.value = user_uuid
+const showUserLogin = async (initialLogin: boolean, user_uuid?: string) => {
+  isInitialLogin = initialLogin
+  if (await preUserLogin(user_uuid)) return
   loginDialog.value = true
+  userUuid.value = user_uuid
   loginAlertText.value = ''
   loading.value = false
+  userName.value = ''
   userPassword.value = ''
 }
+
+await (async () => {
+  const { room_token } = JSON.parse(localStorage.getItem(props.room_uuid) || '{}')
+  const toLobbyQuery = {
+    r: props.room_uuid,
+    u: props.user_uuid,
+    n: props.user_name,
+    p: props.user_password,
+    auto_play: props.auto_play,
+  }
+  if (!room_token) {
+    // 部屋トークンが取得できない状況はロビーに戻す
+    router.replace({ name: 'lobby', query: toLobbyQuery, }).then()
+    return
+  }
+  const { data: roomsResult } = await axios.post(`/api/v1/rooms/${props.room_uuid}/token/${room_token}/check`)
+  console.log(JSON.stringify(roomsResult, null, '  '))
+  if (roomsResult.verify !== 'success') {
+    router.replace({ name: 'lobby', query: roomsResult.reason === 'no_such_room' ? undefined : toLobbyQuery }).then()
+    return
+  }
+
+  users.value.push(...roomsResult.users)
+  if (props.user_uuid !== undefined) {
+    if (!users.value.some(u => u.uuid === props.user_uuid)) {
+      router.replace({ name: 'room', params: { room_uuid: props.room_uuid } }).then()
+      return
+    }
+    await showUserLogin(true, props.user_uuid)
+  }
+  if (!userLoggedInFlg.value && props.user_uuid === undefined && props.user_name !== undefined) {
+    isInitialLogin = true
+    loginDialog.value = true
+    userName.value = props.user_name
+    userPassword.value = props.user_password || ''
+  }
+})()
 
 const userLogin = async () => {
   loginAlertText.value = ''
@@ -124,6 +132,7 @@ const userLogin = async () => {
       room_uuid: props.room_uuid,
       room_token,
     })
+    console.log(JSON.stringify(data, null, '  '))
     const verified = data.verify === 'success'
     user_uuid = verified ? data.uuid : ''
     user_token = verified ? data.token : ''
@@ -185,10 +194,16 @@ const userLogin = async () => {
     }
   }
   localStorage.setItem(user_uuid, JSON.stringify({ user_token, room_uuid: props.room_uuid }))
-  router.push({
+  const next = {
     name: props.auto_play ? 'play' : 'room-user',
     params: { room_uuid: props.room_uuid, user_uuid }
-  }).then()
+  }
+  if (isInitialLogin) {
+    router.replace(next).then()
+  } else {
+    router.push(next).then()
+  }
+  userLoggedInFlg.value = true
   loginDialog.value = false
 }
 
@@ -218,6 +233,11 @@ const inviteUrl = location.host + router.resolve({ name: 'room', params: { room_
 const gotoPlay = () => {
   router.push({ name: 'play', params: { room_uuid: props.room_uuid, user_uuid: props.user_uuid } }).then()
 }
+
+const loginDialogCancel = () => {
+  loginDialog.value = false
+  router.replace({ name: 'room', params: { room_uuid: props.room_uuid } }).then()
+}
 </script>
 
 <template>
@@ -243,7 +263,7 @@ const gotoPlay = () => {
     color='yellow-accent-1'
     elevation='3'
     location='top'
-    v-if='user_uuid'
+    v-if='userLoggedInFlg'
     @click='gotoPlay()'
     size='x-large'
     prepend-icon='mdi-dice-multiple'
@@ -299,7 +319,7 @@ const gotoPlay = () => {
             :disabled='userUuid=== undefined && (!userName || users.some(u => u.name === userName))'
             :append-icon='userUuid === undefined ? "mdi-account-plus" : "mdi-login"'
           >{{userUuid === undefined ? '新規登録' : 'ログイン'}}</v-btn>
-          <v-btn color='secondary' variant='flat' @click='loginDialog = false'>キャンセル</v-btn>
+          <v-btn color='secondary' variant='flat' @click='loginDialogCancel()'>キャンセル</v-btn>
         </v-card-actions>
       </v-card-text>
     </v-card>

@@ -3,8 +3,8 @@ import axios from "axios"
 
 async function fetch_verify(id, password) {
     try {
-        const res = await axios.post(`${id}/verify`, { password })
-        console.log(JSON.stringify(res.data))
+        const { data } = await axios.post(`${id}/verify`, { password })
+        console.log(JSON.stringify(data, null, '  '))
     } catch (err) { }
 }
 

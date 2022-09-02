@@ -29,6 +29,7 @@ const loginAlertIcon = ref('$info')
 const loginAlertText = ref('')
 const roomPasswordInput = ref<HTMLInputElement>()
 const userPasswordInput = ref<HTMLInputElement>()
+let isInitialLogin = false
 
 import { watch } from 'vue'
 watch(() => props.room_uuid, () => {
@@ -41,36 +42,36 @@ watch(() => roomState.state.ready, async () => {
       router.replace({ name: 'lobby' }).then()
       return
     }
-    if (await preRoomLogin(false, props.room_uuid)) return
-    loginDialog.value = true
+    showRoomLogin(true, props.room_uuid).then()
   }
 })
 
-const preRoomLogin = async (push: boolean, room_uuid: string) => {
-  let skipAble = false
+const preRoomLogin = async (room_uuid?: string) => {
+  if (room_uuid === undefined) return false
   const { room_token } = JSON.parse(localStorage.getItem(room_uuid) || '{}')
-  if (room_token) {
-    const { data } = await axios.post(`/api/v1/rooms/${room_uuid}/token/${room_token}/check`)
-    skipAble = data.verify === 'success'
-    if (skipAble) {
-      const next: RouteLocationRaw = {
-        name: 'room',
-        params: { room_uuid },
-        query: { u: props.user_uuid, n: props.user_name, p: props.user_password, auto_play: props.auto_play }
-      }
-      if (push) router.push(next).then()
-      else router.replace(next).then()
+  if (!room_token) return false
+  const { data } = await axios.post(`/api/v1/rooms/${room_uuid}/token/${room_token}/check`)
+  console.log(JSON.stringify(data, null, '  '))
+  if (data.verify === 'success') {
+    const next: RouteLocationRaw = {
+      name: 'room',
+      params: { room_uuid },
+      query: { u: props.user_uuid, n: props.user_name, p: props.user_password, auto_play: props.auto_play }
     }
+    if (isInitialLogin) router.replace(next).then()
+    else router.push(next).then()
+    return true
   }
-  return skipAble
+  return false
 }
 
-const showRoomLogin = async (room_uuid?: string) => {
+const showRoomLogin = async (initialLogin: boolean, room_uuid?: string) => {
+  isInitialLogin = initialLogin
   loginAlertText.value = ''
   loading.value = false
   roomPassword.value = ''
   if (room_uuid !== undefined) {
-    if (await preRoomLogin(true, room_uuid)) return
+    if (await preRoomLogin(room_uuid)) return
     loginDialog.value = true
     roomUuid.value = room_uuid
   } else {
@@ -88,6 +89,7 @@ const roomLoginFunc = async (room_uuid?: string) => {
       `/api/v1/rooms/${room_uuid}/login`,
       { password: roomPassword.value, room_token: token }
     )
+    console.log(JSON.stringify(data, null, '  '))
     loading.value = false
     if (data.verify !== 'success') {
       loginAlertType.value = 'error'
@@ -113,16 +115,18 @@ const roomLoginFunc = async (room_uuid?: string) => {
 
   console.log(JSON.stringify({room_uuid, room_token}, null, '  '))
   localStorage.setItem(room_uuid || '', JSON.stringify( { room_token }))
-  router.push({
+  const next = {
     name: 'room',
     params: { room_uuid },
     query: { u: props.user_uuid, n: props.user_name, p: props.user_password, auto_play: props.auto_play }
-  }).then()
+  }
+  if (isInitialLogin) router.replace(next).then()
+  else router.push(next).then()
 }
 
 defineExpose({
   login: (room_uuid: string) => {
-    showRoomLogin(room_uuid).then()
+    showRoomLogin(false, room_uuid).then()
   },
 })
 </script>
@@ -138,7 +142,7 @@ defineExpose({
               <th class='text-right'>#</th>
               <th class='text-left' style='width: 100%'>部屋名</th>
               <th class='text-left text-right'>
-                <v-btn append-icon='mdi-shape-rectangle-plus' color='primary' @click='showRoomLogin()'>新規作成</v-btn>
+                <v-btn append-icon='mdi-shape-rectangle-plus' color='primary' @click='showRoomLogin(false)'>新規作成</v-btn>
               </th>
             </tr>
             </thead>
@@ -159,7 +163,7 @@ defineExpose({
                 </v-card>
               </td>
               <td class='text-right'>
-                <v-btn append-icon='mdi-login' color='secondary' @click='showRoomLogin(room.uuid)'>入室</v-btn>
+                <v-btn append-icon='mdi-login' color='secondary' @click='showRoomLogin(false, room.uuid)'>入室</v-btn>
               </td>
             </tr>
             </tbody>

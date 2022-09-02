@@ -114,7 +114,7 @@ class Api::V1::UsersController < ApplicationController
       result[:verify] = "failed"
       api_v1_room = Api::V1::Room.find_by(:uuid => params[:room_uuid])
       if api_v1_room.nil?
-        result[:reasons] << "not_found_room"
+        result[:reasons] << "no_such_room"
       else
         result[:reasons] << "expired_room_token"
         result[:room_id] = api_v1_room[:id]
@@ -126,7 +126,7 @@ class Api::V1::UsersController < ApplicationController
       result[:verify] = "failed"
       api_v1_user = Api::V1::User.find_by(:uuid => params[:user_uuid])
       if api_v1_user.nil?
-        result[:reasons] << "not_found_user"
+        result[:reasons] << "no_such_user"
       else
         result[:reasons] << "expired_user_token"
         result[:user_id] = api_v1_user[:id]

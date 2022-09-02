@@ -14,56 +14,49 @@ import { inject } from 'vue'
 const axios = inject('axios') as any
 
 await (async () => {
-  let loggedIn = false
-
   const { room_token } = JSON.parse(localStorage.getItem(props.room_uuid) || '{}')
-  if (room_token) {
-    const { data } = await axios.post(`/api/v1/rooms/${props.room_uuid}/token/${room_token}/check`)
-    loggedIn = data.verify === 'success'
-    if (!loggedIn) {
-      router.replace({ name: 'lobby', query: { r: props.room_uuid, u: props.user_uuid, auto_play: 1, } }).then()
-      return
-    }
+  const toLobbyQuery = { r: props.room_uuid, u: props.user_uuid, auto_play: 1, }
+  if (!room_token) {
+    // 部屋トークンが取得できない状況はロビーに戻す
+    router.replace({ name: 'lobby', query: toLobbyQuery, }).then()
+    return
+  }
+  const { data: roomsData } = await axios.post(`/api/v1/rooms/${props.room_uuid}/token/${room_token}/check`)
+  console.log(JSON.stringify(roomsData, null, '  '))
+  if (roomsData.verify !== 'success') {
+    router.replace({ name: 'lobby', query: roomsData.reason === 'no_such_room' ? undefined : toLobbyQuery, }).then()
+    return
   }
 
   const { user_token } = JSON.parse(localStorage.getItem(props.user_uuid) || '{}')
-  if (user_token) {
-    const { data } = await axios.post(
-      `/api/v1/users/${props.user_uuid}/token/${user_token}/check`,
-      { room_uuid: props.room_uuid, room_token, }
-    )
-    loggedIn = data.verify === 'success'
-    if (!loggedIn) {
-      const hasReason = (reason: string) => data.reasons.some((r: string) => r === reason)
-      if (hasReason('different_room_uuid') || hasReason('not_found_room')) {
-        router.replace({ name: 'lobby' }).then()
-        return
-      }
-      const query: any = { r: props.room_uuid, u: props.user_uuid }
-      if (hasReason('expired_room_token')) {
-        router.replace({ name: 'lobby', query }).then()
-        return
-      }
-      if (hasReason('not_found_user') || hasReason('expired_user_token')) {
-        router.replace({
-          name: 'room-user',
-          params: { room_uuid: props.room_uuid, user_uuid: props.user_uuid, },
-          query: { auto_play: 1 }
-        }).then()
-        return
-      }
-    }
+  if (!user_token) {
+    // ユーザートークンが取得できない状況は部屋に戻す
+    router.replace({ name: 'room', params: { room_uuid: props.room_uuid }, query: { u: props.user_uuid, auto_play: 1, } }).then()
+    return
   }
-
-  if (!loggedIn) {
-    const result = await axios.get(`/api/v1/users/${props.user_uuid}`)
-    if (result.data) {
-      const room_uuid = result.data.room_uuid
-      const u = result.data.id
-      router.replace({ name: 'room', params: { room_uuid }, query: { u } }).then()
-    } else {
+  const { data: usersData } = await axios.post(
+    `/api/v1/users/${props.user_uuid}/token/${user_token}/check`,
+    { room_uuid: props.room_uuid, room_token, }
+  )
+  console.log(JSON.stringify(usersData, null, '  '))
+  if (usersData.verify !== 'success') {
+    const hasReason = (reason: string) => usersData.reasons.some((r: string) => r === reason)
+    if (hasReason('different_room_uuid') || hasReason('no_such_room')) {
       router.replace({ name: 'lobby' }).then()
+    } else if (hasReason('expired_room_token')) {
+      router.replace({ name: 'lobby', query: { r: props.room_uuid, u: props.user_uuid, auto_play: 1, }, }).then()
+    } else if (hasReason('no_such_user')) {
+      router.replace({ name: 'room', params: { room_uuid: props.room_uuid, }, }).then()
+    } else if (hasReason('expired_user_token')) {
+      router.replace({
+        name: 'room-user',
+        params: { room_uuid: props.room_uuid, user_uuid: props.user_uuid, },
+        query: { auto_play: 1 }
+      }).then()
+    } else {
+      router.replace({ name: 'room', params: { room_uuid: props.room_uuid, }, query: { u: props.user_uuid, auto_play: 1, } }).then()
     }
+    return
   }
 })()
 

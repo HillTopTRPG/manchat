@@ -42,8 +42,9 @@ export default function RoomStore() {
   const reloadRoomList = async () => {
     try {
       state.rooms.splice(0, state.rooms.length)
-      const response: { data: any } = await axios.get('http://localhost:81/api/v1/rooms.json')
-      state.rooms.push(...response.data)
+      const { data } = await axios.get('http://localhost:81/api/v1/rooms.json')
+      console.log(JSON.stringify(data, null, '  '))
+      state.rooms.push(...data)
       state.loggedInRooms
         .filter(room => !state.rooms.some(r => r.uuid === room))
         .forEach(dRoom => {

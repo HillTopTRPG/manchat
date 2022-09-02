@@ -1,9 +1,11 @@
 <script setup lang='ts'>
-import { InjectionKeySymbol as userKey, StoreType as UserStore } from '~/data/user'
-import { InjectionKeySymbol as roomKey, StoreType as RoomStore } from '~/data/room'
 import { computed, inject, readonly, watch } from 'vue'
-const userState = inject(userKey) as UserStore
+
+import { InjectionKeySymbol as roomKey, StoreType as RoomStore } from '~/data/room'
 const roomState = inject(roomKey) as RoomStore
+
+import { InjectionKeySymbol as userKey, StoreType as UserStore } from '~/data/user'
+const userState = inject(userKey) as UserStore
 
 const props = defineProps<{
   room_uuid: string;

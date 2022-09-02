@@ -73,13 +73,20 @@ class Api::V1::RoomsController < ApplicationController
   # POST api/v1/rooms/:room_uuid/token/:room_token/check
   def check_token
     result = {}
-    token_row = Api::V1::Token.valid.check_room(params[:room_uuid], params[:room_token])
-    if token_row.nil?
+    api_v1_room = Api::V1::Room.find_by(:uuid => params[:room_uuid])
+    if api_v1_room.nil?
       result[:verify] = 'failed'
-      result[:reason] = 'expired_room_token'
+      result[:reason] = 'no_such_room'
     else
-      result[:verify] = 'success'
-      result[:users] = Api::V1::User.select(:id, :uuid, :name).where(:room_uuid => params[:room_uuid])
+      token_row = Api::V1::Token.valid.check_room(params[:room_uuid], params[:room_token])
+      if token_row.nil?
+        result[:verify] = 'failed'
+        result[:reason] = 'expired_room_token'
+      else
+        result[:verify] = 'success'
+        result[:room] = api_v1_room.attributes.reject {|key| key == 'password'}
+        result[:users] = Api::V1::User.select(:id, :uuid, :name).where(:room_uuid => params[:room_uuid])
+      end
     end
     render json: result
   end
