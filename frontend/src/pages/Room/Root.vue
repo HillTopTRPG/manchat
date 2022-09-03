@@ -1,19 +1,13 @@
 <script setup lang='ts'>
 import Main from '~/pages/Room/Main.vue'
-import UserStore, { InjectionKeySymbol as UserKey } from '~/data/user'
-import RoomStore, { InjectionKeySymbol as RoomKey } from '~/data/room'
-import { provide } from 'vue'
 
-const props = defineProps<{
+defineProps<{
   room_uuid: string;
   user_uuid?: string;
   user_name?: string;
   user_password?: string;
   auto_play?: number;
 }>()
-
-provide(UserKey, UserStore(props.room_uuid))
-provide(RoomKey, RoomStore())
 </script>
 
 <template>
