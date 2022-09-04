@@ -10,11 +10,30 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2022_08_13_194232) do
+ActiveRecord::Schema[7.0].define(version: 2022_08_26_140545) do
+  create_table "api_v1_rooms", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
+    t.string "uuid"
+    t.string "name"
+    t.string "password"
+    t.datetime "last_logged_in"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+  end
+
+  create_table "api_v1_tokens", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
+    t.string "target_type"
+    t.string "room_uuid"
+    t.string "user_uuid"
+    t.string "token"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+  end
+
   create_table "api_v1_users", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
     t.string "uuid"
     t.string "name"
     t.string "password"
+    t.string "room_uuid"
     t.datetime "last_logged_in"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false

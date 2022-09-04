@@ -1,0 +1,26 @@
+<p style="color: green"><%= notice %></p>
+
+<h1>Tokens</h1>
+
+<table id="api_v1_tokens" class='basic-table'>
+  <thead>
+  <tr>
+    <th>id</th>
+    <th>target_type</th>
+    <th>room_uuid</th>
+    <th>user_uuid</th>
+    <th>token</th>
+    <th>created_at</th>
+    <th>updated_at</th>
+    <th>Edit</th>
+    <th>Delete</th>
+  </tr>
+  </thead>
+  <tbody>
+  <% @api_v1_tokens.each do |api_v1_token| %>
+    <%= render api_v1_token %>
+  <% end %>
+  </tbody>
+</table>
+
+<%= link_to "New token", new_api_v1_token_path %>

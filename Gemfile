@@ -74,4 +74,4 @@ end
 
 gem 'bcrypt', '~> 3.1.16'
 gem "jquery-rails"
-# gem 'rack-cors'
+gem 'config'

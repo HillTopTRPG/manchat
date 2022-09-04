@@ -5,28 +5,28 @@ import vue from '@vitejs/plugin-vue'
 import vuetify from 'vite-plugin-vuetify'
 
 // https://ja.vitejs.dev/config/
+//noinspection JSUnusedGlobalSymbols
 export default defineConfig({
-  // yarn dev（ビルド成果物を作らずに直接起動）で起動するときの設定
-  server: {
-    host: true, // 公開アドレスの生成に必要
-    port: 3120,
-    strictPort: true, // ポートがすでに使用されている場合に、次に使用可能なポートを自動的に試すことなく終了する
-    watch: { usePolling: true }
-  },
-  // yarn preview（yarn buildで生成されるdistフォルダ）で起動するときの設定
-  preview: {
-    host: true, // 公開アドレスの生成に必要
-    port: 3120,
-    strictPort: true // ポートがすでに使用されている場合に、次に使用可能なポートを自動的に試すことなく終了する
-  },
-  plugins: [
-		vue(),
-		vuetify({ autoImport: true }),
-  ],
-  resolve: {
-    alias: {
-      // @ts-ignore
-      "~/": `${__dirname}/src/`,
-    },
-  },
-})
+                              // yarn dev（ビルド成果物を作らずに直接起動）で起動するときの設定
+                              server : {
+                                host      : true, // 公開アドレスの生成に必要
+                                port      : 3120,
+                                strictPort: true, // ポートがすでに使用されている場合に、次に使用可能なポートを自動的に試すことなく終了する
+                                watch     : { usePolling: true },
+                                hmr       : false,
+                              }, // yarn preview（yarn buildで生成されるdistフォルダ）で起動するときの設定
+                              preview: {
+                                host      : true, // 公開アドレスの生成に必要
+                                port      : 3120,
+                                strictPort: true, // ポートがすでに使用されている場合に、次に使用可能なポートを自動的に試すことなく終了する
+                              },
+                              plugins: [
+                                vue(), vuetify({ autoImport: true }),
+                              ],
+                              resolve: {
+                                alias: {
+                                  // @ts-ignore
+                                  '~/': `${__dirname}/src/`,
+                                },
+                              },
+                            })

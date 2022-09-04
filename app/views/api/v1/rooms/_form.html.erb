@@ -1,0 +1,27 @@
+<%= form_with(model: api_v1_room) do |form| %>
+  <% if api_v1_room.errors.any? %>
+    <div style="color: red">
+      <h2><%= pluralize(api_v1_room.errors.count, "error") %> prohibited this api_v1_room from being saved:</h2>
+
+      <ul>
+        <% api_v1_room.errors.each do |error| %>
+          <li><%= error.full_message %></li>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
+
+  <div>
+    <%= form.label :name, style: "display: block" %>
+    <%= form.text_field :name %>
+  </div>
+
+  <div>
+    <%= form.label :password, style: "display: block" %>
+    <%= form.text_field :password %>
+  </div>
+
+  <div>
+    <%= form.submit %>
+  </div>
+<% end %>

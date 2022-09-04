@@ -1,12 +1,13 @@
 <p style="color: green"><%= notice %></p>
 
-<table id="api_v1_users">
+<table id="api_v1_users" class='basic-table'>
   <thead>
   <tr>
     <th>id</th>
     <th>Uuid</th>
     <th>Name</th>
     <th>Password</th>
+    <th>RoomUuid</th>
     <th>Last logged in</th>
     <th>created_at</th>
     <th>updated_at</th>
@@ -22,7 +23,7 @@
   <%= link_to "Edit this user", edit_api_v1_user_path(@api_v1_user) %> |
   <%= link_to "Back to users", api_v1_users_path %>
 
-  <%= form_with(:url => api_v1_verify_path(@api_v1_user.id), :local => false, :id => 'verify_form' ) do |f| %>
+  <%= form_with(:url => api_v1_users_verify_path(@api_v1_user.id), :local => false, :id => 'verify_form') do |f| %>
     <%= f.text_field :password %>
     <%= f.submit "verify" %>
   <% end %>
