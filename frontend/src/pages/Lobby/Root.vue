@@ -1,15 +1,11 @@
 <script setup lang='ts'>
 import provideAll from '~/data/Lobby'
-provideAll()
-
 import Main from '~/pages/Lobby/Main.vue'
 
+provideAll()
+
 defineProps<{
-  room_uuid?: string;
-  user_uuid?: string;
-  user_name?: string;
-  user_password?: string;
-  auto_play?: number;
+  room_uuid?: string; user_uuid?: string; user_name?: string; user_password?: string; auto_play?: string;
 }>()
 </script>
 

@@ -2,11 +2,11 @@
 import Main from '~/pages/Room/Main.vue'
 
 defineProps<{
-  room_uuid: string;
-  user_uuid?: string;
-  user_name?: string;
-  user_password?: string;
-  auto_play?: number;
+  room_uuid: string
+  user_uuid?: string
+  user_name?: string
+  user_password?: string
+  auto_play?: string
 }>()
 </script>
 

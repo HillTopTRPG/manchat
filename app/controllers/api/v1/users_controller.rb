@@ -31,32 +31,15 @@ class Api::V1::UsersController < ApplicationController
 
   # POST /api/v1/users
   def create
-    result = {}
-    token_row = Api::V1::Token.valid.check_room(params[:api_v1_user][:room_uuid], params[:room_token])
-    if token_row.nil?
-      result[:verify] = "failed"
-      result[:reason] = "expire_room_token"
-      room_row = Api::V1::Room.find_by(:uuid => params[:api_v1_user][:room_uuid])
-      result[:room_id] = room_row.id unless room_row.nil?
-      render json: result
+    render json: { :verify => 'failed', :reason => 'no_such_room' } and return unless Api::V1::Room.exists?(:uuid => params[:api_v1_user][:room_uuid])
+    render json: { :verify => 'failed', :reason => 'expire_room_token' } and return unless Api::V1::Token.valid.check_room(params[:api_v1_user][:room_uuid], params[:room_token])
+    api_v1_user = Api::V1::User.new(api_v1_user_params)
+    if api_v1_user.save
+      api_v1_token = Api::V1::Token.new(:target_type => 'user', :room_uuid => api_v1_user.room_uuid, :user_uuid => api_v1_user.uuid)
+      api_v1_token.save
+      render json: { :verify => 'success', :token => api_v1_token.token, :user => api_v1_user.attributes.reject { |key| key == 'password' } }
     else
-      if token_row.room_uuid != params[:api_v1_user][:room_uuid]
-        result[:verify] = "failed"
-        result[:reason] = "different_room_uuid"
-        render json: result
-      else
-        api_v1_user = Api::V1::User.new(api_v1_user_params)
-        if api_v1_user.save
-          api_v1_token = Api::V1::Token.new(:target_type => 'user', :room_uuid => api_v1_user.room_uuid, :user_uuid => api_v1_user.uuid)
-          api_v1_token.save
-          result[:verify] = "success"
-          result[:token] = api_v1_token.token
-          result[:user] = api_v1_user
-          render json: result.to_json(:only => [:verify, :token, :user, :id, :uuid, :name])
-        else
-          render json: api_v1_user.errors
-        end
-      end
+      render json: api_v1_user.errors
     end
   end
 
@@ -75,69 +58,30 @@ class Api::V1::UsersController < ApplicationController
 
   # POST /api/v1/users/1/verify
   def login
-    result = {}
-    token_row = Api::V1::Token.valid.check_room(params[:room_uuid], params[:room_token])
-    if token_row.nil?
-      result[:verify] = "failed"
-      result[:reason] = "expire_room_token"
-    else
-      api_v1_user = Api::V1::User.find_by(:uuid => params[:user_uuid])
-      if api_v1_user.nil?
-        result[:verify] = "failed"
-        result[:reason] = "no_such_user"
-      else
-        if BCrypt::Password.new(api_v1_user.password).is_password?(params[:password])
-          if api_v1_user.room_uuid != params[:room_uuid]
-            result[:verify] = "failed"
-            result[:reason] = "different_room_uuid"
-          else
-            api_v1_token = Api::V1::Token.new(:target_type => 'user', :room_uuid => params[:room_uuid], :user_uuid => params[:user_uuid])
-            api_v1_token.save
-            result[:verify] = "success"
-            result[:token] = api_v1_token.token
-            result[:uuid] = api_v1_user.uuid
-          end
-        else
-          result[:verify] = "failed"
-          result[:reason] = "invalid_password"
-        end
-      end
-    end
-    render json: result
+    render json: { :verify => 'failed', :reason => 'no_such_room' } and return unless Api::V1::Room.exists?(:uuid => params[:room_uuid])
+    render json: { :verify => 'failed', :reason => 'expire_room_token' } and return unless Api::V1::Token.valid.check_room(params[:room_uuid], params[:room_token])
+
+    api_v1_user = Api::V1::User.find_by(:uuid => params[:user_uuid], :room_uuid => params[:room_uuid])
+    render json: { :verify => 'failed', :reason => 'no_such_user' } and return if api_v1_user.nil?
+    #noinspection RubyNilAnalysis
+    render json: { :verify => 'failed', :reason => 'invalid_password' } and return unless BCrypt::Password.new(api_v1_user.password).is_password?(params[:password])
+
+    api_v1_token = Api::V1::Token.new(:target_type => 'user', :room_uuid => params[:room_uuid], :user_uuid => params[:user_uuid])
+    api_v1_token.save
+    render json: { :verify => 'success', :user_token => api_v1_token.token }
   end
 
   # POST /api/v1/token/verify/users
   def check_token
-    result = { :verify => "success", :reasons => [] }
-    room_token_row = Api::V1::Token.valid.find_by(:target_type => "room", :room_uuid => params[:room_uuid], :token => params[:room_token])
-    if room_token_row.nil?
-      result[:verify] = "failed"
-      api_v1_room = Api::V1::Room.find_by(:uuid => params[:room_uuid])
-      if api_v1_room.nil?
-        result[:reasons] << "no_such_room"
-      else
-        result[:reasons] << "expired_room_token"
-        result[:room_id] = api_v1_room[:id]
-        result[:room_uuid] = api_v1_room[:uuid]
-      end
-    end
-    user_token_row = Api::V1::Token.valid.find_by(:target_type => "user", :user_uuid => params[:user_uuid], :token => params[:user_token])
-    if user_token_row.nil?
-      result[:verify] = "failed"
-      api_v1_user = Api::V1::User.find_by(:uuid => params[:user_uuid])
-      if api_v1_user.nil?
-        result[:reasons] << "no_such_user"
-      else
-        result[:reasons] << "expired_user_token"
-        result[:user_id] = api_v1_user[:id]
-      end
-    else
-      if user_token_row.room_uuid != params[:room_uuid]
-        result[:verify] = "failed"
-        result[:reasons] << "different_room_uuid"
-      end
-    end
-    render json: result
+    api_v1_room = Api::V1::Room.find_by(:uuid => params[:room_uuid])
+    render json: { :verify => 'failed', :reason => 'no_such_room' } and return if api_v1_room.nil?
+    render json: { :verify => 'failed', :reason => 'expire_room_token' } and return unless Api::V1::Token.valid.check_room(params[:room_uuid], params[:room_token])
+
+    #noinspection RubyNilAnalysis
+    base = { :room => api_v1_room.attributes.reject { |key| key == 'password' }, :users => Api::V1::User.where(:room_uuid => params[:room_uuid]).map { |user| user.attributes.reject { |key| key == 'password' } } }
+    render json: { :verify => 'failed', :reason => 'no_such_user', **base } and return unless Api::V1::User.exists?(:uuid => params[:user_uuid], :room_uuid => params[:room_uuid])
+    render json: { :verify => 'failed', :reason => 'expire_user_token', **base } and return unless Api::V1::Token.valid.check_user(params[:room_uuid], params[:user_uuid], params[:user_token])
+    render json: { :verify => 'success', **base }
   end
 
   def detail
@@ -160,13 +104,14 @@ class Api::V1::UsersController < ApplicationController
   end
 
   private
-    # Use callbacks to share common setup or constraints between actions.
-    def set_api_v1_user
-      @api_v1_user = Api::V1::User.find(params[:id])
-    end
 
-    # Only allow a list of trusted parameters through.
-    def api_v1_user_params
-      params.require(:api_v1_user).permit(:uuid, :name, :password, :room_uuid, :last_logged_in)
-    end
+  # Use callbacks to share common setup or constraints between actions.
+  def set_api_v1_user
+    @api_v1_user = Api::V1::User.find(params[:id])
+  end
+
+  # Only allow a list of trusted parameters through.
+  def api_v1_user_params
+    params.require(:api_v1_user).permit(:uuid, :name, :password, :room_uuid, :last_logged_in)
+  end
 end

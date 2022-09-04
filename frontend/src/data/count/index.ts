@@ -1,11 +1,7 @@
-import { reactive, InjectionKey } from "vue"
+import { InjectionKey, reactive } from 'vue'
 
 export default function CounterStore() {
-  const state = reactive<{
-    count: number;
-  }>({
-    count: 0
-  })
+  const state = reactive<{ count: number }>({ count: 0 })
 
   const increment = () => state.count++
   const decrement = () => state.count--

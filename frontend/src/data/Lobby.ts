@@ -1,6 +1,6 @@
-import { provide } from "vue";
+import { provide } from 'vue'
 import RoomStore, { InjectionKeySymbol as RoomKey } from './room'
 
-export default function() {
+export default function () {
   provide(RoomKey, RoomStore())
 }

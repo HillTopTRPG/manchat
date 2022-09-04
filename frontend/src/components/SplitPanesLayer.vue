@@ -1,4 +1,5 @@
 <script lang='ts'>
+//noinspection JSUnusedGlobalSymbols
 export interface Layout {
   type: string
   uuid: string
@@ -24,109 +25,153 @@ interface Props {
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  isNest: false,
-  showBar: true,
-  componentTarget: ''
+  isNest         : false,
+  showBar        : true,
+  componentTarget: '',
 })
 
 const cLayout = ref(props.layout)
 
 const addChildPane = (idx: number, isAfter: boolean) => {
-  if (!cLayout.value.panes) return
-  if (!isAfter)
-    cLayout.value.panes[idx].panes.push({ type: 'normal', uuid: uuid.v4(), panes: [] })
+  if (!cLayout.value.panes) {
+    return
+  }
+  if (!isAfter) {
+    cLayout.value.panes[idx].panes.push({
+                                          type : 'normal',
+                                          uuid : uuid.v4(),
+                                          panes: [],
+                                        })
+  }
   if (cLayout.value.panes[idx].type !== 'horizontal' && cLayout.value.panes[idx].type !== 'vertical') {
     cLayout.value.panes[idx].type = cLayout.value.type === 'horizontal' ? 'vertical' : 'horizontal'
-    const sUuid = cLayout.value.panes[idx].uuid
+    const sUuid                   = cLayout.value.panes[idx].uuid
     cLayout.value.panes[idx].uuid = uuid.v4()
-    cLayout.value.panes[idx].panes.push({ type: 'normal', uuid: sUuid, panes: [], componentGroup: cLayout.value.panes[idx].componentGroup, component: cLayout.value.panes[idx].component })
+    cLayout.value.panes[idx].panes.push({
+                                          type          : 'normal',
+                                          uuid          : sUuid,
+                                          panes         : [],
+                                          componentGroup: cLayout.value.panes[idx].componentGroup,
+                                          component     : cLayout.value.panes[idx].component,
+                                        })
     cLayout.value.panes[idx].component = ''
   }
-  if (isAfter)
-    cLayout.value.panes[idx].panes.push({ type: 'normal', uuid: uuid.v4(), panes: [] })
+  if (isAfter) {
+    cLayout.value.panes[idx].panes.push({
+                                          type : 'normal',
+                                          uuid : uuid.v4(),
+                                          panes: [],
+                                        })
+  }
 }
 
 const addPane = (event: { target: HTMLElement }) => {
   const btnElm: HTMLElement = event.target.tagName === 'button' ? event.target : event.target.closest('button')!
-  const idx = parseInt(btnElm.dataset.idx || '0')
-  const direction = btnElm.dataset.direction
-  Array.from(document.getElementsByClassName( 'split-panes-layer' ))
-    .find((elm: Element) => (elm as HTMLElement).dataset.uuid === cLayout.value.panes[idx].uuid)
-    ?.classList.remove(`on-hold-${direction}`)
+  const idx                 = parseInt(btnElm.dataset.idx || '0')
+  const direction           = btnElm.dataset.direction
+  Array.from(document.getElementsByClassName('split-panes-layer'))
+       .find((elm: Element) => (
+                                 elm as HTMLElement
+                               ).dataset.uuid === cLayout.value.panes[idx].uuid)
+       ?.classList.remove(`on-hold-${direction}`)
   if (cLayout.value.type === 'horizontal') {
     if (direction === 'up' || direction === 'down') {
       addBrotherPane(idx, direction === 'down')
-    } else if (cLayout.value.panes[idx].panes.length === 0) {
-      addChildPane(idx, direction === 'right')
+    } else {
+      if (cLayout.value.panes[idx].panes.length === 0) {
+        addChildPane(idx, direction === 'right')
+      }
     }
   }
   if (cLayout.value.type === 'vertical') {
     if (direction === 'left' || direction === 'right') {
       addBrotherPane(idx, direction === 'right')
-    } else if (cLayout.value.panes[idx].panes.length === 0) {
-      addChildPane(idx, direction === 'down')
+    } else {
+      if (cLayout.value.panes[idx].panes.length === 0) {
+        addChildPane(idx, direction === 'down')
+      }
     }
   }
 }
 
 const showBorderSelf = (event: { target: HTMLElement }) => {
   const btnElm: HTMLElement = event.target.tagName === 'button' ? event.target : event.target.closest('button')!
-  const idx = parseInt(btnElm.dataset.idx || '0')
-  const direction = btnElm.dataset.direction
-  Array.from(document.getElementsByClassName( 'splitpanes__pane' ))
-    .find((elm: Element) => (elm as HTMLElement).dataset.uuid === cLayout.value.panes[idx].uuid)
-    ?.classList.add(direction ? `on-hold-${direction}` : 'on-hold')
+  const idx                 = parseInt(btnElm.dataset.idx || '0')
+  const direction           = btnElm.dataset.direction
+  Array.from(document.getElementsByClassName('splitpanes__pane'))
+       .find((elm: Element) => (
+                                 elm as HTMLElement
+                               ).dataset.uuid === cLayout.value.panes[idx].uuid)
+       ?.classList.add(direction ? `on-hold-${direction}` : 'on-hold')
 }
 
 const hideBorderSelf = (event: { target: HTMLElement }) => {
   const btnElm: HTMLElement = event.target.tagName === 'button' ? event.target : event.target.closest('button')!
-  const idx = parseInt(btnElm.dataset.idx || '0')
-  const direction = btnElm.dataset.direction
-  Array.from(document.getElementsByClassName( 'splitpanes__pane' ))
-      .find((elm: Element) => (elm as HTMLElement).dataset.uuid === cLayout.value.panes[idx].uuid)
-      ?.classList.remove(direction ? `on-hold-${direction}` : 'on-hold')
+  const idx                 = parseInt(btnElm.dataset.idx || '0')
+  const direction           = btnElm.dataset.direction
+  Array.from(document.getElementsByClassName('splitpanes__pane'))
+       .find((elm: Element) => (
+                                 elm as HTMLElement
+                               ).dataset.uuid === cLayout.value.panes[idx].uuid)
+       ?.classList.remove(direction ? `on-hold-${direction}` : 'on-hold')
 }
 
 const showBorderChildren = (event: { target: HTMLElement }) => {
   const btnElm: HTMLElement = event.target.tagName === 'button' ? event.target : event.target.closest('button')!
-  const idx = parseInt(btnElm.dataset.idx || '0')
-  Array.from(document.getElementsByClassName( 'splitpanes__pane' ))
-    .filter((elm: Element) => cLayout.value.panes[idx].panes.map(p => p.uuid).some(uuid => uuid === (elm as HTMLElement).dataset.uuid))
-    .forEach(elm => elm.classList.add('on-hold'))
+  const idx                 = parseInt(btnElm.dataset.idx || '0')
+  Array.from(document.getElementsByClassName('splitpanes__pane'))
+       .filter((elm: Element) => cLayout.value.panes[idx].panes.map(p => p.uuid).some(uuid => uuid ===
+                                                                                              (
+                                                                                                elm as HTMLElement
+                                                                                              ).dataset.uuid))
+       .forEach(elm => elm.classList.add('on-hold'))
 }
 
 const hideBorderChildren = (event: { target: HTMLElement }) => {
   const btnElm: HTMLElement = event.target.tagName === 'button' ? event.target : event.target.closest('button')!
-  const idx = parseInt(btnElm.dataset.idx || '0')
-  Array.from(document.getElementsByClassName( 'splitpanes__pane' ))
-    .filter((elm: Element) => cLayout.value.panes[idx].panes.map(p => p.uuid).some(uuid => uuid === (elm as HTMLElement).dataset.uuid))
-    .forEach(elm => elm.classList.remove('on-hold'))
+  const idx                 = parseInt(btnElm.dataset.idx || '0')
+  Array.from(document.getElementsByClassName('splitpanes__pane'))
+       .filter((elm: Element) => cLayout.value.panes[idx].panes.map(p => p.uuid).some(uuid => uuid ===
+                                                                                              (
+                                                                                                elm as HTMLElement
+                                                                                              ).dataset.uuid))
+       .forEach(elm => elm.classList.remove('on-hold'))
 }
 
 const addBrotherPane = (idx: number, isAfter: boolean) => {
-  const addObj: Layout = { type: 'normal', uuid: uuid.v4(), panes: [] }
-  cLayout.value.panes.splice(idx + (isAfter ? 1 : 0), 0, addObj)
+  const addObj: Layout = {
+    type : 'normal',
+    uuid : uuid.v4(),
+    panes: [],
+  }
+  cLayout.value.panes.splice(idx +
+                             (
+                               isAfter ? 1 : 0
+                             ), 0, addObj)
   cLayout.value.panes.forEach(p => p.size = 100 / cLayout.value.panes.length)
 }
 
 const removePane = (event: { target: HTMLElement }) => {
   hideBorderSelf(event)
   const btnElm: HTMLElement = event.target.tagName === 'button' ? event.target : event.target.closest('button')!
-  const idx = parseInt(btnElm.dataset.idx || '0')
-  if (!cLayout.value.panes) return
+  const idx                 = parseInt(btnElm.dataset.idx || '0')
+  if (!cLayout.value.panes) {
+    return
+  }
   if (cLayout.value.panes.length === 2 && cLayout.value.uuid !== props.rootLayout.uuid) {
-    const remain = cLayout.value.panes[idx === 0 ? 1 : 0]
-    cLayout.value.panes = remain.panes
-    cLayout.value.uuid = remain.uuid
-    cLayout.value.type = remain.type
-    cLayout.value.component = remain.component
+    const remain                 = cLayout.value.panes[idx === 0 ? 1 : 0]
+    cLayout.value.panes          = remain.panes
+    cLayout.value.uuid           = remain.uuid
+    cLayout.value.type           = remain.type
+    cLayout.value.component      = remain.component
     cLayout.value.componentGroup = remain.componentGroup
   } else {
     cLayout.value.panes.splice(idx, 1)
   }
 }
 
-const onResizedPanes = (event: { size: number }[]) => event.forEach(({size}, idx) => cLayout.value.panes[idx].size = size)
+const onResizedPanes = (event: { size: number }[]) => event.forEach(({ size }, idx) => cLayout.value.panes[idx].size
+  = size)
 </script>
 
 <template>
@@ -265,7 +310,7 @@ const onResizedPanes = (event: { size: number }[]) => event.forEach(({size}, idx
                 </v-row>
               </v-container>
             </v-menu>
-            <v-menu 
+            <v-menu
               v-if="pane.type !== 'horizontal' && pane.type !== 'vertical' && pane.component"
               :close-on-content-click='false'
             >
@@ -315,6 +360,7 @@ const onResizedPanes = (event: { size: number }[]) => event.forEach(({size}, idx
             </template>
           </div>
         </v-sheet>
+        <!--suppress HtmlUnknownTag -->
         <SplitPanesLayer
           :key='pane.uuid'
           :layout='pane'
@@ -358,9 +404,7 @@ const onResizedPanes = (event: { size: number }[]) => event.forEach(({size}, idx
   </v-list>
 </template>
 
-<style scoped lang='css'>
-
-</style>
+<!--suppress HtmlUnknownAttribute, CssUnusedSymbol -->
 <style deep lang='css'>
 .splitpanes.root {
   height: calc(100vh - 64px) !important;
@@ -378,18 +422,19 @@ const onResizedPanes = (event: { size: number }[]) => event.forEach(({size}, idx
   align-items: center;
   display: flex;
 }
+
 .splitpanes__pane.last-generation {
   background-color: rgba(255, 255, 255, 0.3);
 }
 
 .splitpanes--vertical > .splitpanes__splitter {
   min-width: 7px;
-  background: linear-gradient(90deg, #ccc, #111);
+  background: linear-gradient(90deg, #cccccc, #111111);
 }
 
 .splitpanes--horizontal > .splitpanes__splitter {
   min-height: 7px;
-  background: linear-gradient(#ccc, #111);
+  background: linear-gradient(#cccccc, #111111);
 }
 
 .splitpanes__pane.on-hold,

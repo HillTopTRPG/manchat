@@ -1,37 +1,37 @@
 <script setup lang='ts'>
 import { InjectionKeySymbol as roomKey, StoreType as RoomStore } from '~/data/room'
-import { inject } from 'vue'
-const roomState = inject(roomKey) as RoomStore
-const axios = inject('axios') as any
-
+import { computed, inject, ref, watch } from 'vue'
 import { RouteLocationRaw, useRouter } from 'vue-router'
+
+const roomState = inject(roomKey) as RoomStore
+const axios     = inject('axios') as any
+
 const router = useRouter()
 
 const props = defineProps<{
-  room_uuid?: string;
-  user_uuid?: string;
-  user_name?: string;
-  user_password?: string;
-  auto_play?: number;
+  room_uuid?: string
+  user_uuid?: string
+  user_name?: string
+  user_password?: string
+  auto_play?: string
 }>()
 
-import { computed, ref } from 'vue'
-const loginDialog = ref(false)
-const createRoomDialog = ref(false)
-const showPassword = ref(false)
-const roomPassword = ref('')
-const createRoomName = ref('')
-const roomUuid = ref(props.room_uuid || '')
-const selectedRoom = computed(() => roomState.state.rooms.find(r => r.uuid === roomUuid.value) || null)
-const loading = ref(false)
-const loginAlertType = ref('error')
-const loginAlertIcon = ref('$info')
-const loginAlertText = ref('')
+const loginDialog       = ref(false)
+const createRoomDialog  = ref(false)
+const showPassword      = ref(false)
+const roomPassword      = ref('')
+const createRoomName    = ref('')
+const roomUuid          = ref(props.room_uuid || '')
+const selectedRoom      = computed(() => roomState.state.rooms.find(r => r.uuid === roomUuid.value) || null)
+const loading           = ref(false)
+const loginAlertType    = ref('error')
+const loginAlertIcon    = ref('$info')
+const loginAlertText    = ref('')
 const roomPasswordInput = ref<HTMLInputElement>()
+const roomNameInput     = ref<HTMLInputElement>()
 const userPasswordInput = ref<HTMLInputElement>()
-let isInitialLogin = false
+let isInitialLogin      = false
 
-import { watch } from 'vue'
 watch(() => props.room_uuid, () => {
   roomUuid.value = props.room_uuid || ''
 })
@@ -47,48 +47,58 @@ watch(() => roomState.state.ready, async () => {
 })
 
 const preRoomLogin = async (room_uuid?: string) => {
-  if (room_uuid === undefined) return false
+  if (room_uuid === undefined) {
+    return false
+  }
   const { room_token } = JSON.parse(localStorage.getItem(room_uuid) || '{}')
-  if (!room_token) return false
+  if (!room_token) {
+    return false
+  }
   const { data } = await axios.post(`/api/v1/rooms/${room_uuid}/token/${room_token}/check`)
   console.log(JSON.stringify(data, null, '  '))
   if (data.verify === 'success') {
     const next: RouteLocationRaw = {
-      name: 'room',
+      name  : 'room',
       params: { room_uuid },
-      query: { u: props.user_uuid, n: props.user_name, p: props.user_password, auto_play: props.auto_play }
+      query : {
+        u        : props.user_uuid,
+        n        : props.user_name,
+        p        : props.user_password,
+        auto_play: props.auto_play,
+      },
     }
-    if (isInitialLogin) router.replace(next).then()
-    else router.push(next).then()
+    if (isInitialLogin) {
+      router.replace(next).then()
+    } else {
+      router.push(next).then()
+    }
     return true
   }
   return false
 }
 
 const showRoomLogin = async (initialLogin: boolean, room_uuid?: string) => {
-  isInitialLogin = initialLogin
+  isInitialLogin       = initialLogin
   loginAlertText.value = ''
-  loading.value = false
-  roomPassword.value = ''
+  loading.value        = false
+  roomPassword.value   = ''
   if (room_uuid !== undefined) {
-    if (await preRoomLogin(room_uuid)) return
+    if (await preRoomLogin(room_uuid)) {
+      return
+    }
     loginDialog.value = true
-    roomUuid.value = room_uuid
+    roomUuid.value    = room_uuid
   } else {
     createRoomDialog.value = true
-    createRoomName.value = ''
+    createRoomName.value   = ''
   }
 }
 
 const roomLoginFunc = async (room_uuid?: string) => {
-  loading.value = true
+  loading.value  = true
   let room_token = ''
   if (room_uuid !== undefined) {
-    const { token } = JSON.parse(localStorage.getItem(room_uuid) || '{}')
-    const { data } = await axios.post(
-      `/api/v1/rooms/${room_uuid}/login`,
-      { password: roomPassword.value, room_token: token }
-    )
+    const { data } = await axios.post(`/api/v1/rooms/${room_uuid}/login`, { password: roomPassword.value })
     console.log(JSON.stringify(data, null, '  '))
     loading.value = false
     if (data.verify !== 'success') {
@@ -97,38 +107,55 @@ const roomLoginFunc = async (room_uuid?: string) => {
       roomPasswordInput.value?.select()
       return
     }
-    room_token = data.room_token
+    room_token           = data.room_token
     loginAlertType.value = 'info'
     loginAlertText.value = 'ログイン中'
   } else {
     const { data } = await axios.post(`/api/v1/rooms`, {
       api_v1_room: {
-        name: createRoomName.value,
+        name    : createRoomName.value,
         password: roomPassword.value,
-      }
+      },
     })
     console.log(JSON.stringify(data, null, '  '))
     loading.value = false
+    if (!data.success) {
+      loginAlertType.value = 'error'
+      loginAlertText.value = '部屋作成に失敗しました。'
+      roomNameInput.value?.select()
+      return
+    }
     room_token = data.room_token
-    room_uuid = data.room.uuid
+    room_uuid  = data.room.uuid
   }
 
-  console.log(JSON.stringify({room_uuid, room_token}, null, '  '))
-  localStorage.setItem(room_uuid || '', JSON.stringify( { room_token }))
+  console.log(JSON.stringify({
+                               room_uuid,
+                               room_token,
+                             }, null, '  '))
+  localStorage.setItem(room_uuid || '', JSON.stringify({ room_token }))
   const next = {
-    name: 'room',
+    name  : 'room',
     params: { room_uuid },
-    query: { u: props.user_uuid, n: props.user_name, p: props.user_password, auto_play: props.auto_play }
+    query : {
+      u        : props.user_uuid,
+      n        : props.user_name,
+      p        : props.user_password,
+      auto_play: props.auto_play,
+    },
   }
-  if (isInitialLogin) router.replace(next).then()
-  else router.push(next).then()
+  if (isInitialLogin) {
+    router.replace(next).then()
+  } else {
+    router.push(next).then()
+  }
 }
 
 defineExpose({
-  login: (room_uuid: string) => {
-    showRoomLogin(false, room_uuid).then()
-  },
-})
+               login: (room_uuid: string) => {
+                 showRoomLogin(false, room_uuid).then()
+               },
+             })
 </script>
 
 <template>
@@ -142,7 +169,12 @@ defineExpose({
               <th class='text-right'>#</th>
               <th class='text-left' style='width: 100%'>部屋名</th>
               <th class='text-left text-right'>
-                <v-btn append-icon='mdi-shape-rectangle-plus' color='primary' @click='showRoomLogin(false)'>新規作成</v-btn>
+                <v-btn
+                  append-icon='mdi-shape-rectangle-plus'
+                  color='primary'
+                  @click='showRoomLogin(false)'
+                >新規作成
+                </v-btn>
               </th>
             </tr>
             </thead>
@@ -158,8 +190,12 @@ defineExpose({
               </td>
               <td>
                 <v-card elevation='0' variant='text' class='mb-2'>
-                  <v-card-title>#{{ room.id }} {{ room.name }}</v-card-title>
-                  <v-card-subtitle>最終ログイン: {{ $d(room.last_logged_in, 'long') }}</v-card-subtitle>
+                  <v-card-title class='px-0'>#{{ room.id }} {{ room.name }}</v-card-title>
+                  <v-card-subtitle class='px-0'>最終ログイン: {{
+                      // noinspection JSCheckFunctionSignatures
+                      $d(room.last_logged_in, 'long')
+                    }}
+                  </v-card-subtitle>
                 </v-card>
               </td>
               <td class='text-right'>
@@ -199,7 +235,8 @@ defineExpose({
           ref='roomPasswordInput'
         >
           <template #label>
-            <v-icon>mdi-lock</v-icon>パスワード
+            <v-icon>mdi-lock</v-icon>
+            パスワード
           </template>
         </v-text-field>
         <v-card-actions>
@@ -229,6 +266,7 @@ defineExpose({
           append-icon='empty'
           label='部屋名'
           :autofocus='true'
+          ref='roomNameInput'
         />
         <v-text-field
           prepend-icon='mdi-lock'
@@ -248,19 +286,11 @@ defineExpose({
             :loading='loading'
             :disabled='!createRoomName'
             append-icon='mdi-shape-rectangle-plus'
-          >新規登録</v-btn>
+          >新規登録
+          </v-btn>
           <v-btn color='secondary' variant='flat' @click='createRoomDialog = false'>キャンセル</v-btn>
         </v-card-actions>
       </v-card-text>
     </v-card>
   </v-dialog>
 </template>
-
-<style deep lang='css'>
-.v-table .v-card-title,
-.v-table .v-card-subtitle,
-.v-table .v-card-item {
-  padding-left: 0;
-  padding-right: 0;
-}
-</style>

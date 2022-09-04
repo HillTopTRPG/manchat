@@ -13,7 +13,7 @@
 
   <div>
     <%= form.label :target_type, style: "display: block" %>
-    <%= form.select :target_type, [['room', 'room'], ['user', 'user']], { include_blank: false, selected: 1 }, { id: "target_type" } %>
+    <%= form.select :target_type, [%w(room room), %w(user user)], { include_blank: false, selected: 1 }, { id: "target_type" } %>
   </div>
 
   <div>

@@ -1,6 +1,6 @@
 <p style="color: green"><%= notice %></p>
 
-<table id="api_v1_rooms">
+<table id="api_v1_rooms" class='basic-table'>
   <thead>
   <tr>
     <th>id</th>
@@ -22,7 +22,7 @@
 <div>
   <%= link_to "Back to rooms", api_v1_rooms_path %>
 
-  <%= form_with(:url => api_v1_rooms_verify_path(@api_v1_room.id), :local => false, :id => 'verify_form' ) do |f| %>
+  <%= form_with(:url => api_v1_rooms_verify_path(@api_v1_room.id), :local => false, :id => 'verify_form') do |f| %>
     <%= f.text_field :password %>
     <%= f.submit "verify" %>
   <% end %>

@@ -1,40 +1,40 @@
 <script setup lang='ts'>
 const props = defineProps<{
-  room_uuid: string;
-  user_uuid?: string;
-  user_name?: string;
-  user_password?: string;
-  auto_play?: number;
-  loggedIn: boolean;
+  room_uuid: string; user_uuid?: string; user_name?: string; user_password?: string; auto_play?: string; loggedIn: boolean;
 }>()
 
 import { useRouter } from 'vue-router'
-const router = useRouter()
-
 import { ref } from 'vue'
 
-const copiedNotify = ref(false)
+const router = useRouter()
+
+const copiedNotify                           = ref(false)
 let copyToolTipTimeoutId: number | undefined = undefined
-const copy = (text: string) => {
+const copy                                   = (text: string) => {
   copiedNotify.value = false
   navigator.clipboard.writeText(text)
-    .then(() => {
-      console.log('Text copied to clipboard...')
-    })
-    .catch(err => {
-      console.log('Something went wrong', err);
-    })
+           .then(() => {
+             console.log('Text copied to clipboard...')
+           })
+           .catch(err => {
+             console.log('Something went wrong', err)
+           })
   setTimeout(() => {
     copiedNotify.value = true
-    if (copyToolTipTimeoutId !== undefined) clearTimeout(copyToolTipTimeoutId)
+    if (copyToolTipTimeoutId !== undefined) {
+      clearTimeout(copyToolTipTimeoutId)
+    }
     copyToolTipTimeoutId = setTimeout(() => {
-      copiedNotify.value = false
+      copiedNotify.value   = false
       copyToolTipTimeoutId = undefined
     }, 2000)
   }, 100)
 }
 
-const inviteUrl = location.host + router.resolve({ name: 'room', params: { room_uuid: props.room_uuid } })?.href
+const inviteUrl = location.host + router.resolve({
+                                                   name  : 'room',
+                                                   params: { room_uuid: props.room_uuid },
+                                                 })?.href
 </script>
 
 <template>
@@ -55,12 +55,3 @@ const inviteUrl = location.host + router.resolve({ name: 'room', params: { room_
     </v-list-item>
   </v-list>
 </template>
-
-<style deep lang='css'>
-.v-table .v-card-title,
-.v-table .v-card-subtitle,
-.v-table .v-card-item {
-  padding-left: 0;
-  padding-right: 0;
-}
-</style>

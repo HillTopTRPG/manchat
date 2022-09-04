@@ -8,10 +8,10 @@ class Api::V1::Token < ApplicationRecord
   end
 
   def self.check_room(room_uuid, room_token)
-    find_by(:target_type => 'room', :room_uuid => room_uuid, :token => room_token)
+    exists?(:target_type => 'room', :room_uuid => room_uuid, :token => room_token)
   end
 
   def self.check_user(room_uuid, user_uuid, user_token)
-    find_by(:target_type => 'user', :room_uuid => room_uuid, :user_uuid => user_uuid, :token => user_token)
+    exists?(:target_type => 'user', :room_uuid => room_uuid, :user_uuid => user_uuid, :token => user_token)
   end
 end

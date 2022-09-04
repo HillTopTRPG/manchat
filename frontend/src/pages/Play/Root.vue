@@ -4,8 +4,8 @@ import provideAll from '~/data/Play'
 import Main from './Main.vue'
 
 const props = defineProps<{
-  room_uuid: string;
-  user_uuid: string;
+  room_uuid: string
+  user_uuid: string
 }>()
 
 provideAll(props.room_uuid)

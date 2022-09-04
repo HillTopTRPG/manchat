@@ -1,5 +1,6 @@
 import consumer from "channels/consumer"
 
+// noinspection JSUnresolvedVariable
 const appRoom = consumer.subscriptions.create("RoomChannel", {
   connected() {
   },
@@ -13,12 +14,15 @@ const appRoom = consumer.subscriptions.create("RoomChannel", {
     return alert(JSON.stringify(data, null, "  "));
   },
 
-  speak: function(message) {
-    return this.perform('speak', {message: message});
-  }
+  speak: function (message) {
+    // noinspection JSUnresolvedFunction
+    return this.perform('speak', { message: message });
+  },
 });
 
-window.document.onkeydown = function(event) {
+// noinspection JSUnresolvedVariable
+window.document.onkeydown = function (event) {
+  // noinspection JSUnresolvedVariable
   if (event.key === 'Enter' && event.target.value) {
     console.log(event.target.value)
     appRoom.speak(event.target.value);

@@ -1,28 +1,28 @@
 <script setup lang='ts'>
 import { InjectionKeySymbol as roomKey, StoreType as RoomStore } from '~/data/room'
-import { inject } from 'vue'
-const roomState = inject(roomKey) as RoomStore
-
-defineProps<{
-  room_uuid?: string;
-  user_uuid?: string;
-  user_name?: string;
-  user_password?: string;
-  auto_play?: number;
-}>()
-
+import { inject, ref } from 'vue'
 import Contents from '~/pages/Lobby/Contents.vue'
 
 import { useTheme } from 'vuetify'
-const theme = useTheme()
+
+const roomState = inject(roomKey) as RoomStore
+
+defineProps<{
+  room_uuid?: string
+  user_uuid?: string
+  user_name?: string
+  user_password?: string
+  auto_play?: string
+}>()
+
+const theme             = useTheme()
 theme.global.name.value = localStorage.getItem('view.theme') || 'light'
-const toggleTheme = () => {
+const toggleTheme       = () => {
   theme.global.name.value = theme.global.current.value.dark ? 'light' : 'dark'
   localStorage.setItem('view.theme', theme.global.name.value)
 }
 
-import { ref } from 'vue'
-const drawer = ref(false)
+const drawer     = ref(false)
 const contentRef = ref()
 </script>
 
@@ -47,10 +47,16 @@ const contentRef = ref()
             @click='contentRef.login(favoriteRoomUuid)'
           >
             <template #prepend>
-              <v-icon color='accent' class='ml-3 mr-1' :icon='roomState.state.rooms.some(r => r.uuid === favoriteRoomUuid) ? "mdi-folder-home" : "mdi-home-alert"'></v-icon>
+              <v-icon
+                color='accent'
+                class='ml-3 mr-1'
+                :icon='roomState.state.rooms.some(r => r.uuid === favoriteRoomUuid) ? "mdi-folder-home" : "mdi-home-alert"'
+              ></v-icon>
             </template>
             <v-list-item-title>
-              #{{roomState.state.rooms.find(r => r.uuid === favoriteRoomUuid)?.id || ''}} {{roomState.state.rooms.find(r => r.uuid === favoriteRoomUuid)?.name || 'もう存在しない'}}
+              #{{ roomState.state.rooms.find(r => r.uuid === favoriteRoomUuid)?.id }} {{
+                roomState.state.rooms.find(r => r.uuid === favoriteRoomUuid)?.name
+              }}
             </v-list-item-title>
           </v-list-item>
         </template>
@@ -65,10 +71,16 @@ const contentRef = ref()
             @click='contentRef.login(loggedInRoomUuid)'
           >
             <template #prepend>
-              <v-icon color='accent' class='ml-3 mr-1' :icon='roomState.state.rooms.some(r => r.uuid === loggedInRoomUuid) ? "mdi-folder-home" : "mdi-home-alert"'></v-icon>
+              <v-icon
+                color='accent'
+                class='ml-3 mr-1'
+                :icon='roomState.state.rooms.some(r => r.uuid === loggedInRoomUuid) ? "mdi-folder-home" : "mdi-home-alert"'
+              ></v-icon>
             </template>
             <v-list-item-title>
-              #{{roomState.state.rooms.find(r => r.uuid === loggedInRoomUuid)?.id || ''}} {{roomState.state.rooms.find(r => r.uuid === loggedInRoomUuid)?.name || 'もう存在しない'}}
+              #{{
+                roomState.state.rooms.find(r => r.uuid === loggedInRoomUuid)?.id
+              }} {{ roomState.state.rooms.find(r => r.uuid === loggedInRoomUuid)?.name }}
             </v-list-item-title>
           </v-list-item>
         </template>

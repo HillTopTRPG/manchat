@@ -1,12 +1,12 @@
 class Api::V1::Room < ApplicationRecord
   before_create -> {
-    self.uuid = SecureRandom.uuid
-    self.password = BCrypt::Password.create(self.password)
+    self.uuid           = SecureRandom.uuid
+    self.password       = BCrypt::Password.create(self.password)
     self.last_logged_in = DateTime.now
   }
 
   after_create -> {
-    ActionCable.server.broadcast("rooms", { type: "create-data", table: self.class.table_name, data: self.attributes.reject {|key| key == 'password'} })
+    ActionCable.server.broadcast("rooms", { type: "create-data", table: self.class.table_name, data: self.attributes.reject { |key| key == 'password' } })
   }
   after_update -> {
     ActionCable.server.broadcast("rooms", { type: "update-data", table: self.class.table_name, uuid: self.uuid, data: self.previous_changes })

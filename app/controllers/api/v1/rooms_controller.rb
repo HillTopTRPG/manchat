@@ -27,7 +27,7 @@ class Api::V1::RoomsController < ApplicationController
     if api_v1_room.save
       api_v1_token = Api::V1::Token.new(:target_type => 'room', :room_uuid => api_v1_room.uuid)
       api_v1_token.save
-      render json: {:room_token => api_v1_token.token, :room => api_v1_room}.to_json(:only => [:room_token, :room, :id, :uuid, :name])
+      render json: { :success => true, :room_token => api_v1_token.token, :room => api_v1_room.attributes.reject { |key| key == 'password' } }
     else
       render json: api_v1_room.errors
     end
@@ -48,47 +48,30 @@ class Api::V1::RoomsController < ApplicationController
 
   # POST api/v1/rooms/:room_uuid/login
   def login
-    result = { :verify => 'failed' }
-
     api_v1_room = Api::V1::Room.find_by(:uuid => params[:room_uuid])
-    if api_v1_room.nil?
-      result[:reason] = 'no_such_room_uuid'
-    else
-      if BCrypt::Password.new(api_v1_room.password).is_password?(params[:password])
-        result[:verify] = 'success'
-        api_v1_token = Api::V1::Token.valid.find_by(:target_type => "room", :room_uuid => params[:room_uuid], :token => params[:room_token])
-        if api_v1_token.nil?
-          api_v1_token = Api::V1::Token.new(:target_type => 'room', :room_uuid => params[:room_uuid])
-          api_v1_token.save
-        end
-        result[:room_token] = api_v1_token.token
-        result[:users] = Api::V1::User.select(:id, :uuid, :name).where(:room_uuid => params[:room_uuid])
-      else
-        result[:reason] = 'invalid_password'
-      end
-    end
-    render json: result
+    render json: { :verify => 'failed', :reason => 'no_such_room' } and return if api_v1_room.nil?
+    #noinspection RubyNilAnalysis
+    render json: { :verify => 'failed', :reason => 'invalid_password' } and return unless BCrypt::Password.new(api_v1_room.password).is_password?(params[:password])
+    api_v1_token = Api::V1::Token.new(:target_type => 'room', :room_uuid => params[:room_uuid])
+    api_v1_token.save
+    render json: {
+      :verify     => 'success',
+      :room_token => api_v1_token.token,
+      :users      => Api::V1::User.where(:room_uuid => params[:room_uuid]).map { |user| user.attributes.reject { |key| key == 'password' } }
+    }
   end
 
   # POST api/v1/rooms/:room_uuid/token/:room_token/check
   def check_token
-    result = {}
     api_v1_room = Api::V1::Room.find_by(:uuid => params[:room_uuid])
-    if api_v1_room.nil?
-      result[:verify] = 'failed'
-      result[:reason] = 'no_such_room'
-    else
-      token_row = Api::V1::Token.valid.check_room(params[:room_uuid], params[:room_token])
-      if token_row.nil?
-        result[:verify] = 'failed'
-        result[:reason] = 'expired_room_token'
-      else
-        result[:verify] = 'success'
-        result[:room] = api_v1_room.attributes.reject {|key| key == 'password'}
-        result[:users] = Api::V1::User.select(:id, :uuid, :name).where(:room_uuid => params[:room_uuid])
-      end
-    end
-    render json: result
+    render json: { :verify => 'failed', :reason => 'no_such_room' } and return if api_v1_room.nil?
+    render json: { :verify => 'failed', :reason => 'expired_room_token' } and return unless Api::V1::Token.valid.check_room(params[:room_uuid], params[:room_token])
+    #noinspection RubyNilAnalysis
+    render json: {
+      :verify => 'success',
+      :room   => api_v1_room.attributes.reject { |key| key == 'password' },
+      :users  => Api::V1::User.where(:room_uuid => params[:room_uuid]).map { |user| user.attributes.reject { |key| key == 'password' } }
+    }
   end
 
   # DELETE /api/v1/rooms/1 or /api/v1/rooms/1.json
@@ -102,13 +85,14 @@ class Api::V1::RoomsController < ApplicationController
   end
 
   private
-    # Use callbacks to share common setup or constraints between actions.
-    def set_api_v1_room
-      @api_v1_room = Api::V1::Room.find(params[:id])
-    end
 
-    # Only allow a list of trusted parameters through.
-    def api_v1_room_params
-      params.require(:api_v1_room).permit(:uuid, :name, :password, :last_logged_in)
-    end
+  # Use callbacks to share common setup or constraints between actions.
+  def set_api_v1_room
+    @api_v1_room = Api::V1::Room.find(params[:id])
+  end
+
+  # Only allow a list of trusted parameters through.
+  def api_v1_room_params
+    params.require(:api_v1_room).permit(:uuid, :name, :password, :last_logged_in)
+  end
 end
