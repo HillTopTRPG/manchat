@@ -6,6 +6,5 @@
   <td><%= room.last_logged_in < Date.current.in_time_zone ? room.last_logged_in.to_fs(:default) : room.last_logged_in.to_fs(:today) %></td>
   <td><%= room.created_at < Date.current.in_time_zone ? room.created_at.to_fs(:default) : room.created_at.to_fs(:today) %></td>
   <td><%= room.updated_at < Date.current.in_time_zone ? room.updated_at.to_fs(:default) : room.updated_at.to_fs(:today) %></td>
-  <td><%= link_to "Edit this room", edit_api_v1_room_path(room) %></td>
   <td><%= button_to "Destroy this room", room, method: :delete %></td>
 </tr>

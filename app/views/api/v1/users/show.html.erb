@@ -6,6 +6,7 @@
     <th>id</th>
     <th>Uuid</th>
     <th>Name</th>
+    <th>UserType</th>
     <th>Password</th>
     <th>RoomUuid</th>
     <th>Last logged in</th>
@@ -20,7 +21,6 @@
 </table>
 
 <div>
-  <%= link_to "Edit this user", edit_api_v1_user_path(@api_v1_user) %> |
   <%= link_to "Back to users", api_v1_users_path %>
 
   <%= form_with(:url => api_v1_users_verify_path(@api_v1_user.id), :local => false, :id => 'verify_form') do |f| %>

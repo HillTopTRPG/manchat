@@ -12,6 +12,7 @@
     "actioncable": "^5.2.8-1",
     "axios": "^0.27.2",
     "jquery": "^3.6.0",
+    "lodash": "^4.17.21",
     "roboto-fontface": "*",
     "splitpanes": "^3.1.1",
     "vue": "^3.2.37",
@@ -23,6 +24,7 @@
     "webfontloader": "^1.0.0"
   },
   "devDependencies": {
+    "@types/lodash": "^4.14.184",
     "@types/splitpanes": "^2.2.1",
     "@types/webfontloader": "^1.0.0",
     "@vitejs/plugin-vue": "^3.0.0",

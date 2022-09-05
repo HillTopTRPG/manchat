@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2022_08_26_140545) do
+ActiveRecord::Schema[7.0].define(version: 2022_09_04_174942) do
   create_table "api_v1_rooms", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
     t.string "uuid"
     t.string "name"
@@ -32,6 +32,7 @@ ActiveRecord::Schema[7.0].define(version: 2022_08_26_140545) do
   create_table "api_v1_users", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
     t.string "uuid"
     t.string "name"
+    t.string "user_type"
     t.string "password"
     t.string "room_uuid"
     t.datetime "last_logged_in"

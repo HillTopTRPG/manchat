@@ -5,7 +5,9 @@ import { useRouter } from 'vue-router'
 import { inject, ref } from 'vue'
 
 const props = defineProps<{
-  room_uuid: string; user_uuid: string; layout: Layout;
+  room_uuid: string
+  user_uuid: string
+  layout: Layout
 }>()
 
 const router = useRouter()
@@ -46,7 +48,7 @@ await (
                                 u        : props.user_uuid,
                                 auto_play: 1,
                               },
-                            }).then()
+                            })
     }
     const { data: usersData } = await axios.post(`/api/v1/users/${props.user_uuid}/token/${user_token}/check`, {
       room_uuid: props.room_uuid,
