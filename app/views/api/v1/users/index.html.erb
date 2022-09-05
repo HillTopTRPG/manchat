@@ -8,12 +8,12 @@
     <th>id</th>
     <th>Uuid</th>
     <th>Name</th>
+    <th>UserType</th>
     <th>Password</th>
     <th>RoomUuid</th>
     <th>Last logged in</th>
     <th>created_at</th>
     <th>updated_at</th>
-    <th>Edit</th>
     <th>Delete</th>
   </tr>
   </thead>
@@ -21,13 +21,5 @@
   <% @api_v1_users.each do |api_v1_user| %>
     <%= render api_v1_user %>
   <% end %>
-  <form>
-    <label>
-      Say something:
-      <input type="text" data-behavior="room_speaker">
-    </label>
-  </form>
   </tbody>
 </table>
-
-<%= link_to "New user", new_api_v1_user_path %>

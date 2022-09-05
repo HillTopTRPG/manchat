@@ -1,5 +1,5 @@
 class Api::V1::UsersController < ApplicationController
-  before_action :set_api_v1_user, only: %i[ show edit update destroy ]
+  before_action :set_api_v1_user, only: %i[ destroy ]
 
   # GET /api/v1/users or /api/v1/users.json
   def index
@@ -16,24 +16,11 @@ class Api::V1::UsersController < ApplicationController
     end
   end
 
-  # GET /api/v1/users/1 or /api/v1/users/1.json
-  def show
-  end
-
-  # GET /api/v1/users/new
-  def new
-    @api_v1_user = Api::V1::User.new
-  end
-
-  # GET /api/v1/users/1/edit
-  def edit
-  end
-
   # POST /api/v1/users
   def create
     render json: { :verify => 'failed', :reason => 'no_such_room' } and return unless Api::V1::Room.exists?(:uuid => params[:api_v1_user][:room_uuid])
     render json: { :verify => 'failed', :reason => 'expire_room_token' } and return unless Api::V1::Token.valid.check_room(params[:api_v1_user][:room_uuid], params[:room_token])
-    api_v1_user = Api::V1::User.new(api_v1_user_params)
+    api_v1_user = Api::V1::User.new(api_v1_user_params_for_create)
     if api_v1_user.save
       api_v1_token = Api::V1::Token.new(:target_type => 'user', :room_uuid => api_v1_user.room_uuid, :user_uuid => api_v1_user.uuid)
       api_v1_token.save
@@ -45,14 +32,15 @@ class Api::V1::UsersController < ApplicationController
 
   # PATCH/PUT /api/v1/users/1 or /api/v1/users/1.json
   def update
-    respond_to do |format|
-      if @api_v1_user.update(api_v1_user_params)
-        format.html { redirect_to api_v1_users_url, notice: "User was successfully updated." }
-        format.json { render :show, status: :ok, location: @api_v1_user }
-      else
-        format.html { render :edit, status: :unprocessable_entity }
-        format.json { render json: @api_v1_user.errors, status: :unprocessable_entity }
-      end
+    render json: { :verify => 'failed', :reason => 'no_such_room' } and return unless Api::V1::Room.exists?(:uuid => params[:room_uuid])
+    render json: { :verify => 'failed', :reason => 'expire_room_token' } and return unless Api::V1::Token.valid.check_room(params[:room_uuid], params[:room_token])
+    render json: { :verify => 'failed', :reason => 'no_such_user' } and return unless Api::V1::User.exists?(:uuid => params[:user_uuid], :room_uuid => params[:room_uuid])
+    render json: { :verify => 'failed', :reason => 'expire_user_token' } and return unless Api::V1::Token.valid.check_user(params[:room_uuid], params[:user_uuid], params[:user_token])
+    api_v1_user = Api::V1::User.find_by(:uuid => params[:user_uuid], :room_uuid => params[:room_uuid])
+    if api_v1_user.update(api_v1_user_params_for_update)
+      render json: { :verify => 'success' }
+    else
+      render json: @api_v1_user.errors
     end
   end
 
@@ -111,7 +99,12 @@ class Api::V1::UsersController < ApplicationController
   end
 
   # Only allow a list of trusted parameters through.
-  def api_v1_user_params
-    params.require(:api_v1_user).permit(:uuid, :name, :password, :room_uuid, :last_logged_in)
+  def api_v1_user_params_for_create
+    params.require(:api_v1_user).permit(:uuid, :name, :user_type, :password, :room_uuid, :last_logged_in)
+  end
+
+  # Only allow a list of trusted parameters through.
+  def api_v1_user_params_for_update
+    params.require(:api_v1_user).permit(:name, :user_type, :last_logged_in)
   end
 end

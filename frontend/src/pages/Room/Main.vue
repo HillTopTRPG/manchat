@@ -4,6 +4,7 @@ import Contents from '~/pages/Room/Contents.vue'
 
 import { useTheme } from 'vuetify'
 import { useRouter } from 'vue-router'
+import UserIcon from '~/pages/Room/UserIcon.vue'
 
 const props = defineProps<{
   room_uuid: string
@@ -33,6 +34,7 @@ const users      = ref<{
   id: number
   uuid: string
   name: string
+  user_type: string
   room_uuid: string
   last_logged_in: Date
   created_at: Date
@@ -50,6 +52,7 @@ const loginAlertIcon    = ref('$info')
 const loginAlertText    = ref('')
 const userPasswordInput = ref<HTMLInputElement>()
 const userNameInput     = ref<HTMLInputElement>()
+const ready             = ref(false)
 
 const selectedUser       = ref<string[]>([])
 const updateSelectedUser = (newList: string[]) => {
@@ -269,7 +272,50 @@ const clickUser = (user_uuid: string) => {
   }
 }
 
+const userSort = () => {
+  const userTypeOrder = ['master', 'player', 'visitor']
+  users.value.sort((u1, u2) => {
+    const u1Type = userTypeOrder.findIndex(t => t === u1.user_type)
+    const u2Type = userTypeOrder.findIndex(t => t === u2.user_type)
+    switch (true) {
+      case u1Type > u2Type:
+        return 1
+      case u1Type < u2Type:
+        return -1
+      default:
+        return u1.id > u2.id ? 1 : -1
+    }
+  })
+}
+
+const subscriptionHandler = {
+  received(data: any) {
+    console.log(JSON.stringify(data, null, '  '))
+    switch (`[${data.table}]-[${data.type}]`) {
+      case '[api_v1_users]-[create-data]':
+        users.value.push(data.data)
+        userSort()
+        break
+      case '[api_v1_users]-[destroy-data]':
+        users.value.splice(users.value.findIndex(r => r.uuid === data.uuid), 1)
+        break
+      case '[api_v1_users]-[update-data]':
+        users.value.splice(users.value.findIndex(r => r.uuid === data.data.uuid), 1, data.data)
+        userSort()
+        break
+      default:
+        console.log('ignore')
+        break
+    }
+  },
+}
+cable.subscriptions.create({
+                             channel  : 'RoomChannel',
+                             room_uuid: props.room_uuid,
+                           }, subscriptionHandler)
+
 const initialize = async () => {
+  ready.value           = false
   userLoggedInFlg.value = false
   selectedUser.value.splice(0, selectedUser.value.length)
   const { user_token } = JSON.parse(props.user_uuid && localStorage.getItem(props.user_uuid) || '{}')
@@ -312,14 +358,14 @@ const initialize = async () => {
     } else {
       switch (data.reason) {
         case 'no_such_room':
-          return router.replace({ name: 'lobby' }).then()
+          return router.replace({ name: 'lobby' })
         case 'expire_room_token':
           return router.replace({
                                   name : 'lobby',
                                   query: {
                                     r        : props.room_uuid,
                                     u        : props.user_uuid,
-                                    auto_play: 1,
+                                    auto_play: props.auto_play,
                                   },
                                 })
         case 'no_such_user':
@@ -349,26 +395,15 @@ const initialize = async () => {
     roomData.value = data.room
     users.value.splice(0, users.value.length, ...data.users)
   }
-  cable.subscriptions.create({
-                               channel  : 'RoomChannel',
-                               room_uuid: props.room_uuid,
-                             }, {
-                               received(data: any) {
-                                 console.log(JSON.stringify(data, null, '  '))
-                                 if (data.type === 'create-data') {
-                                   users.value.push(data.data)
-                                 }
-                                 if (data.type === 'destroy-data') {
-                                   users.value.splice(users.value.findIndex(r => r.uuid === data.uuid), 1)
-                                 }
-                               },
-                             })
+  userSort()
+
   if (!userLoggedInFlg.value && props.user_uuid === undefined && props.user_name !== undefined) {
     isInitialLogin     = true
     loginDialog.value  = true
     userName.value     = props.user_name
     userPassword.value = props.user_password || ''
   }
+  ready.value = true
 }
 initialize().then()
 watch(() => props.user_uuid, initialize)
@@ -412,20 +447,7 @@ watch(() => props.user_uuid, initialize)
 
           <v-list-item class='py-2'>
             <template #prepend>
-              <v-badge
-                color='red-accent-1'
-                :bordered='true'
-                location='right top'
-                content='GM'
-                style='box-sizing: border-box'
-              >
-                <v-badge color='text-grey-darken-3' location='right bottom' icon='mdi-circle'>
-                  <template #badge>
-                    <v-icon class='text-grey-darken-5'>mdi-circle</v-icon>
-                  </template>
-                  <v-icon class='pa-5 bg-cyan-accent-1' size='x-large' style='border-radius: 50%'>mdi-account</v-icon>
-                </v-badge>
-              </v-badge>
+              <user-icon :user='users.find(u => u.uuid === user_uuid)' />
             </template>
             <transition name='fade'>
               <v-list-item-title class='pl-7' v-if='!drawer'>{{ users.find(u => u.uuid === user_uuid)?.name || '' }}
@@ -473,20 +495,7 @@ watch(() => props.user_uuid, initialize)
             class='py-2'
           >
             <template #prepend>
-              <v-badge
-                color='red-accent-1'
-                :bordered='true'
-                location='right top'
-                content='GM'
-                style='box-sizing: border-box'
-              >
-                <v-badge color='text-grey-darken-3' location='right bottom' icon='mdi-circle'>
-                  <template #badge>
-                    <v-icon class='text-grey-darken-5'>mdi-circle</v-icon>
-                  </template>
-                  <v-icon class='pa-5 bg-cyan-accent-1' size='x-large' style='border-radius: 50%'>mdi-account</v-icon>
-                </v-badge>
-              </v-badge>
+              <user-icon :user='user' />
             </template>
             <transition name='fade'>
               <v-list-item-title class='pl-7' v-if='!drawer'>{{ user.name }}</v-list-item-title>
@@ -504,7 +513,9 @@ watch(() => props.user_uuid, initialize)
           :user_name='user_name'
           :user_password='user_password'
           :auto_play='auto_play'
+          :users='users'
           :logged-in='userLoggedInFlg'
+          :ready='ready'
           ref='contentRef'
         />
       </suspense>
