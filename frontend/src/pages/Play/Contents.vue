@@ -27,7 +27,7 @@ await (
       return router.replace({
                               name : 'lobby',
                               query: toLobbyQuery,
-                            }).then()
+                            })
     }
     const { data: roomsData } = await axios.post(`/api/v1/rooms/${props.room_uuid}/token/${room_token}/check`)
     console.log(JSON.stringify(roomsData, null, '  '))
@@ -35,7 +35,7 @@ await (
       return router.replace({
                               name : 'lobby',
                               query: roomsData.reason === 'no_such_room' ? undefined : toLobbyQuery,
-                            }).then()
+                            })
     }
 
     const { user_token } = JSON.parse(localStorage.getItem(props.user_uuid) || '{}')
@@ -58,7 +58,7 @@ await (
     if (usersData.verify !== 'success') {
       switch (usersData.reason) {
         case 'no_such_room':
-          return router.replace({ name: 'lobby' }).then()
+          return router.replace({ name: 'lobby' })
         case 'expire_room_token':
           return router.replace({
                                   name : 'lobby',
@@ -67,12 +67,12 @@ await (
                                     u        : props.user_uuid,
                                     auto_play: 1,
                                   },
-                                }).then()
+                                })
         case 'no_such_user':
           return router.replace({
                                   name  : 'room',
                                   params: { room_uuid: props.room_uuid },
-                                }).then()
+                                })
         case 'expire_user_token':
           return router.replace({
                                   name  : 'room-user',
@@ -81,7 +81,7 @@ await (
                                     user_uuid: props.user_uuid,
                                   },
                                   query : { auto_play: 1 },
-                                }).then()
+                                })
         default:
           return router.replace({
                                   name  : 'room',
@@ -90,7 +90,7 @@ await (
                                     u        : props.user_uuid,
                                     auto_play: 1,
                                   },
-                                }).then()
+                                })
       }
     }
   }

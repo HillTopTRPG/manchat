@@ -1,5 +1,7 @@
 <script setup lang='ts'>
-defineProps<{
+import { computed } from 'vue'
+
+const props = defineProps<{
   user?: {
     id: number
     uuid: string
@@ -11,6 +13,19 @@ defineProps<{
     updated_at: Date
   }
 }>()
+
+const icon = computed(() => {
+  switch (props.user?.user_type) {
+    case 'master':
+      return 'mdi-movie-open'
+    case 'player':
+      return 'mdi-account'
+    case 'visitor':
+      return 'mdi-eye'
+    default:
+      return 'empty'
+  }
+})
 </script>
 
 <template>
@@ -18,23 +33,12 @@ defineProps<{
     <template #badge>
       <v-icon class='text-grey-darken-5'>mdi-circle</v-icon>
     </template>
-    <v-badge
-      :color='user.user_type === "master" ? "yellow-accent-3" : "gray-accent-3"'
-      location='left top'
-      v-if='user && (user.user_type === "master" || user.user_type === "visitor")'
-    >
-      <template #badge>
-        <v-icon v-if='user.user_type === "master"'>mdi-movie-open</v-icon>
-        <v-icon v-if='user.user_type === "visitor"'>mdi-eye</v-icon>
-      </template>
-      <v-icon class='pa-5 bg-cyan-accent-1' size='x-large' style='border-radius: 50%'>mdi-account</v-icon>
-    </v-badge>
     <v-icon
-      v-else
       class='pa-5 bg-cyan-accent-1'
       size='x-large'
       style='border-radius: 50%'
-    >mdi-account
+      :icon='icon'
+    >
     </v-icon>
   </v-badge>
 </template>
