@@ -23,9 +23,11 @@ const props = defineProps<{
     updated_at: Date
   }[]
 }>()
+const emits = defineEmits<{
+  (e: 'requireUserLogin'): void
+}>()
 
-const user        = computed(() => props.users.find(u => u.uuid === props.user_uuid))
-let isFirstUpdate = true
+const user = computed(() => props.users.find(u => u.uuid === props.user_uuid))
 
 const router = useRouter()
 
@@ -78,20 +80,16 @@ const userTypeSelection: UserTypeSelection[] = [
   },
 ]
 
-const userType = ref<UserTypeSelection>(userTypeSelection.find(s => s.value === user.value?.user_type) ||
-                                        userTypeSelection[1])
-watch(
-  () => user.value?.user_type,
-  () => userType.value = userTypeSelection.find(s => s.value === user.value?.user_type) || userTypeSelection[1],
-)
-watch(() => userType.value.value, async (value: string) => {
-  if (isFirstUpdate) {
-    isFirstUpdate = false
+const userType = ref<UserTypeSelection | undefined>(userTypeSelection.find(s => s.value === user.value?.user_type))
+
+watch(() => userType.value?.value, (value, before) => {
+  console.log(before, '->', value)
+  if (!before) {
     return
   }
   const { room_token } = JSON.parse(localStorage.getItem(props.room_uuid) || '{}')
   const { user_token } = JSON.parse(localStorage.getItem(props.user_uuid || '') || '{}')
-  const { data }       = await axios.patch(`/api/v1/users/${props.user_uuid}`, {
+  axios.patch(`/api/v1/users/${props.user_uuid}`, {
     room_uuid  : props.room_uuid,
     user_uuid  : props.user_uuid,
     room_token,
@@ -100,10 +98,34 @@ watch(() => userType.value.value, async (value: string) => {
       ...pick(user.value, ['name', 'user_type', 'last_logged_in']),
       user_type: value,
     },
+  }).then((data: any) => {
+    if (data.verify !== 'success') {
+      console.log(JSON.stringify(data, null, '  '))
+      switch (data.reason) {
+        case 'no_such_room':
+          return router.replace({ name: 'lobby' }).then()
+        case 'expire_room_token':
+          return router.replace({
+                                  name : 'lobby',
+                                  query: { r: props.room_uuid },
+                                })
+        case 'no_such_user':
+          router.replace({
+                           name  : 'room',
+                           params: { room_uuid: props.room_uuid },
+                         }).then()
+          break
+        case 'expire_user_token':
+          emits('requireUserLogin')
+          break
+        default:
+      }
+    }
   })
-  if (data.verify !== 'success') {
-    console.log(JSON.stringify(data, null, '  '))
-  }
+}, { deep: true })
+watch(() => user.value?.user_type, (_, before) => {
+  userType.value = userTypeSelection.find(s => s.value === user.value?.user_type) || userTypeSelection[1]
+  console.log('更新したでー', userType.value)
 })
 </script>
 
@@ -132,7 +154,7 @@ watch(() => userType.value.value, async (value: string) => {
       :items='userTypeSelection'
       item-value='value'
       item-title='title'
-      :hint='userType.hint'
+      :hint='userType?.hint'
       label='ユーザータイプ'
       persistent-hint
       return-object

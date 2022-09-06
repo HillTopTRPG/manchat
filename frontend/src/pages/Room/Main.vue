@@ -1,5 +1,5 @@
 <script setup lang='ts'>
-import { computed, inject, ref, watch } from 'vue'
+import { computed, inject, readonly, ref, watch } from 'vue'
 import Contents from '~/pages/Room/Contents.vue'
 
 import { useTheme } from 'vuetify'
@@ -430,7 +430,7 @@ watch(() => props.user_uuid, initialize)
     </v-app-bar>
 
     <v-navigation-drawer v-model='drawer2' :rail='drawer' rail-width='80' :permanent='true'>
-      <v-list :nav='true' :selected='selectedUser' @update:selected='updateSelectedUser'>
+      <v-list :nav='true' :selected='readonly(selectedUser)' @update:selected='updateSelectedUser'>
         <v-list-item @click='gotoLobby'>
           <template #prepend>
             <v-icon size='x-large' class='mr-2'>mdi-home-group</v-icon>
@@ -507,7 +507,7 @@ watch(() => props.user_uuid, initialize)
 
     <v-main>
       <suspense>
-        <contents
+        <Contents
           :room_uuid='room_uuid'
           :user_uuid='user_uuid'
           :user_name='user_name'
@@ -516,6 +516,7 @@ watch(() => props.user_uuid, initialize)
           :users='users'
           :logged-in='userLoggedInFlg'
           :ready='ready'
+          @requireUserLogin='showUserLogin'
           ref='contentRef'
         />
       </suspense>
