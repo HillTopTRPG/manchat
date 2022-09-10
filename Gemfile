@@ -75,3 +75,5 @@ end
 gem 'bcrypt', '~> 3.1.16'
 gem "jquery-rails"
 gem 'config'
+gem 'whenever', require: false
+gem 'redis-rails'

@@ -83,8 +83,7 @@ const userTypeSelection: UserTypeSelection[] = [
 const userType = ref<UserTypeSelection | undefined>(userTypeSelection.find(s => s.value === user.value?.user_type))
 
 watch(() => userType.value?.value, (value, before) => {
-  console.log(before, '->', value)
-  if (!before) {
+  if (!before || !props.user_uuid) {
     return
   }
   const { room_token } = JSON.parse(localStorage.getItem(props.room_uuid) || '{}')
@@ -99,9 +98,9 @@ watch(() => userType.value?.value, (value, before) => {
       user_type: value,
     },
   }).then((data: any) => {
-    if (data.verify !== 'success') {
-      console.log(JSON.stringify(data, null, '  '))
-      switch (data.reason) {
+    if (data.data.verify !== 'success') {
+      console.log(JSON.stringify(data.data, null, '  '))
+      switch (data.data.reason) {
         case 'no_such_room':
           return router.replace({ name: 'lobby' }).then()
         case 'expire_room_token':
@@ -125,7 +124,6 @@ watch(() => userType.value?.value, (value, before) => {
 }, { deep: true })
 watch(() => user.value?.user_type, (_, before) => {
   userType.value = userTypeSelection.find(s => s.value === user.value?.user_type) || userTypeSelection[1]
-  console.log('更新したでー', userType.value)
 })
 </script>
 

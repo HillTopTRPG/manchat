@@ -1,10 +1,13 @@
 <script setup lang='ts'>
-import { computed, inject, readonly, ref, watch } from 'vue'
+import { computed, inject, onBeforeUnmount, readonly, ref, watch } from 'vue'
 import Contents from '~/pages/Room/Contents.vue'
-
 import { useTheme } from 'vuetify'
 import { useRouter } from 'vue-router'
 import UserIcon from '~/pages/Room/UserIcon.vue'
+
+import { InjectionKeySymbol as sessionKey, StoreType as SessionStore } from '~/data/session'
+
+const sessionState = inject(sessionKey) as SessionStore
 
 const props = defineProps<{
   room_uuid: string
@@ -36,6 +39,7 @@ const users      = ref<{
   name: string
   user_type: string
   room_uuid: string
+  log_in_count: number
   last_logged_in: Date
   created_at: Date
   updated_at: Date
@@ -65,11 +69,9 @@ watch(() => props.user_uuid, () => {
   }
 })
 
-const gotoLobby = () => {
-  return router.push({ name: 'lobby' })
-}
+const gotoLobby = () => router.push({ name: 'lobby' })
 
-const logout = () => {
+const logout = async () => {
   selectedUser.value.splice(0, selectedUser.value.length)
   return router.push({
                        name  : 'room',
@@ -91,8 +93,9 @@ const preUserLogin = async (user_uuid?: string) => {
   if (user_token) {
     const { room_token } = JSON.parse(localStorage.getItem(props.room_uuid) || '{}')
     const { data }       = await axios.post(`/api/v1/users/${user_uuid}/token/${user_token}/check`, {
-      room_uuid: props.room_uuid,
+      room_uuid        : props.room_uuid,
       room_token,
+      subscription_uuid: sessionState.state.session_uuid,
     })
     console.log(JSON.stringify(data, null, '  '))
     if (data.verify === 'success') {
@@ -147,7 +150,7 @@ const userLogin = async () => {
     return router.replace({
                             name : 'lobby',
                             query: toLobbyQuery,
-                          }).then()
+                          })
   }
 
   let user_uuid,
@@ -157,9 +160,10 @@ const userLogin = async () => {
     loginAlertType.value = 'info'
     loginAlertText.value = 'ログイン中'
     const { data }       = await axios.post(`/api/v1/users/${userUuid.value}/login`, {
-      password : userPassword.value,
-      room_uuid: props.room_uuid,
+      password         : userPassword.value,
+      room_uuid        : props.room_uuid,
       room_token,
+      subscription_uuid: sessionState.state.session_uuid,
     })
     console.log(JSON.stringify(data, null, '  '))
     if (data.verify !== 'success') {
@@ -194,12 +198,13 @@ const userLogin = async () => {
     loginAlertType.value = 'info'
     loginAlertText.value = 'ログイン中'
     const { data }       = await axios.post(`/api/v1/users`, {
-      api_v1_user: {
+      api_v1_user      : {
         name     : userName.value,
         password : userPassword.value,
         room_uuid: props.room_uuid,
       },
       room_token,
+      subscription_uuid: sessionState.state.session_uuid,
     })
     console.log(JSON.stringify(data, null, '  '))
     if (data.verify !== 'success') {
@@ -288,7 +293,7 @@ const userSort = () => {
   })
 }
 
-const subscriptionHandler = {
+const roomChannelSubscriptionHandler = {
   received(data: any) {
     console.log(JSON.stringify(data, null, '  '))
     switch (`[${data.table}]-[${data.type}]`) {
@@ -309,10 +314,20 @@ const subscriptionHandler = {
     }
   },
 }
-cable.subscriptions.create({
-                             channel  : 'RoomChannel',
-                             room_uuid: props.room_uuid,
-                           }, subscriptionHandler)
+
+const roomChannel = cable.subscriptions.create({
+                                                 channel  : 'RoomChannel',
+                                                 room_uuid: props.room_uuid,
+                                               }, roomChannelSubscriptionHandler)
+
+let usersChannel: any = null
+
+onBeforeUnmount(() => {
+  cable.subscriptions.remove(roomChannel)
+  if (usersChannel) {
+    cable.subscriptions.remove(usersChannel)
+  }
+})
 
 const initialize = async () => {
   ready.value           = false
@@ -320,37 +335,52 @@ const initialize = async () => {
   selectedUser.value.splice(0, selectedUser.value.length)
   const { user_token } = JSON.parse(props.user_uuid && localStorage.getItem(props.user_uuid) || '{}')
   const { room_token } = JSON.parse(localStorage.getItem(props.room_uuid) || '{}')
-  const toLobbyQuery   = {
-    r        : props.room_uuid,
-    u        : props.user_uuid,
-    n        : props.user_name,
-    p        : props.user_password,
-    auto_play: props.auto_play,
-  }
-  // 部屋トークンが取得できない状況はロビーに戻す
+
+  const toLobby = (hasQuery: boolean, hasNewQuery?: boolean) => router
+    .replace({
+               name : 'lobby',
+               query: hasQuery ? {
+                 r        : props.room_uuid,
+                 u        : props.user_uuid,
+                 n        : hasNewQuery ? props.user_name : undefined,
+                 p        : hasNewQuery ? props.user_password : undefined,
+                 auto_play: props.auto_play,
+               } : undefined,
+             })
+
+  const toRoom = (hasQuery: boolean) => router
+    .replace({
+               name  : 'room',
+               params: { room_uuid: props.room_uuid },
+               query : hasQuery ? {
+                 u        : props.user_uuid,
+                 auto_play: props.auto_play,
+               } : undefined,
+             })
+
+  const toPlay = () => router.replace({
+                                        name  : 'play',
+                                        params: {
+                                          room_uuid: props.room_uuid,
+                                          user_uuid: props.user_uuid,
+                                        },
+                                      })
+
   if (!room_token) {
-    return router.replace({
-                            name : 'lobby',
-                            query: toLobbyQuery,
-                          })
+    return toLobby(true, true)
   }
 
   if (user_token !== undefined) {
     const userTokenCheck = `/api/v1/users/${props.user_uuid}/token/${user_token}/check`
     const { data }       = await axios.post(userTokenCheck, {
-      room_uuid: props.room_uuid,
+      room_uuid        : props.room_uuid,
       room_token,
+      subscription_uuid: sessionState.state.session_uuid,
     })
     console.log(JSON.stringify(data, null, '  '))
     if (data.verify === 'success') {
       if (props.auto_play) {
-        return router.replace({
-                                name  : 'play',
-                                params: {
-                                  room_uuid: props.room_uuid,
-                                  user_uuid: props.user_uuid,
-                                },
-                              })
+        return toPlay()
       }
       roomData.value = data.room
       users.value.splice(0, users.value.length, ...data.users)
@@ -358,21 +388,11 @@ const initialize = async () => {
     } else {
       switch (data.reason) {
         case 'no_such_room':
-          return router.replace({ name: 'lobby' })
+          return toLobby(false)
         case 'expire_room_token':
-          return router.replace({
-                                  name : 'lobby',
-                                  query: {
-                                    r        : props.room_uuid,
-                                    u        : props.user_uuid,
-                                    auto_play: props.auto_play,
-                                  },
-                                })
+          return toLobby(true, false)
         case 'no_such_user':
-          router.replace({
-                           name  : 'room',
-                           params: { room_uuid: props.room_uuid },
-                         }).then()
+          toRoom(false).then()
           break
         case 'expire_user_token':
           loginDialog.value = true
@@ -387,10 +407,7 @@ const initialize = async () => {
     const { data } = await axios.post(`/api/v1/rooms/${props.room_uuid}/token/${room_token}/check`)
     console.log(JSON.stringify(data, null, '  '))
     if (data.verify !== 'success') {
-      return router.replace({
-                              name : 'lobby',
-                              query: data.reason === 'no_such_room' ? undefined : toLobbyQuery,
-                            }).then()
+      return toLobby(data.reason !== 'no_such_room', true)
     }
     roomData.value = data.room
     users.value.splice(0, users.value.length, ...data.users)
@@ -403,10 +420,46 @@ const initialize = async () => {
     userName.value     = props.user_name
     userPassword.value = props.user_password || ''
   }
+  if (usersChannel) {
+    cable.subscriptions.remove(usersChannel)
+  }
+  if (props.user_uuid) {
+    const userChannelSubscriptionHandler = {
+      received(data: any) {
+        console.log(JSON.stringify(data, null, '  '))
+        switch (data.type) {
+          case 'notify_connection_info':
+            switch (data.value) {
+              case 'room-deleted':
+                return toLobby(false)
+              case 'user-deleted':
+                return toRoom(false)
+              case 'invalid-room-token':
+                return toLobby(true)
+              case 'invalid-user-token':
+                return toRoom(true)
+              default:
+                break
+            }
+            break
+          default:
+        }
+      },
+    }
+
+    usersChannel = cable.subscriptions.create({
+                                                channel          : 'UsersChannel',
+                                                room_uuid        : props.room_uuid,
+                                                room_token,
+                                                user_uuid        : props.user_uuid,
+                                                user_token,
+                                                subscription_uuid: sessionState.state.session_uuid,
+                                              }, userChannelSubscriptionHandler)
+  }
   ready.value = true
 }
 initialize().then()
-watch(() => props.user_uuid, initialize)
+watch([() => props.room_uuid, () => props.user_uuid], initialize)
 </script>
 
 <template>

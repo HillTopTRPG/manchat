@@ -1,9 +1,10 @@
 FROM ubuntu:latest
-RUN apt-get update
-RUN apt-get install -y nodejs npm curl
-RUN npm install -g yarn n@latest
-RUN n lts
-RUN apt-get purge -y nodejs npm
+
+RUN apt-get update && \
+    apt-get install -y nodejs npm curl && \
+    npm install -g yarn n@latest && \
+    n lts && \
+    apt-get purge -y nodejs npm
 
 RUN apt-get update -qq && \
     apt-get install -y \

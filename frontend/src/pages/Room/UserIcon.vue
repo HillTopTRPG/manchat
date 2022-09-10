@@ -8,6 +8,7 @@ const props = defineProps<{
     name: string
     user_type: string
     room_uuid: string
+    log_in_count: number
     last_logged_in: Date
     created_at: Date
     updated_at: Date
@@ -29,16 +30,25 @@ const icon = computed(() => {
 </script>
 
 <template>
-  <v-badge :bordered='true' color='text-grey-darken-3' location='right bottom' icon='mdi-circle'>
+  <v-badge
+    :bordered='true'
+    :color='user?.log_in_count ? "green-darken-1" : "grey-darken-1"'
+    location='right bottom'
+    icon='mdi-circle'
+  >
     <template #badge>
-      <v-icon class='text-grey-darken-5'>mdi-circle</v-icon>
+      <v-icon
+        :class='user?.log_in_count ? "text-green-darken-4" : "text-grey-darken-3"'
+        v-if='user?.log_in_count < 2'
+      >mdi-circle
+      </v-icon>
+      <template v-else>{{ user?.log_in_count }}</template>
     </template>
     <v-icon
       class='pa-5 bg-cyan-accent-1'
       size='x-large'
       style='border-radius: 50%'
       :icon='icon'
-    >
-    </v-icon>
+    />
   </v-badge>
 </template>
