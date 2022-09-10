@@ -1,2 +1,8 @@
-module Api::V1::RoomsHelper
+# frozen_string_literal: true
+
+module Api
+  class V1
+    class RoomsHelper
+    end
+  end
 end

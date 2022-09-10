@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class CreateApiV1Tokens < ActiveRecord::Migration[7.0]
   def change
     create_table :api_v1_tokens do |t|

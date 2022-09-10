@@ -1,7 +1,13 @@
-require "test_helper"
+# frozen_string_literal: true
 
-class Api::V1::ExistenceRequestTest < ActiveSupport::TestCase
-  # test "the truth" do
-  #   assert true
-  # end
+require 'test_helper'
+
+class Api
+  class V1
+    class ExistenceRequestTest < ActiveSupport::TestCase
+      # test "the truth" do
+      #   assert true
+      # end
+    end
+  end
 end
