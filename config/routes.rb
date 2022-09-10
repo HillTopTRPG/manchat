@@ -20,6 +20,7 @@ Rails.application.routes.draw do
       patch "users/:user_uuid", to: "users#update"
       delete "users/:id", to: "users#destroy"
       post "users/:user_uuid/login", to: "users#login"
+      # post "users/:user_uuid/logout", to: "users#logout"
       post "users/:user_uuid/token/:user_token/check", to: "users#check_token"
 
       get "tokens", to: "tokens#index", as: "tokens"

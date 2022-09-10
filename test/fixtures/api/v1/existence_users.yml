@@ -1,0 +1,9 @@
+# Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
+
+one:
+  room_uuid: MyString
+  user_uuid: MyString
+
+two:
+  room_uuid: MyString
+  user_uuid: MyString

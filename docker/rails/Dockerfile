@@ -12,7 +12,8 @@ RUN apt-get update -qq && \
     default-libmysqlclient-dev \
     default-mysql-client \
     cmake \
-    vim
+    vim \
+    cron
 
 RUN apt-get install -y golang-go && \
     git clone https://github.com/progrium/entrykit.git && \
@@ -37,5 +38,8 @@ ENTRYPOINT [ \
   "prehook", "ruby -v", "--", \
   "prehook", "bundle install -j4", "--", \
   "prehook", "/app/wait-for-it.sh mysql:3306 -- bundle exec rails db:create", "--", \
-  "prehook", "bundle exec rails db:migrate", "--" \
+  "prehook", "bundle exec rails db:migrate", "--", \
+  "prehook", "cron", "--", \
+  "prehook", "bundle exec whenever --update-crontab", "--", \
+  "prehook", "bundle exec rake 'database:initialize'", "--" \
 ]

@@ -54,8 +54,9 @@ class Api::V1::UsersController < ApplicationController
     #noinspection RubyNilAnalysis
     render json: { :verify => 'failed', :reason => 'invalid_password' } and return unless BCrypt::Password.new(api_v1_user.password).is_password?(params[:password])
 
-    api_v1_token = Api::V1::Token.new(:target_type => 'user', :room_uuid => params[:room_uuid], :user_uuid => params[:user_uuid])
-    api_v1_token.save
+    api_v1_token = Api::V1::Token.create(:target_type => 'user', :room_uuid => params[:room_uuid], :user_uuid => params[:user_uuid])
+
+    api_v1_user.update(:last_logged_in => DateTime.now)
     render json: { :verify => 'success', :user_token => api_v1_token.token }
   end
 
@@ -69,7 +70,8 @@ class Api::V1::UsersController < ApplicationController
     base = { :room => api_v1_room.attributes.reject { |key| key == 'password' }, :users => Api::V1::User.where(:room_uuid => params[:room_uuid]).map { |user| user.attributes.reject { |key| key == 'password' } } }
     render json: { :verify => 'failed', :reason => 'no_such_user', **base } and return unless Api::V1::User.exists?(:uuid => params[:user_uuid], :room_uuid => params[:room_uuid])
     render json: { :verify => 'failed', :reason => 'expire_user_token', **base } and return unless Api::V1::Token.valid.check_user(params[:room_uuid], params[:user_uuid], params[:user_token])
-    render json: { :verify => 'success', **base }
+
+    render json: { :verify => 'success', **base, :users => Api::V1::User.where(:room_uuid => params[:room_uuid]).map { |user| user.attributes.reject { |key| key == 'password' } } }
   end
 
   def detail

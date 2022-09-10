@@ -5,6 +5,7 @@
   <td><%= user.user_type %></td>
   <td><%= user.password %></td>
   <td><%= user.room_uuid %></td>
+  <td><%= user.log_in_count %></td>
   <td><%= user.last_logged_in < Date.current.in_time_zone ? user.last_logged_in.to_fs(:default) : user.last_logged_in.to_fs(:today) %></td>
   <td><%= user.created_at < Date.current.in_time_zone ? user.created_at.to_fs(:default) : user.created_at.to_fs(:today) %></td>
   <td><%= user.updated_at < Date.current.in_time_zone ? user.updated_at.to_fs(:default) : user.updated_at.to_fs(:today) %></td>

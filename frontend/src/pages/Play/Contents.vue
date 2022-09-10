@@ -1,100 +1,14 @@
 <script setup lang='ts'>
 //noinspection TypeScriptCheckImport
 import SplitPanesLayer, { Layout } from '~/components/SplitPanesLayer.vue'
-import { useRouter } from 'vue-router'
-import { inject, ref } from 'vue'
+import { ref } from 'vue'
 
-const props = defineProps<{
+defineProps<{
   room_uuid: string
   user_uuid: string
+  ready: boolean
   layout: Layout
 }>()
-
-const router = useRouter()
-
-const axios = inject('axios') as any
-
-await (
-  async () => {
-    const { room_token } = JSON.parse(localStorage.getItem(props.room_uuid) || '{}')
-    const toLobbyQuery   = {
-      r        : props.room_uuid,
-      u        : props.user_uuid,
-      auto_play: 1,
-    }
-    if (!room_token) {
-      // 部屋トークンが取得できない状況はロビーに戻す
-      return router.replace({
-                              name : 'lobby',
-                              query: toLobbyQuery,
-                            })
-    }
-    const { data: roomsData } = await axios.post(`/api/v1/rooms/${props.room_uuid}/token/${room_token}/check`)
-    console.log(JSON.stringify(roomsData, null, '  '))
-    if (roomsData.verify !== 'success') {
-      return router.replace({
-                              name : 'lobby',
-                              query: roomsData.reason === 'no_such_room' ? undefined : toLobbyQuery,
-                            })
-    }
-
-    const { user_token } = JSON.parse(localStorage.getItem(props.user_uuid) || '{}')
-    if (!user_token) {
-      // ユーザートークンが取得できない状況は部屋に戻す
-      return router.replace({
-                              name  : 'room',
-                              params: { room_uuid: props.room_uuid },
-                              query : {
-                                u        : props.user_uuid,
-                                auto_play: 1,
-                              },
-                            })
-    }
-    const { data: usersData } = await axios.post(`/api/v1/users/${props.user_uuid}/token/${user_token}/check`, {
-      room_uuid: props.room_uuid,
-      room_token,
-    })
-    console.log(JSON.stringify(usersData, null, '  '))
-    if (usersData.verify !== 'success') {
-      switch (usersData.reason) {
-        case 'no_such_room':
-          return router.replace({ name: 'lobby' })
-        case 'expire_room_token':
-          return router.replace({
-                                  name : 'lobby',
-                                  query: {
-                                    r        : props.room_uuid,
-                                    u        : props.user_uuid,
-                                    auto_play: 1,
-                                  },
-                                })
-        case 'no_such_user':
-          return router.replace({
-                                  name  : 'room',
-                                  params: { room_uuid: props.room_uuid },
-                                })
-        case 'expire_user_token':
-          return router.replace({
-                                  name  : 'room-user',
-                                  params: {
-                                    room_uuid: props.room_uuid,
-                                    user_uuid: props.user_uuid,
-                                  },
-                                  query : { auto_play: 1 },
-                                })
-        default:
-          return router.replace({
-                                  name  : 'room',
-                                  params: { room_uuid: props.room_uuid },
-                                  query : {
-                                    u        : props.user_uuid,
-                                    auto_play: 1,
-                                  },
-                                })
-      }
-    }
-  }
-)()
 
 const showBar      = ref(false)
 const isDrawerOpen = ref(true)
@@ -106,7 +20,7 @@ const fgx = (val: number) => {
 </script>
 
 <template>
-  <v-layout>
+  <v-layout v-if='ready'>
     <v-navigation-drawer
       v-model='isDrawerOpen'
       :rail='isRail'
