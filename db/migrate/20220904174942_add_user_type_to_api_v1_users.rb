@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class AddUserTypeToApiV1Users < ActiveRecord::Migration[7.0]
   def up
     add_column :api_v1_users, :user_type, :string, after: :name

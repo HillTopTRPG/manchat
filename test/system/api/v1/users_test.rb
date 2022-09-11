@@ -1,47 +1,53 @@
-require "application_system_test_case"
+# frozen_string_literal: true
 
-class Api::V1::UsersTest < ApplicationSystemTestCase
-  setup do
-    @api_v1_user = api_v1_users(:one)
-  end
+require 'application_system_test_case'
 
-  test "visiting the index" do
-    visit api_v1_users_url
-    assert_selector "h1", text: "Users"
-  end
+class Api
+  class V1
+    class UsersTest < ApplicationSystemTestCase
+      setup do
+        @api_v1_user = api_v1_users(:one)
+      end
 
-  test "should create user" do
-    visit api_v1_users_url
-    click_on "New user"
+      test 'visiting the index' do
+        visit api_v1_users_url
+        assert_selector 'h1', text: 'Users'
+      end
 
-    fill_in "Last logged in", with: @api_v1_user.last_logged_in
-    fill_in "Name", with: @api_v1_user.name
-    fill_in "Password", with: @api_v1_user.password
-    fill_in "Uuid", with: @api_v1_user.uid
-    click_on "Create User"
+      test 'should create user' do
+        visit api_v1_users_url
+        click_on 'New user'
 
-    assert_text "User was successfully created"
-    click_on "Back"
-  end
+        fill_in 'Last logged in', with: @api_v1_user.last_logged_in
+        fill_in 'Name', with: @api_v1_user.name
+        fill_in 'Password', with: @api_v1_user.password
+        fill_in 'Uuid', with: @api_v1_user.uid
+        click_on 'Create User'
 
-  test "should update User" do
-    visit api_v1_user_url(@api_v1_user)
-    click_on "Edit this user", match: :first
+        assert_text 'User was successfully created'
+        click_on 'Back'
+      end
 
-    fill_in "Last logged in", with: @api_v1_user.last_logged_in
-    fill_in "Name", with: @api_v1_user.name
-    fill_in "Password", with: @api_v1_user.password
-    fill_in "Uuid", with: @api_v1_user.uid
-    click_on "Update User"
+      test 'should update User' do
+        visit api_v1_user_url(@api_v1_user)
+        click_on 'Edit this user', match: :first
 
-    assert_text "User was successfully updated"
-    click_on "Back"
-  end
+        fill_in 'Last logged in', with: @api_v1_user.last_logged_in
+        fill_in 'Name', with: @api_v1_user.name
+        fill_in 'Password', with: @api_v1_user.password
+        fill_in 'Uuid', with: @api_v1_user.uid
+        click_on 'Update User'
 
-  test "should destroy User" do
-    visit api_v1_user_url(@api_v1_user)
-    click_on "Destroy this user", match: :first
+        assert_text 'User was successfully updated'
+        click_on 'Back'
+      end
 
-    assert_text "User was successfully destroyed"
+      test 'should destroy User' do
+        visit api_v1_user_url(@api_v1_user)
+        click_on 'Destroy this user', match: :first
+
+        assert_text 'User was successfully destroyed'
+      end
+    end
   end
 end
