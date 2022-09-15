@@ -18,7 +18,6 @@ Rails.application.routes.draw do
 
       get 'users', to: 'users#index', as: 'users'
       post 'users', to: 'users#create'
-      get 'users/:user_uuid', to: 'users#detail', as: 'user'
       patch 'users/:user_uuid', to: 'users#update'
       delete 'users/:id', to: 'users#destroy'
       post 'users/:user_uuid/login', to: 'users#login'

@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
-class Api
-  class V1
+module Api
+  module V1
     class UsersChannelSubscriber < ApplicationRecord
       def self.subscribed(params)
         create(**params.slice(:subscription_uuid, :room_uuid, :room_token, :user_uuid, :user_token))

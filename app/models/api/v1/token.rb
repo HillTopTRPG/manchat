@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
-class Api
-  class V1
+module Api
+  module V1
     class Token < ApplicationRecord
       before_create lambda {
         self.token = SecureRandom.uuid
@@ -21,6 +21,14 @@ class Api
 
       def self.check_user(room_uuid, user_uuid, user_token)
         exists?(target_type: 'user', room_uuid: room_uuid, user_uuid: user_uuid, token: user_token)
+      end
+
+      def self.create_by_user(api_v1_user)
+        Api::V1::Token.create(
+          target_type: 'user',
+          **api_v1_user.slice(:room_uuid),
+          user_uuid: api_v1_user.uuid
+        )
       end
     end
   end

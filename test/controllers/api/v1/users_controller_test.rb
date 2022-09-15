@@ -2,8 +2,8 @@
 
 require 'test_helper'
 
-class Api
-  class V1
+module Api
+  module V1
     class UsersControllerTest < ActionDispatch::IntegrationTest
       setup do
         @api_v1_user = api_v1_users(:one)

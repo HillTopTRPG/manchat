@@ -1,27 +1,18 @@
 <script setup lang='ts'>
 import { useRouter } from 'vue-router'
-import { computed, ref, watch } from 'vue'
-import { pick } from 'lodash'
-import axios from 'axios'
+import { computed, inject, ref, watch } from 'vue'
+import { Nav, userPatch } from '~/pages/AccountHelper'
+import { merge } from 'lodash'
+import { User } from '~/data/user'
 
 const props = defineProps<{
   room_uuid: string
-  loggedIn: boolean
   user_uuid?: string
   user_name?: string
   user_password?: string
   auto_play?: string
-  ready: boolean
-  users: {
-    id: number
-    uuid: string
-    name: string
-    user_type: string
-    room_uuid: string
-    last_logged_in: Date
-    created_at: Date
-    updated_at: Date
-  }[]
+  nav: Nav
+  users: User[]
 }>()
 const emits = defineEmits<{
   (e: 'requireUserLogin'): void
@@ -30,6 +21,12 @@ const emits = defineEmits<{
 const user = computed(() => props.users.find(u => u.uuid === props.user_uuid))
 
 const router = useRouter()
+const axios  = inject('axios') as any
+
+const env = {
+  router,
+  axios,
+}
 
 const copiedNotify                           = ref(false)
 let copyToolTipTimeoutId: number | undefined = undefined
@@ -82,81 +79,75 @@ const userTypeSelection: UserTypeSelection[] = [
 
 const userType = ref<UserTypeSelection | undefined>(userTypeSelection.find(s => s.value === user.value?.user_type))
 
-watch(() => userType.value?.value, (value, before) => {
-  if (!before || !props.user_uuid) {
+watch(() => userType.value?.value, (user_type, before) => {
+  if (!before || !props.user_uuid || !user.value) {
     return
   }
-  const { room_token } = JSON.parse(localStorage.getItem(props.room_uuid) || '{}')
-  const { user_token } = JSON.parse(localStorage.getItem(props.user_uuid || '') || '{}')
-  axios.patch(`/api/v1/users/${props.user_uuid}`, {
-    room_uuid  : props.room_uuid,
-    user_uuid  : props.user_uuid,
-    room_token,
-    user_token,
-    api_v1_user: {
-      ...pick(user.value, ['name', 'user_type', 'last_logged_in']),
-      user_type: value,
-    },
-  }).then((data: any) => {
-    if (data.data.verify !== 'success') {
-      console.log(JSON.stringify(data.data, null, '  '))
-      switch (data.data.reason) {
-        case 'no_such_room':
-          return router.replace({ name: 'lobby' }).then()
-        case 'expire_room_token':
-          return router.replace({
-                                  name : 'lobby',
-                                  query: { r: props.room_uuid },
-                                })
-        case 'no_such_user':
-          router.replace({
-                           name  : 'room',
-                           params: { room_uuid: props.room_uuid },
-                         }).then()
-          break
-        case 'expire_user_token':
-          emits('requireUserLogin')
-          break
-        default:
-      }
-    }
-  })
+  userPatch(merge({}, env, props), user, { user_type }, () => emits('requireUserLogin')).then()
 }, { deep: true })
-watch(() => user.value?.user_type, (_, before) => {
-  userType.value = userTypeSelection.find(s => s.value === user.value?.user_type) || userTypeSelection[1]
+watch(() => user.value?.user_type, (value) => {
+  userType.value = userTypeSelection.find(s => s.value === value) || userTypeSelection[1]
 })
 </script>
 
 <template>
-  <template v-if='ready'>
-    <v-list class='ma-4' v-if='!loggedIn' density='compact'>
-      <v-list-item @click='copy(inviteUrl)'>
-        <template #prepend>
-          <v-icon>mdi-account-plus</v-icon>
-          部屋への招待URL
-        </template>
-        <span class='ml-5' style='white-space: nowrap;'>{{ inviteUrl }}</span>
-        <v-icon class='ml-1'>mdi-content-copy</v-icon>
-        <v-tooltip v-model='copiedNotify' v-if='copiedNotify' location='right'>
-          <template v-slot:activator='{ props }'>
-            <span v-bind='props'></span>
-          </template>
-          <span>コピーしました</span>
-        </v-tooltip>
-      </v-list-item>
-    </v-list>
+  <template v-if='nav !== "init"'>
+    {{ nav }}
+    <transition name='fade'>
+      <template v-if='nav === "entrance"'>
+        <v-list class='ma-4' density='compact'>
+          <v-list-item @click='copy(inviteUrl)'>
+            <template #prepend>
+              <v-icon>mdi-account-plus</v-icon>
+              部屋への招待URL
+            </template>
+            <span class='ml-5' style='white-space: nowrap;'>{{ inviteUrl }}</span>
+            <v-icon class='ml-1'>mdi-content-copy</v-icon>
+            <v-tooltip v-model='copiedNotify' v-if='copiedNotify' location='right'>
+              <template v-slot:activator='{ props }'>
+                <span v-bind='props'></span>
+              </template>
+              <span>コピーしました</span>
+            </v-tooltip>
+          </v-list-item>
+        </v-list>
+      </template>
+    </transition>
 
-    <v-select
-      class='ma-4'
-      v-model='userType'
-      :items='userTypeSelection'
-      item-value='value'
-      item-title='title'
-      :hint='userType?.hint'
-      label='ユーザータイプ'
-      persistent-hint
-      return-object
-      v-if='loggedIn'
-    />
+    <template v-if='nav === "profile"'>
+      <transition name='fade'>
+        <v-select
+          class='ma-4'
+          v-model='userType'
+          :items='userTypeSelection'
+          item-value='value'
+          item-title='title'
+          :hint='userType?.hint'
+          label='ユーザータイプ'
+          persistent-hint
+          return-object
+        />
+      </transition>
+    </template>
+
+    <template v-if='nav === "room-info"'>
+    </template>
   </template>
 </template>
+
+<style deep lang='css'>
+
+.slide-fade-enter-active {
+  transition: all .3s ease-out;
+}
+
+.slide-fade-leave-active {
+  transition: all .8s cubic-bezier(1.0, 0.5, 0.8, 1.0);
+}
+
+.slide-fade-enter-from,
+.slide-fade-leave-to {
+  transform: translateX(20px);
+  opacity: 0;
+}
+</style>

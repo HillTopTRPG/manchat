@@ -95,8 +95,10 @@ const showRoomLogin = async (initialLogin: boolean, room_uuid?: string) => {
 }
 
 const roomLoginFunc = async (room_uuid?: string) => {
-  loading.value  = true
-  let room_token = ''
+  loading.value        = true
+  loginAlertType.value = 'info'
+  loginAlertText.value = 'ログイン中'
+  let room_token       = ''
   if (room_uuid !== undefined) {
     const { data } = await axios.post(`/api/v1/rooms/${room_uuid}/login`, { password: roomPassword.value })
     console.log(JSON.stringify(data, null, '  '))
@@ -107,9 +109,7 @@ const roomLoginFunc = async (room_uuid?: string) => {
       roomPasswordInput.value?.select()
       return
     }
-    room_token           = data.room_token
-    loginAlertType.value = 'info'
-    loginAlertText.value = 'ログイン中'
+    room_token = data.room_token
   } else {
     const { data } = await axios.post(`/api/v1/rooms`, {
       api_v1_room: {
@@ -166,7 +166,7 @@ defineExpose({
           <v-table :fixed-header='true' class='h-100' v-if='roomState.state.ready'>
             <thead>
             <tr>
-              <th class='text-right'>#</th>
+              <th></th>
               <th class='text-left' style='width: 100%'>部屋名</th>
               <th class='text-left text-right'>
                 <v-btn
@@ -185,6 +185,7 @@ defineExpose({
                   :model-value='roomState.state.favoriteRooms.some(uuid => uuid === room.uuid)'
                   true-icon='mdi-star'
                   false-icon='mdi-star-outline'
+                  :hide-details='true'
                   @click='roomState.changeRoomFavorite(room.uuid)'
                 />
               </td>
@@ -266,6 +267,7 @@ defineExpose({
           append-icon='empty'
           label='部屋名'
           :autofocus='true'
+          @keydown.enter='userPasswordInput.focus()'
           ref='roomNameInput'
         />
         <v-text-field

@@ -1,17 +1,21 @@
 import { inject, InjectionKey, reactive } from 'vue'
 
+export type User = {
+  id: number
+  uuid: string
+  name: string
+  user_type: string
+  room_uuid: string
+  log_in_count: number
+  last_logged_in: Date
+  created_at: Date
+  updated_at: Date
+}
+
 export default function UserStore(room_uuid: string) {
 
   const state = reactive<{
-    users: {
-      id: number
-      uuid: string
-      name: string
-      room_uuid: string
-      last_logged_in: Date
-      created_at: Date
-      updated_at: Date
-    }[]
+    users: User[]
   }>({
        users: [],
      })

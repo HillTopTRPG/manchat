@@ -2,8 +2,8 @@
 
 require 'application_system_test_case'
 
-class Api
-  class V1
+module Api
+  module V1
     class TokensTest < ApplicationSystemTestCase
       setup do
         @api_v1_token = api_v1_tokens(:one)

@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
 module Api
-  class V1
-    class TokensHelper
+  module V1
+    module TokensHelper
     end
   end
 end

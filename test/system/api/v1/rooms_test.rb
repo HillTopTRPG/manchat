@@ -2,8 +2,8 @@
 
 require 'application_system_test_case'
 
-class Api
-  class V1
+module Api
+  module V1
     class RoomsTest < ApplicationSystemTestCase
       setup do
         @api_v1_room = api_v1_rooms(:one)

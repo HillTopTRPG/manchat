@@ -2,8 +2,8 @@
 
 require 'test_helper'
 
-class Api
-  class V1
+module Api
+  module V1
     class RoomsControllerTest < ActionDispatch::IntegrationTest
       setup do
         @api_v1_room = api_v1_rooms(:one)
