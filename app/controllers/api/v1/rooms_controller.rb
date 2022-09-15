@@ -98,27 +98,22 @@ module Api
       end
 
       def check_no_such_room(room_uuid, base = {})
-        if (api_v1_room = Api::V1::Room.find_by(uuid: room_uuid)).nil?
-          render json: { **base, verify: 'failed', reason: 'no_such_room' } and return nil
-        end
+        check = (api_v1_room = Api::V1::Room.find_by(uuid: room_uuid)).nil?
+        render json: base.merge(verify: 'failed', reason: 'no_such_room') and return nil if check
 
         api_v1_room
       end
 
       def check_room_invalid_password(api_v1_room, password)
-        unless BCrypt::Password.new(api_v1_room.password).is_password?(password)
-          render json: { verify: 'failed', reason: 'invalid_password' } and return true
-        end
-
-        false
+        check = !BCrypt::Password.new(api_v1_room.password).is_password?(password)
+        render json: { verify: 'failed', reason: 'invalid_password' } if check
+        check
       end
 
       def check_expire_room_token(room_uuid, room_token, base = {})
-        unless Api::V1::Token.valid.check_room(room_uuid, room_token)
-          render json: { **base, verify: 'failed', reason: 'expire_room_token' } and return true
-        end
-
-        false
+        check = !Api::V1::Token.valid.check_room(room_uuid, room_token)
+        render json: base.merge(verify: 'failed', reason: 'expire_room_token') if check
+        check
       end
     end
   end

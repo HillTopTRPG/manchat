@@ -47,7 +47,7 @@ module Api
       def check_token
         return if (base = check_check_token(params)).nil?
 
-        render json: { **base, verify: 'success' }
+        render json: base.merge(verify: 'success')
       end
 
       # DELETE /api/v1/users/1
@@ -97,7 +97,7 @@ module Api
 
       def check_no_such_room(room_uuid, base = {})
         check = (api_v1_room = Api::V1::Room.find_by(uuid: room_uuid)).nil?
-        render json: { **base, verify: 'failed', reason: 'no_such_room' } if check
+        render json: base.merge(verify: 'failed', reason: 'no_such_room') if check
         check ? nil : api_v1_room
       end
 
@@ -109,19 +109,19 @@ module Api
 
       def check_expire_room_token(room_uuid, room_token, base = {})
         check = !Api::V1::Token.valid.check_room(room_uuid, room_token)
-        render json: { **base, verify: 'failed', reason: 'expire_room_token' } if check
+        render json: base.merge(verify: 'failed', reason: 'expire_room_token') if check
         check
       end
 
       def check_no_such_user(room_uuid, user_uuid, base = {})
         check = (api_v1_user = Api::V1::User.find_by(uuid: user_uuid, room_uuid: room_uuid)).nil?
-        render json: { **base, verify: 'failed', reason: 'no_such_user' } if check
+        render json: base.merge(verify: 'failed', reason: 'no_such_user') if check
         check ? nil : api_v1_user
       end
 
       def check_expire_user_token(room_uuid, user_uuid, user_token, base = {})
         check = !Api::V1::Token.valid.check_user(room_uuid, user_uuid, user_token)
-        render json: { **base, verify: 'failed', reason: 'expire_user_token' } if check
+        render json: base.merge(verify: 'failed', reason: 'expire_user_token') if check
         check
       end
     end
