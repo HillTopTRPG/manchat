@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+# rubocop:disable Metrics/BlockLength
 namespace :token do
   desc 'ユーザーチャンネルのサブスクライバーのトークンの有効期限を延長する'
   task ttl_extension: :environment do
@@ -38,3 +39,4 @@ namespace :token do
     Api::V1::Token.expired.delete_all
   end
 end
+# rubocop:enable Metrics/BlockLength

@@ -2,8 +2,8 @@
 
 require 'test_helper'
 
-class Api
-  class V1
+module Api
+  module V1
     class TokensControllerTest < ActionDispatch::IntegrationTest
       setup do
         @api_v1_token = api_v1_tokens(:one)

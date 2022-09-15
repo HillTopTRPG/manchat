@@ -37,17 +37,13 @@ const icon = computed(() => {
     icon='mdi-circle'
   >
     <template #badge>
-      <v-icon
-        :class='user?.log_in_count ? "text-green-darken-4" : "text-grey-darken-3"'
-        v-if='user?.log_in_count < 2'
-      >mdi-circle
-      </v-icon>
-      <template v-else>{{ user?.log_in_count }}</template>
+      <span class='text-black' v-if='!user?.log_in_count'>●</span>
+      <template v-else-if='user?.log_in_count > 1'>{{ user?.log_in_count }}</template>
     </template>
     <v-icon
-      class='pa-5 bg-cyan-accent-1'
+      class='pa-5 border-solid'
       size='x-large'
-      style='border-radius: 50%'
+      style='border-radius: 50%; border-width: 3px;'
       :icon='icon'
     />
   </v-badge>

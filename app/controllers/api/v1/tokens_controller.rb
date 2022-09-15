@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
-class Api
-  class V1
+module Api
+  module V1
     class TokensController < ApplicationController
       before_action :set_api_v1_token, only: %i[destroy]
 

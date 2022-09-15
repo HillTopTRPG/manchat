@@ -2,5 +2,8 @@ inherit_from: .rubocop_todo.yml
 AllCops:
   NewCops: enable
   SuggestExtensions: false
+  Exclude:
+    - db/schema.rb
 
-
+Style/Documentation:
+  Enabled: false

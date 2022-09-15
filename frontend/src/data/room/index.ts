@@ -1,18 +1,20 @@
 import { inject, InjectionKey, reactive, watch } from 'vue'
 
+export type Room = {
+  id: number
+  name: string
+  uuid: string
+  last_logged_in: Date
+  created_at: Date
+  updated_at: Date
+}
+
 export default function RoomStore() {
   const state = reactive<{
     ready: boolean
     favoriteRooms: string[]
     loggedInRooms: string[]
-    rooms: {
-      id: number
-      name: string
-      uuid: string
-      last_logged_in: Date
-      created_at: Date
-      updated_at: Date
-    }[]
+    rooms: Room[]
   }>({
        ready        : false,
        favoriteRooms: [],

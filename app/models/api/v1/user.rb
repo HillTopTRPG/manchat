@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
-class Api
-  class V1
+module Api
+  module V1
     class User < Api::V1::SynchronizeRecord
       before_create lambda {
         self.uuid           = SecureRandom.uuid
@@ -12,6 +12,10 @@ class Api
       before_destroy lambda {
         Api::V1::Token.where(user_uuid: uuid).delete_all
       }
+
+      def to_response
+        attributes.except :password
+      end
     end
   end
 end
