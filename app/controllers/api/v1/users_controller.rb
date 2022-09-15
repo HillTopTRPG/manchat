@@ -38,7 +38,7 @@ module Api
         return if (api_v1_user = check_login(params)).nil?
 
         api_v1_token = Api::V1::Token.create(target_type: 'user',
-          **params.permit(:room_uuid, :user_uuid).slice(:room_uuid, :user_uuid))
+                                             **params.permit(:room_uuid, :user_uuid).slice(:room_uuid, :user_uuid))
         api_v1_user.update(last_logged_in: DateTime.now)
         render json: { verify: 'success', user_token: api_v1_token.token }
       end
@@ -65,13 +65,13 @@ module Api
 
       def check_room(room_uuid, room_token)
         check = (api_v1_room = check_no_such_room(room_uuid)).nil? ||
-          check_expire_room_token(room_uuid, room_token)
+                check_expire_room_token(room_uuid, room_token)
         check ? nil : api_v1_room
       end
 
       def check_user(room_uuid, user_uuid, user_token, base = {})
         check = (api_v1_user = check_no_such_user(room_uuid, user_uuid, base)).nil? ||
-          check_expire_user_token(room_uuid, user_uuid, user_token, base)
+                check_expire_user_token(room_uuid, user_uuid, user_token, base)
         check ? nil : api_v1_user
       end
 
@@ -90,8 +90,8 @@ module Api
 
       def check_login(params)
         check = check_room(params[:room_uuid], params[:room_token]).nil? ||
-          (api_v1_user = check_no_such_user(params[:room_uuid], params[:user_uuid])).nil? ||
-          check_user_invalid_password(api_v1_user, params[:password])
+                (api_v1_user = check_no_such_user(params[:room_uuid], params[:user_uuid])).nil? ||
+                check_user_invalid_password(api_v1_user, params[:password])
         check ? nil : api_v1_user
       end
 
