@@ -33,6 +33,7 @@
 # JetBrains IDE
 .idea/**/workspace.xml
 .idea/**/tasks.xml
+.idea/**/Project_Default.xml
 
 config/settings.local.yml
 config/settings/*.local.yml
