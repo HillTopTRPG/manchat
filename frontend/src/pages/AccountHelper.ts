@@ -2,12 +2,15 @@ import { ComputedRef, Ref } from 'vue'
 import Router from 'router'
 import { merge, pick } from 'lodash'
 import { User } from '~/data/user'
+import { Room } from '~/data/room'
 
 export type Nav =
   'init'
   | 'entrance'
   | 'profile'
-  | 'room-info'
+  | 'room-basic'
+  | 'notification'
+  | 'play'
 
 type Env = {
   axios: any
@@ -131,8 +134,8 @@ async function requestUserCreate(args: Env & RoomProps & { subscription_uuid: st
   return data.verify === 'success' ? data : data.reason
 }
 
-const toLobby = (args: Omit<RoomProps, 'room_uuid'> & { router: typeof Router, room_uuid?: string },
-                 hasQuery: boolean,
+export const toLobby = (args: Omit<RoomProps, 'room_uuid'> & { router: typeof Router, room_uuid?: string },
+                        hasQuery: boolean,
 ) => args.router.replace({
                            name : 'lobby',
                            query: hasQuery ? merge(toRoomQuery(args), { r: args.room_uuid }) : undefined,
@@ -192,7 +195,7 @@ export async function requestUserTokenCheck(args: {
 
 export async function requestTokenCheckWrap(args: Env & RoomProps & {
   subscription_uuid: string
-  roomData: Ref<{ id: number; uuid: string; name: string } | null>
+  room: Ref<Room | null>
   users: Ref<User[]>
   userLoggedInFlg: Ref<boolean>
   drawerRail: Ref<boolean>
@@ -219,7 +222,7 @@ export async function requestTokenCheckWrap(args: Env & RoomProps & {
       return data.reason
     }
 
-    args.roomData.value = data.room
+    args.room.value = data.room
     args.users.value.splice(0, args.users.value.length, ...data.users)
 
     toRoom(args, true).then()
@@ -234,7 +237,7 @@ export async function requestTokenCheckWrap(args: Env & RoomProps & {
     console.log(JSON.stringify(data, null, '  '))
 
     if (data.room && data.users) {
-      args.roomData.value = data.room
+      args.room.value = data.room
       args.users.value.splice(0, args.users.value.length, ...data.users)
     }
 
@@ -265,13 +268,35 @@ export async function requestTokenCheckWrap(args: Env & RoomProps & {
   }
 }
 
+export async function roomPatch(args: Env & RoomProps, room: Room | null, updateUser: Partial<{
+  name: string
+}>) {
+  args.axios.patch(`/api/v1/rooms/${args.room_uuid}`, merge(pick(args, 'room_uuid', 'user_uuid'), getTokens(args), {
+    api_v1_room: merge(pick(room, 'name'), updateUser),
+  })).then((data: any) => {
+    console.log(JSON.stringify(data.data, null, '  '))
+    if (data.data.verify === 'success') {
+      return
+    }
+    const reason = data.data.reason
+    if (reason === 'expire_room_token' || reason === 'no_such_room') {
+      return toLobby(args, reason === 'expire_room_token')
+    }
+    if (reason === 'expire_user_token' || reason === 'no_such_user') {
+      return toRoom(args, reason === 'expire_user_token')
+    }
+    if (reason === 'unauthorized_operations') {
+      return
+    }
+  })
+}
+
 export async function userPatch(args: Env & RoomProps, user: ComputedRef<User | undefined>, updateUser: Partial<{
   name: string
   user_type: string
-  last_logged_in: Date
 }>, expireUserTokenCallback: () => void) {
   args.axios.patch(`/api/v1/users/${args.user_uuid}`, merge(pick(args, 'room_uuid', 'user_uuid'), getTokens(args), {
-    api_v1_user: merge(pick(user.value, 'name', 'user_type', 'last_logged_in'), updateUser),
+    api_v1_user: merge(pick(user.value, 'name', 'user_type'), updateUser),
   })).then((data: any) => {
     if (data.data.verify !== 'success') {
       console.log(JSON.stringify(data.data, null, '  '))
@@ -285,6 +310,30 @@ export async function userPatch(args: Env & RoomProps, user: ComputedRef<User | 
       reason === 'expire_user_token' && expireUserTokenCallback()
     }
   })
+}
+
+export async function roomDelete(args: Env & RoomProps) {
+  args.axios.delete(`/api/v1/rooms/${args.room_uuid}`, { data: merge(pick(args, 'user_uuid'), getTokens(args)) })
+      .then((data: any) => {
+        console.log(JSON.stringify(data.data, null, '  '))
+        if (data.verify === 'success') {
+          return
+        }
+        //        const reason = data.data.reason
+        //        return toLobby(args, reason === 'expire_room_token')
+      })
+}
+
+export async function userDelete(args: Env & RoomProps) {
+  args.axios.delete(`/api/v1/users/${args.user_uuid}`, { data: merge(pick(args, 'room_uuid'), getTokens(args)) })
+      .then((data: any) => {
+        console.log(JSON.stringify(data.data, null, '  '))
+        const reason = data.data.reason
+        if (reason === 'expire_room_token' || reason === 'no_such_room') {
+          return toLobby(args, reason === 'expire_room_token')
+        }
+        return toRoom(args, reason === 'expire_user_token')
+      })
 }
 
 export const userSort = (users: Ref<User[] | undefined>) => {
@@ -304,23 +353,43 @@ export const userSort = (users: Ref<User[] | undefined>) => {
 }
 
 export function createRoomChannel(args: RoomProps & {
+  router: typeof Router
   cable: any
+  room: Ref<Room | null>
   users: Ref<User[]>
 }) {
   const roomChannelSubscriptionHandler = {
     received(data: any) {
       console.log(JSON.stringify(data, null, '  '))
+      console.log(`[${data.table}]-[${data.type}]`)
       switch (`[${data.table}]-[${data.type}]`) {
         case '[api_v1_users]-[create-data]':
           args.users.value.push(data.data)
           userSort(args.users)
           break
         case '[api_v1_users]-[destroy-data]':
-          args.users.value.splice(args.users.value.findIndex(r => r.uuid === data.uuid), 1)
+          console.log('[api_v1_users]-[destroy-data]')
+          const index = args.users.value.findIndex(r => r.uuid === data.uuid)
+          console.log(index)
+          if (index < 0) {
+            return
+          }
+          args.users.value.splice(index, 1)
+          console.log(data.uuid === args.user_uuid, data.uuid, args.user_uuid)
+          if (data.uuid === args.user_uuid) {
+            toRoom(args, false).then()
+          }
+          break
+        case '[api_v1_rooms]-[destroy-data]':
+          args.room.value = null
+          toLobby(args, false).then()
           break
         case '[api_v1_users]-[update-data]':
           args.users.value.splice(args.users.value.findIndex(r => r.uuid === data.data.uuid), 1, data.data)
           userSort(args.users)
+          break
+        case '[api_v1_rooms]-[update-data]':
+          args.room.value = data.data
           break
         default:
           console.log('ignore')
@@ -363,3 +432,24 @@ export function createUserChannel(args: RoomProps & {
   )
 }
 
+export interface UserTypeSelection {
+  title: string
+  value: string
+  hint: string
+}
+
+export const userTypeSelection: UserTypeSelection[] = [
+  {
+    title: 'マスター',
+    value: 'master',
+    hint : '特別な操作が許可されます。',
+  }, {
+    title: 'プレイヤー',
+    value: 'player',
+    hint : '',
+  }, {
+    title: '見学者',
+    value: 'visitor',
+    hint : '閲覧のみ許可されます。',
+  },
+]

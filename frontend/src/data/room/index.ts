@@ -96,8 +96,19 @@ export default function RoomStore() {
       if (data.type === 'create-data') {
         state.rooms.push(data.data)
       }
+      if (data.type === 'update-data') {
+        const index = state.rooms.findIndex(r => r.uuid === data.data.uuid)
+        if (index < 0) {
+          return
+        }
+        state.rooms.splice(index, 1, data.data)
+      }
       if (data.type === 'destroy-data') {
-        state.rooms.splice(state.rooms.findIndex(r => r.uuid === data.uuid), 1)
+        const index = state.rooms.findIndex(r => r.uuid === data.uuid)
+        if (index < 0) {
+          return
+        }
+        state.rooms.splice(index, 1)
       }
     },
   })

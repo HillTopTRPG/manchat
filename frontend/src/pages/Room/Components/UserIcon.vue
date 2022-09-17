@@ -48,3 +48,25 @@ const icon = computed(() => {
     />
   </v-badge>
 </template>
+
+<!--suppress CssUnusedSymbol, HtmlUnknownAttribute -->
+<style deep lang='css'>
+.v-badge__badge {
+  user-select: none;
+}
+
+.v-badge__badge::after {
+  transform: none !important;
+}
+
+.v-badge__badge > * {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+</style>

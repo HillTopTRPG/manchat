@@ -3,7 +3,6 @@ import { computed, inject, onBeforeUnmount, readonly, ref, watch } from 'vue'
 import Contents from '~/pages/Room/Contents.vue'
 import { useTheme } from 'vuetify'
 import { useRouter } from 'vue-router'
-import UserIcon from '~/pages/Room/UserIcon.vue'
 import {
   createRoomChannel,
   createUserChannel,
@@ -11,15 +10,16 @@ import {
   requestTokenCheckWrap,
   requestUserLoginWrap,
   requestUserTokenCheck,
-  toPlay,
   toRoom,
   userSort,
 } from '~/pages/AccountHelper'
 
 import { InjectionKeySymbol as sessionKey, StoreType as SessionStore } from '~/data/session'
-import { merge, omit } from 'lodash'
+import { merge } from 'lodash'
 import { User } from '~/data/user'
 import { Room } from '~/data/room'
+import UserNavItem from '~/pages/Room/Components/UserNavItem.vue'
+import UserListItem from '~/pages/Room/Components/UserListItem.vue'
 
 const sessionState = inject(sessionKey) as SessionStore
 
@@ -51,22 +51,38 @@ const env = {
 
 const drawerRail = ref(true)
 const contentRef = ref()
-const roomData   = ref<Room | null>(null)
+const room       = ref<Room | null>(null)
 const users      = ref<User[]>([])
 
-const breadcrumbsItems = computed(() => (
-  [
-    {
-      title   : `#${roomData.value?.id} ${roomData.value?.name}`,
-      disabled: false,
-      href    : '',
-    }, {
-    title   : users.value.find(u => u.uuid === props.user_uuid)?.name,
-    disabled: false,
-    href    : '',
-  },
-  ]
-))
+const collections = {
+  room,
+  users,
+}
+
+const breadcrumbsItems = computed(() => {
+  const user = userLoggedInFlg.value && users.value.find(u => u.uuid === selectedUserUuid.value[0])
+  return [
+    [
+      {
+        title   : `#${room.value?.id} ${room.value?.name}`,
+        disabled: false,
+        href    : '',
+      },
+    ], user ? [
+      {
+        title   : user.name,
+        disabled: false,
+        href    : '',
+      },
+    ] : [], [
+      {
+        title   : currentNavText.value,
+        disabled: false,
+        href    : '',
+      },
+    ],
+  ].flatMap(a => a)
+})
 
 const userUuid          = ref<string | undefined>(undefined)
 const loginDialog       = ref(false)
@@ -80,27 +96,46 @@ const loginAlertText    = ref('')
 const userPasswordInput = ref<HTMLInputElement>()
 const userNameInput     = ref<HTMLInputElement>()
 
-const selectedUserUuid       = ref<string[]>([])
+const selectedUserUuid       = ref<string[]>(['room-info'])
+const currentUserUuid        = computed(() => selectedUserUuid.value[0])
 const updateSelectedUserUuid = (newList: string[]) => {
   selectedUserUuid.value.splice(0, selectedUserUuid.value.length, ...newList)
 }
+watch(currentUserUuid, (value) => {
+  if (!userLoggedInFlg.value) {
+    return
+  }
+  let userNav: Nav = value === props.user_uuid ? 'play' : 'profile'
+  selectedNav.value.splice(0, selectedNav.value.length, value === 'room-info' ? 'room-basic' : userNav)
+})
 
-const selectedNav       = ref<Nav[]>(['entrance'])
+const selectedNav       = ref<Nav[]>(['init'])
 const currentNav        = computed(() => selectedNav.value[0])
+const currentNavText    = computed(() => {
+  switch (currentNav.value) {
+    case 'profile':
+      return 'プロフィール'
+    case 'entrance':
+      return 'エントランス'
+    case 'room-basic':
+      return '基本情報'
+    case 'notification':
+      return '通知設定'
+    case 'play':
+      return 'プレイ画面'
+  }
+  return ''
+})
 const updateSelectedNav = (newList: Nav[]) => {
   selectedNav.value.splice(0, selectedNav.value.length, ...newList)
 }
 
 watch(() => props.user_uuid, () => {
-  if (props.user_uuid) {
-    selectedUserUuid.value.splice(0, selectedUserUuid.value.length, props.user_uuid)
-  }
+  selectedUserUuid.value.splice(0, selectedUserUuid.value.length, props.user_uuid || 'room-info')
 })
 
-const gotoLobby = () => router.push({ name: 'lobby' })
-
-const logout = async () => {
-  selectedUserUuid.value.splice(0, selectedUserUuid.value.length)
+const logoutUser = async () => {
+  selectedUserUuid.value.splice(0, selectedUserUuid.value.length, 'room-info')
   userUuid.value = undefined
   return toRoom(merge({}, env, props), false)
 }
@@ -178,8 +213,6 @@ const userLogin = async () => {
   successUserLoggedIn(userLoginWrapResult.user_uuid).then()
 }
 
-const gotoPlay = () => toPlay(merge({}, env, props))
-
 const loginDialogCancel = () => {
   loginDialog.value = false
   if (!userLoggedInFlg.value) {
@@ -187,12 +220,13 @@ const loginDialogCancel = () => {
   }
 }
 
-const roomChannel = createRoomChannel(merge({}, env, props, { users }))
-
+let roomChannel: any  = null
 let usersChannel: any = null
 
 onBeforeUnmount(() => {
-  cable.subscriptions.remove(roomChannel)
+  if (roomChannel) {
+    cable.subscriptions.remove(roomChannel)
+  }
   if (usersChannel) {
     cable.subscriptions.remove(usersChannel)
   }
@@ -200,24 +234,23 @@ onBeforeUnmount(() => {
 
 const initialize = async () => {
   userLoggedInFlg.value = false
-  selectedUserUuid.value.splice(0, selectedUserUuid.value.length)
+  selectedUserUuid.value.splice(0, selectedUserUuid.value.length, 'room-info')
   drawerRail.value = !!props.user_uuid
+
+  if (roomChannel) {
+    cable.subscriptions.remove(roomChannel)
+  }
 
   if (usersChannel) {
     cable.subscriptions.remove(usersChannel)
   }
 
-  console.log(JSON.stringify(props, null, '  '))
-  console.log(JSON.stringify(omit(env, 'router', 'axios', 'cable'), null, '  '))
-  const result = await requestTokenCheckWrap(merge({}, env, props, {
-    roomData,
-    users,
+  const result = await requestTokenCheckWrap(merge({}, env, props, collections, {
     userLoggedInFlg,
     drawerRail,
     selectedUserUuid,
     selectedNav,
   }))
-  console.log(JSON.stringify(result, null, '  '))
   if (result !== null) {
     if (result === 'expire_user_token') {
       isInitialLogin    = true
@@ -237,28 +270,36 @@ const initialize = async () => {
     userPassword.value = props.user_password || ''
   }
 
+  roomChannel  = createRoomChannel(merge({}, env, props, collections))
   usersChannel = props.user_uuid ? createUserChannel(merge({}, env, props)) : null
 }
 initialize().then()
 watch([() => props.room_uuid, () => props.user_uuid], initialize)
+
+const collapse = ref(false)
 </script>
 
 <template>
-  <v-layout>
-    <v-app-bar prominent elevation='1' density='compact'>
+  <v-layout :class='{ "toolbar-collapse": collapse }'>
+    <v-app-bar prominent elevation='1' density='compact' :collapse='collapse'>
       <v-app-bar-nav-icon
         variant='text' @click.stop='drawerRail = !drawerRail'
         :icon='drawerRail ? "mdi-chevron-right" : "mdi-chevron-left"'
       ></v-app-bar-nav-icon>
       <v-avatar image='https://quoridorn.com/img/mascot/normal/mascot_normal.png' class='ml-3' />
       <v-toolbar-title>
-        <v-breadcrumbs :items='breadcrumbsItems' v-if='roomData'>
+        <v-breadcrumbs :items='breadcrumbsItems' v-if='room'>
           <template #divider>
             <v-icon>mdi-chevron-right</v-icon>
           </template>
         </v-breadcrumbs>
       </v-toolbar-title>
       <v-spacer />
+      <v-btn
+        variant='text'
+        :icon='collapse ? "mdi-arrow-expand-horizontal" : "mdi-arrow-collapse-horizontal"'
+        @click='collapse = !collapse'
+      ></v-btn>
       <v-btn variant='text' icon='mdi-brightness-6' @click='toggleTheme'></v-btn>
     </v-app-bar>
 
@@ -269,87 +310,39 @@ watch([() => props.room_uuid, () => props.user_uuid], initialize)
         :selected='readonly(selectedUserUuid)'
         @update:selected='updateSelectedUserUuid'
       >
-        <v-tooltip transition='scale-transition'>
-          <template #activator='{ props }'>
-            <v-list-item @click='gotoLobby' variant='outlined' v-bind='props'>
-              <template #append>
-                <v-icon size='x-large' class='mr-2'>mdi-home-group</v-icon>
-              </template>
-              <transition name='fade'>
-                <v-list-item-title class='pl-7' v-if='!drawerRail'>ロビー</v-list-item-title>
-              </transition>
-            </v-list-item>
-          </template>
-          <span class='font-weight-bold'>ロビーに戻ります。</span>
-        </v-tooltip>
-
-        <v-divider />
+        <user-nav-item
+          label='部屋'
+          :show-label='!drawerRail'
+          value='room-info'
+          append-icon='folder-home'
+          tooltip-text='部屋'
+        />
 
         <template v-if='userLoggedInFlg'>
           <v-list-subheader v-if='user_uuid'>あなた</v-list-subheader>
-
-          <v-tooltip transition='scale-transition'>
-            <template #activator='{ props }'>
-              <v-list-item
-                class='py-2'
-                :value='users.find(u => u.uuid === user_uuid)?.uuid'
-                active-color='primary'
-                variant='elevated'
-                v-bind='props'
-              >
-                <template #prepend>
-                  <user-icon :user='users.find(u => u.uuid === user_uuid)' />
-                </template>
-                <transition name='fade'>
-                  <v-list-item-title class='pl-7' v-if='!drawerRail'>{{
-                      users.find(u => u.uuid === user_uuid)?.name || ''
-                    }}
-                  </v-list-item-title>
-                </transition>
-              </v-list-item>
-            </template>
-            <span class='font-weight-bold'>{{ users.find(u => u.uuid === user_uuid)?.name || '' }}</span>
-          </v-tooltip>
+          <user-list-item :user='users.find(u => u.uuid === user_uuid)' :hide-title='drawerRail' />
         </template>
 
         <v-list-subheader v-if='user_uuid'>{{ drawerRail || userLoggedInFlg ? 'Users' : '他のユーザー' }}</v-list-subheader>
         <v-list-subheader v-else>{{ drawerRail ? 'Log in' : 'ログイン' }}</v-list-subheader>
 
-        <v-tooltip transition='scale-transition' v-if='!user_uuid'>
-          <template #activator='{ props }'>
-            <v-list-item @click='showUserLogin()' v-bind='props'>
-              <template #prepend>
-                <v-icon size='x-large' class='mr-2'>mdi-login-variant</v-icon>
-              </template>
-              <transition name='fade'>
-                <v-list-item-title class='pl-7' v-if='!drawerRail'>新しいユーザー</v-list-item-title>
-              </transition>
-            </v-list-item>
-          </template>
-          <span class='font-weight-bold'>新しいユーザーを作成します</span>
-        </v-tooltip>
+        <user-nav-item
+          label='新しいユーザー'
+          :show-label='!drawerRail'
+          value='new-user'
+          prepend-icon='login-variant'
+          tooltip-text='新しいユーザーを作成します'
+          @click-list-item='showUserLogin()'
+          v-if='!user_uuid'
+        />
 
         <template v-for='user in users' :key='user.uuid'>
-          <v-tooltip transition='scale-transition' v-if='!userLoggedInFlg || user.uuid !== user_uuid'>
-            <template #activator='{ props }'>
-              <v-list-item
-                :value='user.uuid'
-                @click='!userLoggedInFlg && showUserLogin(user.uuid)'
-                active-color='primary'
-                variant='elevated'
-                class='py-2'
-                v-bind='props'
-              >
-                <template #prepend>
-                  <user-icon :user='user' />
-                </template>
-                <transition name='fade'>
-                  <v-list-item-title class='pl-7' v-if='!drawerRail'>{{ user.name }}</v-list-item-title>
-                </transition>
-              </v-list-item>
-            </template>
-            <span class='font-weight-bold'>{{ user.name }}</span>
-          </v-tooltip>
+          <user-list-item
+            :user='user'
+            :hide-title='drawerRail'
+            @click-list-item='!userLoggedInFlg && showUserLogin(user.uuid)'
+            v-if='!userLoggedInFlg || user.uuid !== user_uuid'
+          />
         </template>
       </v-list>
     </v-navigation-drawer>
@@ -361,71 +354,43 @@ watch([() => props.room_uuid, () => props.user_uuid], initialize)
       :permanent='true'
       v-if='userLoggedInFlg && currentNav !== "init"'
     >
-      <v-list
-        :nav='true'
-        :mandatory='true'
-        :selected='readonly(selectedNav)'
-        @update:selected='updateSelectedNav'
-      >
-        <v-tooltip transition='scale-transition'>
-          <template #activator='{ props }'>
-            <v-list-item variant='elevated' color='primary' value='profile' v-bind='props'>
-              <template #append>
-                <v-icon size='x-large' class='mr-2'>mdi-badge-account</v-icon>
-              </template>
-              <transition name='fade'>
-                <v-list-item-title class='pl-7' v-if='!drawerRail'>プロフィール</v-list-item-title>
-              </transition>
-            </v-list-item>
+      <v-list :nav='true' :mandatory='true' :selected='readonly(selectedNav)' @update:selected='updateSelectedNav'>
+        <template v-if='currentUserUuid === "room-info"'>
+          <user-nav-item
+            label='基本情報'
+            :show-label='!drawerRail'
+            value='room-basic'
+            append-icon='book-open-variant'
+            tooltip-text='部屋の基本情報を表示・編集します。'
+          />
+        </template>
+        <template v-else>
+          <user-nav-item
+            label='プレイ'
+            :show-label='!drawerRail'
+            tooltip-text='プレイ画面に移動します。'
+            value='play'
+            append-icon='dice-multiple'
+            v-if='currentUserUuid === user_uuid'
+          />
+          <user-nav-item
+            label='プロフィール'
+            :show-label='!drawerRail'
+            value='profile'
+            append-icon='badge-account'
+            tooltip-text='プロフィールを表示・編集します。'
+          />
+          <template v-if='currentUserUuid === user_uuid'>
+            <v-list-subheader>{{ drawerRail ? "Setting" : "アプリの設定" }}</v-list-subheader>
+            <user-nav-item
+              label='通知'
+              :show-label='!drawerRail'
+              value='notification'
+              append-icon='bell'
+              tooltip-text='通知設定を表示・編集します。'
+            />
           </template>
-          <span class='font-weight-bold'>プロフィールを表示・編集します。</span>
-        </v-tooltip>
-
-        <v-tooltip transition='scale-transition'>
-          <template #activator='{ props }'>
-            <v-list-item variant='elevated' color='primary' value='room-info' v-bind='props'>
-              <template #append>
-                <v-icon size='x-large' class='mr-2'>mdi-table-furniture</v-icon>
-              </template>
-              <transition name='fade'>
-                <v-list-item-title class='pl-7' v-if='!drawerRail'>卓情報</v-list-item-title>
-              </transition>
-            </v-list-item>
-          </template>
-          <span class='font-weight-bold'>卓情報を表示・編集します。</span>
-        </v-tooltip>
-      </v-list>
-
-      <v-spacer />
-
-      <v-list :nav='true'>
-        <v-tooltip transition='scale-transition'>
-          <template #activator='{ props }'>
-            <v-list-item @click='gotoPlay()' variant='outlined' color='primary' v-bind='props'>
-              <template #append>
-                <v-icon size='x-large' class='mr-2'>mdi-dice-multiple</v-icon>
-              </template>
-              <transition name='fade'>
-                <v-list-item-title class='pl-7' v-if='!drawerRail'>プレイ</v-list-item-title>
-              </transition>
-            </v-list-item>
-          </template>
-          <span class='font-weight-bold'>プレイ画面に移動します。</span>
-        </v-tooltip>
-
-        <v-tooltip transition='scale-transition'>
-          <template #activator='{ props }'>
-            <v-list-item @click='logout()' variant='outlined' v-bind='props'>
-              <template #append>
-                <v-icon size='x-large' class='mr-2'>mdi-logout-variant</v-icon>
-              </template>
-              <transition name='fade'>
-                <v-list-item-title class='pl-7' v-if='!drawerRail'>ログアウト</v-list-item-title>
-              </transition>
-            </v-list-item>
-          </template>
-          <span class='font-weight-bold'>ログアウトし、部屋に戻ります。</span>
-        </v-tooltip>
+        </template>
       </v-list>
     </v-navigation-drawer>
 
@@ -438,8 +403,10 @@ watch([() => props.room_uuid, () => props.user_uuid], initialize)
           :user_password='user_password'
           :auto_play='auto_play'
           :users='users'
+          :room='room'
           :nav='currentNav'
           @requireUserLogin='showUserLogin'
+          @logoutUser='logoutUser()'
           ref='contentRef'
         />
       </suspense>
@@ -506,18 +473,16 @@ watch([() => props.room_uuid, () => props.user_uuid], initialize)
       </v-card-text>
     </v-card>
   </v-dialog>
+  <v-overlay class='chat-overlay' scroll-strategy='none' :model-value='true'>
+    <div>こんにちはーー！！！！</div>
+  </v-overlay>
 </template>
 
-<!--suppress HtmlUnknownAttribute, CssUnusedSymbol -->
+<!--suppress HtmlUnknownAttribute, CssUnusedSymbol, CssUnknownProperty -->
 <style deep lang='css'>
-.fade-enter-active,
-.fade-leave-active {
-  transition: opacity 0.5s ease;
-}
-
-.fade-enter-from,
-.fade-leave-to {
-  opacity: 0;
+/*noinspection CssUnresolvedCustomProperty*/
+.toolbar-collapse .v-main {
+  padding-top: 0 !important;
 }
 
 .v-navigation-drawer__content {
@@ -539,7 +504,48 @@ watch([() => props.room_uuid, () => props.user_uuid], initialize)
   color: rgb(var(--v-theme-on-surface-variant));
 }
 
+.v-tooltip .v-overlay__content > .v-card > * {
+  padding: 0;
+}
+
 .v-tooltip .v-overlay__content * {
   background: transparent !important;
+  color: inherit;
+}
+
+.chat-overlay > * {
+  pointer-events: none;
+}
+
+/*noinspection CssUnresolvedCustomProperty*/
+.chat-overlay .v-overlay__content > * {
+  pointer-events: none;
+  animation: loop 10s -25s linear infinite;
+  position: absolute;
+  top: 20px;
+  font-size: 30px;
+  white-space: pre;
+  font-weight: bold;
+  color: rgb(var(--v-theme-on-surface-variant));
+  text-stroke: 1px rgb(var(--v-theme-surface-variant));
+  -webkit-text-stroke: 1px rgb(var(--v-theme-surface-variant));
+}
+
+.chat-overlay .v-overlay__scrim {
+  background: transparent;
+}
+
+@keyframes loop {
+  0% {
+    left: 100vw;
+  }
+  to {
+    left: 0;
+    transform: translateX(-100%);
+  }
+}
+
+.v-list-item:hover > .v-list-item__overlay {
+  opacity: calc(0.08 * var(--v-theme-overlay-multiplier));
 }
 </style>
