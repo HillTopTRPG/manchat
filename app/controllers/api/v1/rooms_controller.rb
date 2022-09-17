@@ -2,9 +2,7 @@
 
 module Api
   module V1
-    class RoomsController < ApplicationController
-      before_action :set_api_v1_room, only: %i[update destroy]
-
+    class RoomsController < HasTokenController
       # GET /api/v1/rooms or /api/v1/rooms.json
       def index
         @api_v1_rooms = Api::V1::Room.all
@@ -15,104 +13,82 @@ module Api
         end
       end
 
-      # GET /api/v1/rooms/:room_uuid
-      def detail
-        api_v1_room = Api::V1::Room.find_by(uuid: params[:room_uuid])
-        if api_v1_room.nil?
-          render json: nil
-        else
-          render json: api_v1_room.to_response
-        end
-      end
-
       # POST /api/v1/rooms
       def create
         api_v1_room = Api::V1::Room.new(api_v1_room_params)
         if api_v1_room.save
-          api_v1_token = Api::V1::Token.new(target_type: 'room', room_uuid: api_v1_room.uuid)
-          api_v1_token.save
+          api_v1_token = Api::V1::Token.create(target_type: 'room', room_uuid: api_v1_room.uuid)
           render json: { success: true, room_token: api_v1_token.token, room: api_v1_room.to_response }
         else
           render json: api_v1_room.errors
         end
       end
 
-      # PATCH/PUT /api/v1/rooms/1 or /api/v1/rooms/1.json
+      # PATCH /api/v1/rooms/1
       def update
-        respond_to do |format|
-          if @api_v1_room.update(api_v1_room_params)
-            format.html { redirect_to api_v1_rooms_path, notice: 'Room was successfully updated.' }
-            format.json { render :show, status: :ok, location: @api_v1_room }
-          else
-            format.html { render :edit, status: :unprocessable_entity }
-            format.json { render json: @api_v1_room.errors, status: :unprocessable_entity }
-          end
-        end
+        return if (api_v1_room = check_update(params)).nil?
+
+        api_v1_room_params_for_update = params.require(:api_v1_room).permit(:name)
+        render json: api_v1_room.update(api_v1_room_params_for_update) ? { verify: 'success' } : api_v1_room.errors
       end
 
       # POST api/v1/rooms/:room_uuid/login
       def login
-        return if (api_v1_room = check_no_such_room(params[:room_uuid])).nil? ||
-                  check_room_invalid_password(api_v1_room, params[:password])
+        return if (api_v1_room = check_no_such_room(params[:room_uuid])).nil?
+        return if check_room_invalid_password(api_v1_room, params[:password])
 
-        render json: {
-          verify: 'success',
-          room_token: Api::V1::Token.create(target_type: 'room', room_uuid: params[:room_uuid]).token,
-          users: Api::V1::User.where(room_uuid: params[:room_uuid]).map(&:to_response)
-        }
+        room_token = Api::V1::Token.create(target_type: 'room', room_uuid: params[:room_uuid]).token
+        users = Api::V1::User.where(room_uuid: params[:room_uuid]).map(&:to_response)
+        render json: { verify: 'success', room_token: room_token, users: users }
       end
 
       # POST api/v1/rooms/:room_uuid/token/:room_token/check
       def check_token
-        return if (api_v1_room = check_no_such_room(params[:room_uuid])).nil? ||
-                  check_expire_room_token(params[:room_uuid], params[:room_token])
+        return if (api_v1_room = get_room(params[:room_uuid], params[:room_token])).nil?
 
+        room = api_v1_room.to_response
         # noinspection RubyNilAnalysis
-        render json: {
-          verify: 'success',
-          room: api_v1_room.to_response,
-          users: Api::V1::User.where(room_uuid: params[:room_uuid]).map(&:to_response)
-        }
+        users = Api::V1::User.where(room_uuid: params[:room_uuid]).map(&:to_response)
+        render json: { verify: 'success', room: room, users: users }
       end
 
-      # DELETE /api/v1/rooms/1 or /api/v1/rooms/1.json
+      # DELETE /api/v1/rooms/1
       def destroy
-        @api_v1_room.destroy
+        return if (api_v1_room = check_destroy(params)).nil?
 
-        respond_to do |format|
-          format.html { redirect_to api_v1_rooms_url, notice: 'Room was successfully destroyed.' }
-          format.json { head :no_content }
-        end
+        api_v1_room.destroy
+        render json: { verify: 'success' }
       end
 
       private
-
-      # Use callbacks to share common setup or constraints between actions.
-      def set_api_v1_room
-        @api_v1_room = Api::V1::Room.find(params[:id])
-      end
 
       # Only allow a list of trusted parameters through.
       def api_v1_room_params
         params.require(:api_v1_room).permit(:uuid, :name, :password, :last_logged_in)
       end
 
-      def check_no_such_room(room_uuid, base = {})
-        check = (api_v1_room = Api::V1::Room.find_by(uuid: room_uuid)).nil?
-        render json: base.merge(verify: 'failed', reason: 'no_such_room') and return nil if check
+      def check_update(params)
+        return nil if (api_v1_room = get_room(params[:room_uuid], params[:room_token])).nil?
+        return nil if (api_v1_user = get_user(params)).nil?
+        return api_v1_room if api_v1_user.user_type == 'master'
 
-        api_v1_room
+        render json: { verify: 'failed', reason: 'unauthorized_operations' }
+        nil
+      end
+
+      def check_destroy(params)
+        return nil if (api_v1_room = get_room(params[:room_uuid], params[:room_token])).nil?
+        return api_v1_room if Api::V1::User.where(room_uuid: params[:room_uuid]).count.zero?
+        return nil if (api_v1_user = get_user(params)).nil?
+        return api_v1_room if api_v1_user.user_type == 'master'
+
+        render json: { verify: 'failed', reason: 'unauthorized_operations' }
+        nil
       end
 
       def check_room_invalid_password(api_v1_room, password)
         check = !BCrypt::Password.new(api_v1_room.password).is_password?(password)
         render json: { verify: 'failed', reason: 'invalid_password' } if check
-        check
-      end
-
-      def check_expire_room_token(room_uuid, room_token, base = {})
-        check = !Api::V1::Token.valid.check_room(room_uuid, room_token)
-        render json: base.merge(verify: 'failed', reason: 'expire_room_token') if check
         check
       end
     end

@@ -22,15 +22,18 @@ module Api
       after_update lambda {
         ActionCable.server.broadcast(
           'rooms',
-          { type: 'update-data', table: self.class.table_name, uuid: uuid, data: previous_changes }
+          { type: 'update-data', table: self.class.table_name, data: to_response, changes: previous_changes }
         )
-      }
-      before_destroy lambda {
-        Api::V1::Token.where(room_uuid: uuid).delete_all
-        Api::V1::User.where(room_uuid: uuid).delete_all
+        ActionCable.server.broadcast(
+          "room_#{uuid}",
+          { type: 'update-data', table: self.class.table_name, data: to_response, changes: previous_changes }
+        )
       }
       after_destroy lambda {
         ActionCable.server.broadcast('rooms', { type: 'destroy-data', table: self.class.table_name, uuid: uuid })
+        ActionCable.server.broadcast("room_#{uuid}", { type: 'destroy-data', table: self.class.table_name })
+        Api::V1::Token.where(room_uuid: uuid).delete_all
+        Api::V1::User.where(room_uuid: uuid).delete_all
       }
 
       def to_response
