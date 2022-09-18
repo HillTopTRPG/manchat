@@ -294,7 +294,6 @@ const collapse = ref(false)
           </template>
         </v-breadcrumbs>
       </v-toolbar-title>
-      <v-spacer />
       <v-btn
         variant='text'
         :icon='collapse ? "mdi-arrow-expand-horizontal" : "mdi-arrow-collapse-horizontal"'
