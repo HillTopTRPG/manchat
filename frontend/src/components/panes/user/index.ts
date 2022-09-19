@@ -1,11 +1,11 @@
-import UserList, { labelStr as UserListLabel } from './UserList.vue'
+import UserList, { componentInfo as UserListInfo } from './UserList.vue'
 
 const group = 'ユーザー'
 
 export default [
   {
     component: UserList,
-    label    : UserListLabel,
+    info     : UserListInfo,
     group    : group,
   },
 ]

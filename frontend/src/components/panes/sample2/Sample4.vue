@@ -3,7 +3,10 @@ import { defineComponent } from '@vue/runtime-core'
 
 export default defineComponent({})
 //noinspection JSUnusedGlobalSymbols
-export const labelStr = 'サンプルペイン4'
+export const componentInfo = {
+  name : 'Sample4',
+  label: 'サンプルペイン4',
+}
 </script>
 
 <script setup lang='ts'>
