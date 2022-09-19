@@ -6,7 +6,7 @@ const panes = [
   ...samplePanes, ...samplePanes2, ...userPanes,
 ]
 
-export default panes.map(p => p.component)
+export default panes
 
 const map: { group: string, items: { [key: string]: string } }[] = []
 const groups: string[]                                           = []
@@ -25,10 +25,9 @@ groups.forEach(g => {
   panes
     .filter(p => p.group === g)
     .forEach(p => {
-      items[p.label] = p.component.__file!
-        .split('/').pop()!
-        .split('.vue')[0]
-        .replace(/([a-z0–9])([A-Z])/g, '$1-$2').toLowerCase()
+      // Convert to kebab-case and register
+      const kebab         = p.info.name.replace(/([a-z0–9])([A-Z])/g, '$1-$2').toLowerCase()
+      items[p.info.label] = kebab
     })
 })
 export const componentMap = map

@@ -1,16 +1,16 @@
-import Sample, { labelStr as SampleLabel } from './Sample.vue'
-import Sample2, { labelStr as Sample2Label } from './Sample2.vue'
+import Sample, { componentInfo as SampleInfo } from './Sample.vue'
+import Sample2, { componentInfo as Sample2Info } from './Sample2.vue'
 
 const group = 'smpl1'
 
 export default [
   {
     component: Sample,
-    label    : SampleLabel,
+    info     : SampleInfo,
     group    : group,
   }, {
     component: Sample2,
-    label    : Sample2Label,
+    info     : Sample2Info,
     group    : group,
   },
 ]
