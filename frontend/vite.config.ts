@@ -18,17 +18,12 @@ export default defineConfig(async ({
       port      : 3120,
       strictPort: true, // ポートがすでに使用されている場合に、次に使用可能なポートを自動的に試すことなく終了する
       watch     : { usePolling: true },
-      hmr       : false, //
-      //      https     : {
-      //        key : fs.readFileSync('./certificate/localhost-key.pem'),
-      //        cert: fs.readFileSync('./certificate/localhost.pem'),
-      //      },
+      hmr       : false,
     }, // yarn preview（yarn buildで生成されるdistフォルダ）で起動するときの設定
     preview: {
       host      : true, // 公開アドレスの生成に必要
       port      : 3120,
       strictPort: true, // ポートがすでに使用されている場合に、次に使用可能なポートを自動的に試すことなく終了する
-      //      https     : true,
     },
     plugins: [
       vue(), vuetify({ autoImport: true }), VitePWA({
