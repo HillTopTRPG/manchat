@@ -11,6 +11,7 @@ import {
   requestUserLoginWrap,
   requestUserTokenCheck,
   toRoom,
+  toRoomUser,
   userSort,
 } from '~/pages/AccountHelper'
 
@@ -28,7 +29,7 @@ const props = defineProps<{
   user_uuid?: string
   user_name?: string
   user_password?: string
-  auto_play?: string
+  open?: Nav
 }>()
 
 const theme             = useTheme()
@@ -74,13 +75,13 @@ const breadcrumbsItems = computed(() => {
         disabled: false,
         href    : '',
       },
-    ] : [], [
+    ] : [], currentNavText.value ? [
       {
         title   : currentNavText.value,
         disabled: false,
         href    : '',
       },
-    ],
+    ] : [],
   ].flatMap(a => a)
 })
 
@@ -105,12 +106,38 @@ watch(currentUserUuid, (value) => {
   if (!userLoggedInFlg.value) {
     return
   }
-  let userNav: Nav = value === props.user_uuid ? 'play' : 'profile'
-  selectedNav.value.splice(0, selectedNav.value.length, value === 'room-info' ? 'room-basic' : userNav)
+  const userNav: Nav | undefined = value === props.user_uuid ? props.open : 'profile'
+  const nextNav                  = value === 'room-info' ? 'room-basic' : userNav
+  if (nextNav) {
+    selectedNav.value.splice(0, selectedNav.value.length, nextNav)
+  } else {
+    selectedNav.value.splice(0, selectedNav.value.length)
+  }
 })
 
-const selectedNav       = ref<Nav[]>(['init'])
-const currentNav        = computed(() => selectedNav.value[0])
+const selectedNav = ref<Nav[]>(['init'])
+switch (props.open) {
+  case 'profile':
+  case 'notification':
+  case 'room-basic':
+    selectedNav.value[0] = props.open
+    break
+  default:
+    selectedNav.value[0] = 'init'
+    break
+}
+const currentNav = computed(() => selectedNav.value[0])
+watch(currentNav, () => {
+  console.log(currentNav.value)
+  switch (currentNav.value) {
+    case 'profile':
+    case 'notification':
+    case 'room-basic':
+      toRoomUser(merge({}, env, props, { open: currentNav.value }), true)
+      break
+    default:
+  }
+})
 const currentNavText    = computed(() => {
   switch (currentNav.value) {
     case 'profile':
@@ -121,8 +148,6 @@ const currentNavText    = computed(() => {
       return '基本情報'
     case 'notification':
       return '通知設定'
-    case 'play':
-      return 'プレイ画面'
   }
   return ''
 })
@@ -140,6 +165,13 @@ const logoutUser = async () => {
   return toRoom(merge({}, env, props), false)
 }
 
+const closeOverlay = () => {
+  selectedNav.value.splice(0, selectedNav.value.length)
+  const args = merge({}, env, { ...props })
+  args.open  = undefined
+  toRoomUser(args, true)
+}
+
 let isInitialLogin = false
 
 const existsUserName  = computed(() => users.value.find(u => u.uuid === userUuid.value)?.name || '')
@@ -152,7 +184,7 @@ const successUserLoggedIn = (user_uuid: string) => {
   selectedUserUuid.value.splice(0, selectedUserUuid.value.length, user_uuid)
 
   const next = {
-    name  : props.auto_play ? 'play' : 'room-user',
+    name  : 'room-user',
     params: {
       room_uuid: props.room_uuid,
       user_uuid,
@@ -276,17 +308,29 @@ const initialize = async () => {
 initialize().then()
 watch([() => props.room_uuid, () => props.user_uuid], initialize)
 
-const collapse = ref(false)
+const collapse  = ref(false)
+const showBar   = ref(false)
+const rootClass = computed(() => {
+  const result = []
+  if (collapse.value) {
+    result.push('toolbar-collapse')
+  }
+  result.push(currentNav.value)
+  if (drawerRail.value) {
+    result.push('drawer-rail')
+  }
+  return result
+})
 </script>
 
 <template>
-  <v-layout :class='{ "toolbar-collapse": collapse }'>
+  <v-layout :class='rootClass'>
     <v-app-bar prominent elevation='1' density='compact' :collapse='collapse'>
       <v-app-bar-nav-icon
         variant='text' @click.stop='drawerRail = !drawerRail'
         :icon='drawerRail ? "mdi-chevron-right" : "mdi-chevron-left"'
       ></v-app-bar-nav-icon>
-      <v-avatar image='https://quoridorn.com/img/mascot/normal/mascot_normal.png' class='ml-3' />
+      <v-avatar image='https://quoridorn.com/img/mascot/normal/mascot_normal.png' class='ml-3' v-if='!collapse' />
       <v-toolbar-title>
         <v-breadcrumbs :items='breadcrumbsItems' v-if='room'>
           <template #divider>
@@ -299,7 +343,13 @@ const collapse = ref(false)
         :icon='collapse ? "mdi-arrow-expand-horizontal" : "mdi-arrow-collapse-horizontal"'
         @click='collapse = !collapse'
       ></v-btn>
-      <v-btn variant='text' icon='mdi-brightness-6' @click='toggleTheme'></v-btn>
+      <v-btn
+        variant='text'
+        icon='mdi-pencil-ruler'
+        @click='showBar = !showBar'
+        v-if='currentNav !== "init" && currentNav !== "entrance" && !(drawerRail && collapse)'
+      ></v-btn>
+      <v-btn variant='text' icon='mdi-brightness-6' @click='toggleTheme' v-if='!(drawerRail && collapse)'></v-btn>
     </v-app-bar>
 
     <v-navigation-drawer :rail='drawerRail || userLoggedInFlg' rail-width='80' :permanent='true'>
@@ -315,6 +365,7 @@ const collapse = ref(false)
           value='room-info'
           append-icon='folder-home'
           tooltip-text='部屋'
+          :big-icon='true'
         />
 
         <template v-if='userLoggedInFlg'>
@@ -349,11 +400,11 @@ const collapse = ref(false)
 
     <v-navigation-drawer
       :rail='drawerRail'
-      rail-width='80'
+      rail-width='54'
       :permanent='true'
       v-if='userLoggedInFlg && currentNav !== "init"'
     >
-      <v-list :nav='true' :mandatory='true' :selected='readonly(selectedNav)' @update:selected='updateSelectedNav'>
+      <v-list :nav='true' :selected='readonly(selectedNav)' @update:selected='updateSelectedNav' density='compact'>
         <template v-if='currentUserUuid === "room-info"'>
           <user-nav-item
             label='基本情報'
@@ -365,14 +416,6 @@ const collapse = ref(false)
         </template>
         <template v-else>
           <user-nav-item
-            label='プレイ'
-            :show-label='!drawerRail'
-            tooltip-text='プレイ画面に移動します。'
-            value='play'
-            append-icon='dice-multiple'
-            v-if='currentUserUuid === user_uuid'
-          />
-          <user-nav-item
             label='プロフィール'
             :show-label='!drawerRail'
             value='profile'
@@ -380,7 +423,8 @@ const collapse = ref(false)
             tooltip-text='プロフィールを表示・編集します。'
           />
           <template v-if='currentUserUuid === user_uuid'>
-            <v-list-subheader>{{ drawerRail ? "Setting" : "アプリの設定" }}</v-list-subheader>
+            <v-list-subheader v-if='!drawerRail'>アプリの設定</v-list-subheader>
+            <v-divider v-else />
             <user-nav-item
               label='通知'
               :show-label='!drawerRail'
@@ -400,12 +444,13 @@ const collapse = ref(false)
           :user_uuid='user_uuid'
           :user_name='user_name'
           :user_password='user_password'
-          :auto_play='auto_play'
           :users='users'
           :room='room'
           :nav='currentNav'
+          :showBar='showBar'
           @requireUserLogin='showUserLogin'
           @logoutUser='logoutUser()'
+          @close-overlay='closeOverlay()'
           ref='contentRef'
         />
       </suspense>
@@ -478,7 +523,16 @@ const collapse = ref(false)
 </template>
 
 <!--suppress HtmlUnknownAttribute, CssUnusedSymbol, CssUnknownProperty -->
+
 <style deep lang='css'>
+.v-toolbar {
+  min-width: 220px;
+}
+
+.drawer-rail .v-toolbar {
+  min-width: 133px;
+}
+
 /*noinspection CssUnresolvedCustomProperty*/
 .toolbar-collapse .v-main {
   padding-top: 0 !important;
@@ -491,6 +545,11 @@ const collapse = ref(false)
 
 .v-navigation-drawer--rail .v-list-item__append > * {
   margin-left: 0;
+}
+
+.v-navigation-drawer {
+  padding-top: 48px;
+  margin-top: 0 !important;
 }
 
 .v-navigation-drawer .v-list-item {

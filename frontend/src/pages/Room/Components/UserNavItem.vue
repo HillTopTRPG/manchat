@@ -5,9 +5,9 @@ defineProps<{
   appendIcon?: string
   prependIcon?: string
   value: string
-  auto_play?: string
   showLabel: boolean
   listItemStyle?: string
+  bigIcon?: boolean
 }>()
 
 const emits = defineEmits<{
@@ -27,10 +27,10 @@ const emits = defineEmits<{
         :style='listItemStyle'
       >
         <template #append>
-          <v-icon size='x-large' class='mr-2' v-if='appendIcon'>mdi-{{ appendIcon }}</v-icon>
+          <v-icon :size='bigIcon ? "default" : "small"' class='mr-2' v-if='appendIcon'>mdi-{{ appendIcon }}</v-icon>
         </template>
         <template #prepend>
-          <v-icon size='x-large' class='mr-2' v-if='prependIcon'>mdi-{{ prependIcon }}</v-icon>
+          <v-icon :size='bigIcon ? "default" : "small"' class='mr-2' v-if='prependIcon'>mdi-{{ prependIcon }}</v-icon>
         </template>
         <transition name='fade'>
           <v-list-item-title class='pl-7' v-if='showLabel'>{{ label }}</v-list-item-title>

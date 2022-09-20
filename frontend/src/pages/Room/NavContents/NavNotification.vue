@@ -9,9 +9,12 @@ const props = defineProps<{
   user_uuid?: string
   user_name?: string
   user_password?: string
-  auto_play?: string
   nav: Nav
   users: User[]
+}>()
+
+const emits = defineEmits<{
+  (e: 'close'): void
 }>()
 
 const router = useRouter()
@@ -83,41 +86,50 @@ const defaults = {
 </script>
 
 <template>
-  <v-list v-if='nav === "notification"' :nav='true' bg-color='transparent'>
-    <v-defaults-provider :defaults='defaults'>
-      <v-list-subheader>デスクトップ通知</v-list-subheader>
-      <v-list-item @click='banNotifyDesktop = !banNotifyDesktop'>
-        <template #append>
-          <v-switch :model-value='banNotifyDesktop' @click.self.prevent />
-        </template>
-        <v-list-item-title>デスクトップ通知をすべて無効にする
-          <v-btn icon='mdi-bell' v-show='!banNotifyDesktop' @click.stop='testDesktopNotify()' />
-        </v-list-item-title>
-      </v-list-item>
+  <v-overlay
+    class='nav-contents overflow-auto'
+    :contained='true'
+    :model-value='nav === "notification"'
+  >
+    <v-list :nav='true' bg-color='transparent'>
+      <v-defaults-provider :defaults='defaults'>
+        <v-list-subheader>デスクトップ通知</v-list-subheader>
+        <v-list-item @click='banNotifyDesktop = !banNotifyDesktop'>
+          <template #append>
+            <v-switch :model-value='banNotifyDesktop' @click.self.prevent />
+          </template>
+          <v-list-item-title>デスクトップ通知をすべて無効にする
+            <v-btn icon='mdi-bell' v-show='!banNotifyDesktop' @click.stop='testDesktopNotify()' />
+          </v-list-item-title>
+        </v-list-item>
 
-      <v-list-subheader>サウンド</v-list-subheader>
-      <v-list-item @click='banNotifyAllSound = !banNotifyAllSound'>
-        <template #append>
-          <v-switch :model-value='banNotifyAllSound' @click.self.prevent />
-        </template>
-        <v-list-item-title>通知音をすべて無効にする</v-list-item-title>
-      </v-list-item>
-      <v-list-item @click='notifyChatSound = !notifyChatSound'>
-        <template #append>
-          <v-switch :model-value='notifyChatSound' @click.self.prevent />
-        </template>
-        チャット
-        <v-btn @click='testAudio()' icon='mdi-volume-source' @click.stop />
-      </v-list-item>
-      <v-list-item @click='notifyChatSound = !notifyChatSound'>
-        <template #append>
-          <v-switch :model-value='notifyChatSound' @click.self.prevent />
-        </template>
-        チャット2
-        <v-btn @click='testAudio2()' icon='mdi-volume-source' @click.stop />
-      </v-list-item>
-    </v-defaults-provider>
-  </v-list>
+        <v-list-subheader>サウンド</v-list-subheader>
+        <v-list-item @click='banNotifyAllSound = !banNotifyAllSound'>
+          <template #append>
+            <v-switch :model-value='banNotifyAllSound' @click.self.prevent />
+          </template>
+          <v-list-item-title>通知音をすべて無効にする</v-list-item-title>
+        </v-list-item>
+        <v-list-item @click='notifyChatSound = !notifyChatSound'>
+          <template #append>
+            <v-switch :model-value='notifyChatSound' @click.self.prevent />
+          </template>
+          チャット
+          <v-btn @click='testAudio()' icon='mdi-volume-source' @click.stop />
+        </v-list-item>
+        <v-list-item @click='notifyChatSound = !notifyChatSound'>
+          <template #append>
+            <v-switch :model-value='notifyChatSound' @click.self.prevent />
+          </template>
+          チャット2
+          <v-btn @click='testAudio2()' icon='mdi-volume-source' @click.stop />
+        </v-list-item>
+      </v-defaults-provider>
+    </v-list>
+    <v-container class='d-flex align-center justify-center'>
+      <v-btn icon='mdi-close' size='small' variant='tonal' @click='emits("close")'></v-btn>
+    </v-container>
+  </v-overlay>
 </template>
 
 <!--suppress CssUnusedSymbol, HtmlUnknownAttribute -->

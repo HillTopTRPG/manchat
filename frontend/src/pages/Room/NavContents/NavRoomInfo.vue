@@ -14,7 +14,6 @@ const props = defineProps<{
   user_uuid?: string
   user_name?: string
   user_password?: string
-  auto_play?: string
   nav: Nav
   users: User[]
   room: Room | null
@@ -23,6 +22,7 @@ const props = defineProps<{
 const emits = defineEmits<{
   (e: 'logoutUser'): void
   (e: 'requireRoomLogin'): void
+  (e: 'close'): void
 }>()
 
 const user = computed(() => props.users.find(u => u.uuid === props.user_uuid))
@@ -87,8 +87,23 @@ const deleteRoom = async () => {
 </script>
 
 <template>
-  <template v-if='nav === "entrance" || nav === "room-basic"'>
+  <v-overlay class='nav-contents' :contained='true' :model-value='nav === "entrance" || nav === "room-basic"'>
     <v-list class='ma-4' lines='two' bg-color='transparent'>
+      <v-list-subheader>部屋情報</v-list-subheader>
+
+      <template v-if='user?.user_type === "master"'>
+        <v-list-item>
+          <v-text-field
+            v-model='roomName'
+            label='部屋の名前'
+            hint='必須項目'
+          />
+        </v-list-item>
+        <v-list-item>
+          <v-btn color='secondary' @click='updateRoom()'>更新</v-btn>
+        </v-list-item>
+      </template>
+
       <v-list-item @click='copy(inviteUrl)' variant='text' style='vertical-align: middle'>
         <span>部屋への招待URL</span>
         <span class='ml-5' style='white-space: nowrap;'>{{ inviteUrl }}</span>
@@ -100,6 +115,7 @@ const deleteRoom = async () => {
           <span>コピーしました</span>
         </v-tooltip>
       </v-list-item>
+
       <v-list-item variant='text'>
         <v-list-item-action>
           <room-logout-dialog-button @execute='toLobby(merge({ router }, props), false)' />
@@ -118,25 +134,8 @@ const deleteRoom = async () => {
       </v-list-item>
     </v-list>
 
-    <template v-if='user?.user_type === "master"'>
-      <v-form>
-        <v-container>
-          <v-row class='ma-0'>
-            <v-col class='pa-0'>
-              <v-text-field
-                v-model='roomName'
-                label='名前'
-                hint='必須項目'
-              />
-            </v-col>
-          </v-row>
-          <v-row class='mx-0 my-4'>
-            <v-col class='pa-0'>
-              <v-btn color='secondary' @click='updateRoom()'>更新</v-btn>
-            </v-col>
-          </v-row>
-        </v-container>
-      </v-form>
-    </template>
-  </template>
+    <v-container class='d-flex align-center justify-center' v-if='nav === "room-basic"'>
+      <v-btn icon='mdi-close' size='small' variant='tonal' @click='emits("close")'></v-btn>
+    </v-container>
+  </v-overlay>
 </template>

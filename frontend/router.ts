@@ -1,5 +1,4 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import Play from '~/pages/Play/Root.vue'
 import Room from '~/pages/Room/Root.vue'
 import Lobby from '~/pages/Lobby/Root.vue'
 import NotFoundRoom from '~/pages/Error/NotFoundRoom.vue'
@@ -17,7 +16,6 @@ const router = createRouter({
                                       user_uuid    : r.query.u,
                                       user_name    : r.query.n,
                                       user_password: r.query.p,
-                                      auto_play    : r.query.auto_play,
                                     }
                                   ),
                                 }, {
@@ -30,7 +28,7 @@ const router = createRouter({
                                       user_uuid    : r.query.u,
                                       user_name    : r.query.n,
                                       user_password: r.query.p,
-                                      auto_play    : r.query.auto_play,
+                                      open         : r.query.open,
                                     }
                                   ),
                                 }, {
@@ -43,14 +41,9 @@ const router = createRouter({
                                       user_uuid    : r.params.user_uuid,
                                       user_name    : r.query.n,
                                       user_password: r.query.p,
-                                      auto_play    : r.query.auto_play,
+                                      open         : r.query.open,
                                     }
                                   ),
-                                }, {
-                                  path     : '/r/:room_uuid/u/:user_uuid/p',
-                                  name     : 'play',
-                                  component: Play,
-                                  props    : true,
                                 }, {
                                   path     : '/r/not_found',
                                   name     : 'not_found_room',

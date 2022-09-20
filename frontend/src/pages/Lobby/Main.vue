@@ -12,7 +12,6 @@ defineProps<{
   user_uuid?: string
   user_name?: string
   user_password?: string
-  auto_play?: string
 }>()
 
 const theme             = useTheme()
@@ -104,7 +103,6 @@ const contentRef = ref()
         :user_uuid='user_uuid'
         :user_name='user_name'
         :user_password='user_password'
-        :auto_play='auto_play'
         ref='contentRef'
       />
     </v-main>

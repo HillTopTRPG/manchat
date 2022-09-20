@@ -18,7 +18,7 @@ services:
     build: ./docker/vue
     volumes:
       - ./frontend:/app
-    command: "yarn serve"
+    command: "yarn dev"
   rails:
     build: ./docker/rails
     tty: true
