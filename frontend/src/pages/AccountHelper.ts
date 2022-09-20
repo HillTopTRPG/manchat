@@ -10,7 +10,6 @@ export type Nav =
   | 'profile'
   | 'room-basic'
   | 'notification'
-  | 'play'
 
 type Env = {
   axios: any
@@ -22,7 +21,7 @@ export type RoomProps = {
   user_uuid?: string
   user_name?: string
   user_password?: string
-  auto_play?: string
+  open?: string
 }
 
 export async function requestUserLoginWrap(args: Env & RoomProps & {
@@ -141,12 +140,17 @@ export const toLobby = (args: Omit<RoomProps, 'room_uuid'> & { router: typeof Ro
                            query: hasQuery ? merge(toRoomQuery(args), { r: args.room_uuid }) : undefined,
                          })
 
+const toRoomUserQuery = (args: Omit<RoomProps, 'room_uuid'>) => (
+  {
+    n   : args.user_name,
+    p   : args.user_password,
+    open: args.open,
+  }
+)
+
 const toRoomQuery = (args: Omit<RoomProps, 'room_uuid'>) => (
   {
-    u        : args.user_uuid,
-    n        : args.user_name,
-    p        : args.user_password,
-    auto_play: args.auto_play,
+    u: args.user_uuid, ...toRoomUserQuery(args),
   }
 )
 
@@ -155,6 +159,19 @@ export async function toRoom(args: RoomProps & { router: typeof Router }, hasQue
                                name  : 'room',
                                params: pick(args, 'room_uuid'),
                                query : hasQuery ? toRoomQuery(args) : undefined,
+                             })
+}
+
+export async function toRoomUser(args: RoomProps & { router: typeof Router }, hasQuery: boolean) {
+  console.log(JSON.stringify({
+                               name  : 'room-user',
+                               params: pick(args, 'room_uuid', 'user_uuid'),
+                               query : hasQuery ? toRoomUserQuery(args) : undefined,
+                             }, null, '  '))
+  return args.router.replace({
+                               name  : 'room-user',
+                               params: pick(args, 'room_uuid', 'user_uuid'),
+                               query : hasQuery ? toRoomUserQuery(args) : undefined,
                              })
 }
 
@@ -226,7 +243,16 @@ export async function requestTokenCheckWrap(args: Env & RoomProps & {
     args.users.value.splice(0, args.users.value.length, ...data.users)
 
     toRoom(args, true).then()
-    args.selectedNav.value.splice(0, args.selectedUserUuid.value.length, 'entrance')
+    switch (args.open) {
+      case 'profile':
+      case 'notification':
+      case 'room-basic':
+        args.selectedNav.value.splice(0, args.selectedNav.value.length, args.open)
+        break
+      default:
+        args.selectedNav.value.splice(0, args.selectedNav.value.length, 'entrance')
+        break
+    }
     return null
   } else {
     const { data } = await args.axios.post(`/api/v1/users/${args.user_uuid}/token/${user_token}/check`, {
@@ -244,19 +270,26 @@ export async function requestTokenCheckWrap(args: Env & RoomProps & {
     const isSuccess            = data.verify === 'success'
     args.userLoggedInFlg.value = isSuccess
     args.drawerRail.value      = !isSuccess
-    args.selectedNav.value.splice(0, args.selectedNav.value.length, isSuccess ? 'profile' : 'entrance')
     if (isSuccess) {
       args.selectedUserUuid.value.splice(0, args.selectedUserUuid.value.length, args.user_uuid!)
-      if (args.auto_play) {
-        toPlay(args).then()
-        return 'goto play'
-      }
       args.router.replace({
                             name  : 'room-user',
                             params: pick(args, 'room_uuid', 'user_uuid'),
+                            query : pick(args, 'open'),
                           }).then()
+      switch (args.open) {
+        case 'profile':
+        case 'notification':
+        case 'room-basic':
+          args.selectedNav.value.splice(0, args.selectedNav.value.length, args.open)
+          break
+        default:
+          args.selectedNav.value.splice(0, args.selectedNav.value.length)
+          break
+      }
       return null
     }
+    args.selectedNav.value.splice(0, args.selectedNav.value.length, 'entrance')
     args.selectedUserUuid.value.splice(0, args.selectedUserUuid.value.length)
     if (data.reason === 'expire_room_token' || data.reason === 'no_such_room') {
       toLobby(args, data.reason.startsWith('expire')).then()

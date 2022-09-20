@@ -13,7 +13,6 @@ const props = defineProps<{
   user_uuid?: string
   user_name?: string
   user_password?: string
-  auto_play?: string
 }>()
 
 const loginDialog       = ref(false)
@@ -61,10 +60,9 @@ const preRoomLogin = async (room_uuid?: string) => {
       name  : 'room',
       params: { room_uuid },
       query : {
-        u        : props.user_uuid,
-        n        : props.user_name,
-        p        : props.user_password,
-        auto_play: props.auto_play,
+        u: props.user_uuid,
+        n: props.user_name,
+        p: props.user_password,
       },
     }
     if (isInitialLogin) {
@@ -138,10 +136,9 @@ const roomLoginFunc = async (room_uuid?: string) => {
     name  : 'room',
     params: { room_uuid },
     query : {
-      u        : props.user_uuid,
-      n        : props.user_name,
-      p        : props.user_password,
-      auto_play: props.auto_play,
+      u: props.user_uuid,
+      n: props.user_name,
+      p: props.user_password,
     },
   }
   if (isInitialLogin) {

@@ -11,13 +11,13 @@ const props = defineProps<{
   user_uuid?: string
   user_name?: string
   user_password?: string
-  auto_play?: string
   nav: Nav
   users: User[]
 }>()
 
 const emits = defineEmits<{
   (e: 'requireUserLogin'): void
+  (e: 'close'): void
 }>()
 
 const user = computed(() => props.users.find(u => u.uuid === props.user_uuid))
@@ -71,52 +71,35 @@ const deleteUser = async () => {
 </script>
 
 <template>
-  <v-form v-if='nav === "profile"'>
-    <v-container>
-      <v-row class='ma-0'>
-        <v-col class='pa-0'>
-          <v-text-field
-            v-model='userName'
-            label='名前'
-            hint='必須項目'
-          />
-        </v-col>
-      </v-row>
-      <v-row class='mx-0 my-4'>
-        <v-col class='pa-0'>
-          <v-select
-            v-model='userType'
-            :items='userTypeSelection'
-            item-value='value'
-            item-title='title'
-            :hint='userType?.hint'
-            label='ユーザータイプ'
-            persistent-hint
-            return-object
-          />
-        </v-col>
-      </v-row>
-      <!--        <v-row class='mx-0 my-4'>-->
-      <!--          <v-col class='pa-0'>-->
-      <!--            <v-color-picker-->
-      <!--              v-model='userColor'-->
-      <!--              :hide-canvas='true'-->
-      <!--              :show-swatches='true'-->
-      <!--              :swatches='swatches'-->
-      <!--              :hide-inputs='true'-->
-      <!--              :hide-sliders='true'-->
-      <!--              :modes='["hex"]'-->
-      <!--            />-->
-      <!--          </v-col>-->
-      <!--        </v-row>-->
-      <v-row class='mx-0 my-4'>
-        <v-col class='pa-0'>
-          <v-btn color='secondary' @click='updateUser()'>更新</v-btn>
-        </v-col>
-        <v-col class='pa-0'>
-          <delete-dialog-button button-text='削除' dialog-title='このユーザーを削除しますか？' @execute='deleteUser()' />
-        </v-col>
-      </v-row>
+  <v-overlay class='nav-contents' :contained='true' :model-value='nav === "profile"'>
+    <v-list :nav='true' bg-color='transparent'>
+      <v-list-subheader>あなたのアカウント情報</v-list-subheader>
+      <v-list-item>
+        <v-text-field
+          v-model='userName'
+          label='名前'
+          hint='必須項目'
+        />
+      </v-list-item>
+      <v-list-item>
+        <v-select
+          v-model='userType'
+          :items='userTypeSelection'
+          item-value='value'
+          item-title='title'
+          :hint='userType?.hint'
+          label='ユーザータイプ'
+          persistent-hint
+          return-object
+        />
+      </v-list-item>
+      <v-list-item>
+        <v-btn color='secondary' @click='updateUser()'>更新</v-btn>
+        <delete-dialog-button button-text='削除' dialog-title='このユーザーを削除しますか？' @execute='deleteUser()' />
+      </v-list-item>
+    </v-list>
+    <v-container class='d-flex align-center justify-center'>
+      <v-btn icon='mdi-close' size='small' variant='tonal' @click='emits("close")'></v-btn>
     </v-container>
-  </v-form>
+  </v-overlay>
 </template>

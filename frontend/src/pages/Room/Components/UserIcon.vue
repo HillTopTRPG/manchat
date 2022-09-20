@@ -49,7 +49,7 @@ const colors = ['#92a1c6', '#146a7c', '#f0ab3d', '#c271b4', '#c20d90']
       :icon='icon'
       color='white'
     >
-      <Avatar variant='beam' :name='user.uuid' :colors='colors' />
+      <Avatar variant='beam' size='40' :name='user.uuid' :colors='colors' />
     </v-badge>
   </v-badge>
 </template>
