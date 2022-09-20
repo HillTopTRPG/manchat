@@ -10,6 +10,9 @@ import VueAxios from 'vue-axios'
 import ActionCable from 'actioncable'
 import router from '../router'
 import { createI18n } from 'vue-i18n'
+//import { registerSW } from 'virtual:pwa-register'
+//
+//registerSW()
 
 const i18n = createI18n({
                           locale         : 'ja-JP', // set locale

@@ -30,16 +30,18 @@ RUN gem install nokogiri \
 
 RUN gem install bundler -v ${BUNDLER_VERSION}
 
-ADD ./wait-for-it.sh /app/wait-for-it.sh
-
 WORKDIR /app
+
+ADD ./wait-for-it.sh /app/wait-for-it.sh
+RUN chmod -R 777 /app
 
 ENTRYPOINT [ \
   "prehook", "ruby -v", "--", \
   "prehook", "bundle install -j4", "--", \
-  "prehook", "/app/wait-for-it.sh mysql:3306 -- bundle exec rails db:create", "--", \
+  "prehook", "bundle exec rails db:create", "--", \
   "prehook", "bundle exec rails db:migrate", "--", \
   "prehook", "cron", "--", \
+  "prehook", "bundle exec rake app:update:bin", "--", \
   "prehook", "bundle exec whenever --update-crontab", "--", \
   "prehook", "bundle exec rake 'database:initialize'", "--" \
 ]

@@ -32,5 +32,6 @@ WORKDIR /app
 RUN yarn global add @vue/cli
 
 ENTRYPOINT [ \
-  "prehook", "yarn install", "--" \
+  "prehook", "yarn install", "--", \
+  "prehook", "yarn build", "--" \
 ]
