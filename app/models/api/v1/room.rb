@@ -3,8 +3,9 @@
 module Api
   module V1
     class Room < ApplicationRecord
+      include UuidGenerator
+
       before_create lambda {
-        self.uuid = SecureRandom.uuid
         self.password = BCrypt::Password.create(password)
         self.last_logged_in = DateTime.now
       }

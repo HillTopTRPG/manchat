@@ -10,7 +10,31 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2022_09_07_004932) do
+ActiveRecord::Schema[7.0].define(version: 2022_09_21_050001) do
+  create_table "api_v1_change_logs", primary_key: "uuid", id: :string, charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
+    t.string "room_uuid", null: false
+    t.string "table", null: false
+    t.string "owner_user", null: false
+    t.json "before", null: false
+    t.json "after", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+  end
+
+  create_table "api_v1_chats", primary_key: "uuid", id: :string, charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
+    t.string "room_uuid", null: false
+    t.string "tab"
+    t.text "raw", null: false
+    t.string "owner_user"
+    t.string "owner_character"
+    t.string "target"
+    t.integer "secret", null: false
+    t.json "rands"
+    t.json "reactions"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+  end
+
   create_table "api_v1_rooms", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
     t.string "uuid"
     t.string "name"
