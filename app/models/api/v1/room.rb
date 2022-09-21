@@ -37,7 +37,7 @@ module Api
       }
 
       def to_response
-        attributes.except :password
+        attributes.except 'password'
       end
     end
   end

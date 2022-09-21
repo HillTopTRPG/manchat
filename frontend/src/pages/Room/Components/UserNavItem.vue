@@ -1,5 +1,7 @@
 <script setup lang='ts'>
-defineProps<{
+import { computed } from 'vue'
+
+const props = defineProps<{
   label: string
   tooltipText: string
   appendIcon?: string
@@ -13,12 +15,16 @@ defineProps<{
 const emits = defineEmits<{
   (e: 'click-list-item'): void
 }>()
+
+const iconSize  = computed(() => props.bigIcon ? 'default' : 'small')
+const iconClass = computed(() => props.bigIcon ? 'ma-2' : 'mr-2')
 </script>
 
 <template>
   <v-tooltip transition='scale-transition'>
     <template #activator='{ props }'>
       <v-list-item
+        :class='{ "hide-contents": !showLabel }'
         variant='elevated'
         color='primary'
         :value='value'
@@ -27,10 +33,10 @@ const emits = defineEmits<{
         :style='listItemStyle'
       >
         <template #append>
-          <v-icon :size='bigIcon ? "default" : "small"' class='mr-2' v-if='appendIcon'>mdi-{{ appendIcon }}</v-icon>
+          <v-icon :size='iconSize' :class='iconClass' v-if='appendIcon'>mdi-{{ appendIcon }}</v-icon>
         </template>
         <template #prepend>
-          <v-icon :size='bigIcon ? "default" : "small"' class='mr-2' v-if='prependIcon'>mdi-{{ prependIcon }}</v-icon>
+          <v-icon :size='iconSize' :class='iconClass' v-if='prependIcon'>mdi-{{ prependIcon }}</v-icon>
         </template>
         <transition name='fade'>
           <v-list-item-title class='pl-7' v-if='showLabel'>{{ label }}</v-list-item-title>
@@ -42,7 +48,7 @@ const emits = defineEmits<{
 </template>
 
 <!--suppress CssUnusedSymbol -->
-<style lang='css'>
+<style deep lang='css'>
 .fade-enter-active,
 .fade-leave-active {
   transition: opacity 0.2s ease;
@@ -51,5 +57,9 @@ const emits = defineEmits<{
 .fade-enter-from,
 .fade-leave-to {
   opacity: 0;
+}
+
+.hide-contents .v-list-item__content {
+  display: none;
 }
 </style>

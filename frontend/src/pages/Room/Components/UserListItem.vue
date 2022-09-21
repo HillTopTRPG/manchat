@@ -17,7 +17,7 @@ const emits = defineEmits<{
   <v-tooltip transition='scale-transition' v-if='user'>
     <template #activator='{ props }'>
       <v-list-item
-        class='py-2'
+        class='py-2 px-1'
         :value='user.uuid'
         active-color='primary'
         variant='elevated'

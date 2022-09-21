@@ -8,6 +8,7 @@ import SplitPanesLayer from '~/components/SplitPanesLayer.vue'
 import { Room } from '~/data/room'
 import defaultLayout from './DefaultLayout'
 import provideAll from '~/data/Play'
+import { watch } from 'vue'
 
 const props = defineProps<{
   room_uuid: string
@@ -25,7 +26,9 @@ const emits = defineEmits<{
   (e: 'close-overlay'): void
 }>()
 
-provideAll(props.room_uuid)
+watch(() => props.room_uuid, () => {
+  provideAll(props.room, props.users)
+}, { immediate: true })
 </script>
 
 <template>

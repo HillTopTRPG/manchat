@@ -1,8 +1,9 @@
 import { provide } from 'vue'
 import CounterStore, { InjectionKeySymbol as counterKey } from './count'
-import UserStore, { InjectionKeySymbol as userKey } from './user'
+import UserStore, { InjectionKeySymbol as userKey, User } from './user'
+import { Room } from '~/data/room'
 
-export default function (room_uuid: string) {
+export default function (room: Room | null, users: User[]) {
   provide(counterKey, CounterStore())
-  provide(userKey, UserStore(room_uuid))
+  provide(userKey, UserStore(users))
 }

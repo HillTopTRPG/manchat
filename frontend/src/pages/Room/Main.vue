@@ -352,7 +352,7 @@ const rootClass = computed(() => {
       <v-btn variant='text' icon='mdi-brightness-6' @click='toggleTheme' v-if='!(drawerRail && collapse)'></v-btn>
     </v-app-bar>
 
-    <v-navigation-drawer :rail='drawerRail || userLoggedInFlg' rail-width='80' :permanent='true'>
+    <v-navigation-drawer :rail='drawerRail || userLoggedInFlg' rail-width='70' :permanent='true'>
       <v-list
         :nav='true'
         :mandatory='true'
@@ -369,12 +369,19 @@ const rootClass = computed(() => {
         />
 
         <template v-if='userLoggedInFlg'>
-          <v-list-subheader v-if='user_uuid'>あなた</v-list-subheader>
+          <v-list-subheader v-if='!drawerRail && !userLoggedInFlg'>あなた</v-list-subheader>
+          <v-divider v-else />
           <user-list-item :user='users.find(u => u.uuid === user_uuid)' :hide-title='drawerRail' />
         </template>
 
-        <v-list-subheader v-if='user_uuid'>{{ drawerRail || userLoggedInFlg ? 'Users' : '他のユーザー' }}</v-list-subheader>
-        <v-list-subheader v-else>{{ drawerRail ? 'Log in' : 'ログイン' }}</v-list-subheader>
+        <template v-if='user_uuid'>
+          <v-list-subheader v-if='!drawerRail && !userLoggedInFlg'>他のユーザー</v-list-subheader>
+          <v-divider v-else />
+        </template>
+        <template v-else>
+          <v-list-subheader v-if='!drawerRail'>ログイン</v-list-subheader>
+          <v-divider v-else />
+        </template>
 
         <user-nav-item
           label='新しいユーザー'
@@ -383,6 +390,7 @@ const rootClass = computed(() => {
           prepend-icon='login-variant'
           tooltip-text='新しいユーザーを作成します'
           @click-list-item='showUserLogin()'
+          :big-icon='true'
           v-if='!user_uuid'
         />
 
