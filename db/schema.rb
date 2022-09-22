@@ -19,6 +19,7 @@ ActiveRecord::Schema[7.0].define(version: 2022_09_21_050001) do
     t.json "after", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.index ["room_uuid"], name: "index_api_v1_change_logs_on_room_uuid"
   end
 
   create_table "api_v1_chats", primary_key: "uuid", id: :string, charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
@@ -27,12 +28,15 @@ ActiveRecord::Schema[7.0].define(version: 2022_09_21_050001) do
     t.text "raw", null: false
     t.string "owner_user"
     t.string "owner_character"
-    t.string "target"
+    t.string "target_type"
+    t.string "target_uuid"
     t.integer "secret", null: false
-    t.json "rands"
+    t.string "ref_uuid"
+    t.json "attached"
     t.json "reactions"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.index ["room_uuid"], name: "index_api_v1_chats_on_room_uuid"
   end
 
   create_table "api_v1_rooms", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|

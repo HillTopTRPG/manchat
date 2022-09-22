@@ -407,8 +407,8 @@ const onResizedPanes = (event: { size: number }[]) => event.forEach(({ size }, i
 <!--suppress HtmlUnknownAttribute, CssUnusedSymbol -->
 <style deep lang='css'>
 .splitpanes.root {
-  height: calc(100vh - 64px) !important;
-  background-image: linear-gradient(-45deg, #d5dee7 0%, #ffafbd 0%, #c9ffbf 100%);
+  height: 100%;
+  background: rgb(var(--v-theme-surface));
 }
 
 .splitpanes {

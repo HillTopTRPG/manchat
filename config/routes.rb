@@ -17,6 +17,8 @@ Rails.application.routes.draw do
         post "#{n}s/:#{n}_uuid/token/:#{n}_token/check", to: "#{n}s#check_token"
       end
 
+      get 'room_collections/:room_uuid', to: 'room_collections#index', as: 'room_collections'
+
       %w[chats].each do |n|
         get n, to: "#{n}#index", as: n
         post n, to: "#{n}#create"

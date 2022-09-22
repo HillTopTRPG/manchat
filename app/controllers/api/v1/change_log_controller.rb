@@ -2,7 +2,7 @@
 
 module Api
   module V1
-    class ChangeLogController < RoomCollectionsController
+    class ChangeLogController < AbstractRoomCollectionsController
       def model
         Api::V1::ChangeLog
       end

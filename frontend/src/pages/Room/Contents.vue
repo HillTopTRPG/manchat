@@ -12,13 +12,12 @@ import { watch } from 'vue'
 
 const props = defineProps<{
   room_uuid: string
-  user_uuid?: string
-  user_name?: string
-  user_password?: string
-  nav: Nav
+  user_uuid: string
+  nav1?: string | 'room-info'
+  nav2: Nav
   users: User[]
-  showBar: boolean
   room: Room | null
+  showBar: boolean
 }>()
 const emits = defineEmits<{
   (e: 'requireUserLogin'): void
@@ -27,18 +26,18 @@ const emits = defineEmits<{
 }>()
 
 watch(() => props.room_uuid, () => {
-  provideAll(props.room, props.users)
+  provideAll(props)
 }, { immediate: true })
 </script>
 
 <template>
-  <template v-if='nav !== "init"'>
+  <template v-if='nav2 !== "init"'>
     <nav-room-info v-bind='$props' @logout-user='emits("logoutUser")' @close='emits("close-overlay")' />
     <nav-profile v-bind='$props' @require-user-login='emits("requireUserLogin")' @close='emits("close-overlay")' />
     <nav-notification v-bind='$props' @close='emits("close-overlay")' />
 
     <split-panes-layer
-      v-if='nav !== "entrance"'
+      v-if='nav2 !== "entrance" && nav2 !== "init"'
       :layout='defaultLayout'
       :root-layout='defaultLayout'
       :show-bar='showBar'
@@ -46,6 +45,7 @@ watch(() => props.room_uuid, () => {
   </template>
 </template>
 
+<!--suppress HtmlUnknownAttribute -->
 <style deep lang='css'>
 .v-overlay__scrim {
   background: rgb(var(--v-theme-surface));

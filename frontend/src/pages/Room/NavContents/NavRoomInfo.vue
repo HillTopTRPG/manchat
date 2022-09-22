@@ -14,7 +14,8 @@ const props = defineProps<{
   user_uuid?: string
   user_name?: string
   user_password?: string
-  nav: Nav
+  nav1?: string | 'room-info'
+  nav2: Nav
   users: User[]
   room: Room | null
 }>()
@@ -87,7 +88,7 @@ const deleteRoom = async () => {
 </script>
 
 <template>
-  <v-overlay class='nav-contents' :contained='true' :model-value='nav === "entrance" || nav === "room-basic"'>
+  <v-overlay class='nav-contents' :contained='true' :model-value='nav2 === "entrance" || nav2 === "room-basic"'>
     <v-list class='ma-4' lines='two' bg-color='transparent'>
       <v-list-subheader>部屋情報</v-list-subheader>
 
@@ -134,7 +135,7 @@ const deleteRoom = async () => {
       </v-list-item>
     </v-list>
 
-    <v-container class='d-flex align-center justify-center' v-if='nav === "room-basic"'>
+    <v-container class='d-flex align-center justify-center' v-if='nav2 === "room-basic"'>
       <v-btn icon='mdi-close' size='small' variant='tonal' @click='emits("close")'></v-btn>
     </v-container>
   </v-overlay>

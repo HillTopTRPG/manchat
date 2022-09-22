@@ -21,7 +21,8 @@ export type RoomProps = {
   user_uuid?: string
   user_name?: string
   user_password?: string
-  open?: string
+  nav1?: string | 'room-info'
+  nav2?: Nav
 }
 
 export async function requestUserLoginWrap(args: Env & RoomProps & {
@@ -144,7 +145,8 @@ const toRoomUserQuery = (args: Omit<RoomProps, 'room_uuid'>) => (
   {
     n   : args.user_name,
     p   : args.user_password,
-    open: args.open,
+    nav1: args.nav1,
+    nav2: args.nav2,
   }
 )
 
@@ -163,11 +165,6 @@ export async function toRoom(args: RoomProps & { router: typeof Router }, hasQue
 }
 
 export async function toRoomUser(args: RoomProps & { router: typeof Router }, hasQuery: boolean) {
-  console.log(JSON.stringify({
-                               name  : 'room-user',
-                               params: pick(args, 'room_uuid', 'user_uuid'),
-                               query : hasQuery ? toRoomUserQuery(args) : undefined,
-                             }, null, '  '))
   return args.router.replace({
                                name  : 'room-user',
                                params: pick(args, 'room_uuid', 'user_uuid'),
@@ -182,7 +179,7 @@ export async function toPlay(args: RoomProps & { router: typeof Router }) {
                                                })
 }
 
-function getTokens(args: RoomProps) {
+export function getTokens(args: RoomProps) {
   const { room_token } = JSON.parse(localStorage.getItem(args.room_uuid) || '{}')
   const { user_token } = JSON.parse(localStorage.getItem(args.user_uuid || '') || '{}')
   return {
@@ -195,7 +192,7 @@ export async function requestUserTokenCheck(args: {
   axios: any
   subscription_uuid: string
   room_uuid: string
-  user_uuid?: string
+  user_uuid?: string | undefined
 }) {
   const tokens = getTokens(args)
   if (!tokens.user_token) {
@@ -216,10 +213,10 @@ export async function requestTokenCheckWrap(args: Env & RoomProps & {
   users: Ref<User[]>
   userLoggedInFlg: Ref<boolean>
   drawerRail: Ref<boolean>
-  selectedUserUuid: Ref<string[]>
-  selectedNav: Ref<Nav[]>
+  selectedNav1: Ref<string[]>
+  selectedNav2: Ref<Nav[]>
 }): Promise<string | null> {
-  args.selectedNav.value.splice(0, args.selectedNav.value.length, 'init')
+  args.selectedNav2.value.splice(0, args.selectedNav2.value.length, 'init')
   const {
           room_token,
           user_token,
@@ -243,14 +240,14 @@ export async function requestTokenCheckWrap(args: Env & RoomProps & {
     args.users.value.splice(0, args.users.value.length, ...data.users)
 
     toRoom(args, true).then()
-    switch (args.open) {
+    switch (args.nav2) {
       case 'profile':
       case 'notification':
       case 'room-basic':
-        args.selectedNav.value.splice(0, args.selectedNav.value.length, args.open)
+        args.selectedNav2.value.splice(0, args.selectedNav2.value.length, args.nav2)
         break
       default:
-        args.selectedNav.value.splice(0, args.selectedNav.value.length, 'entrance')
+        args.selectedNav2.value.splice(0, args.selectedNav2.value.length, 'entrance')
         break
     }
     return null
@@ -271,26 +268,26 @@ export async function requestTokenCheckWrap(args: Env & RoomProps & {
     args.userLoggedInFlg.value = isSuccess
     args.drawerRail.value      = !isSuccess
     if (isSuccess) {
-      args.selectedUserUuid.value.splice(0, args.selectedUserUuid.value.length, args.user_uuid!)
+      args.selectedNav1.value.splice(0, args.selectedNav1.value.length, args.nav1 || args.user_uuid!)
       args.router.replace({
                             name  : 'room-user',
                             params: pick(args, 'room_uuid', 'user_uuid'),
-                            query : pick(args, 'open'),
+                            query : pick(args, 'nav1', 'nav2'),
                           }).then()
-      switch (args.open) {
+      switch (args.nav2) {
         case 'profile':
         case 'notification':
         case 'room-basic':
-          args.selectedNav.value.splice(0, args.selectedNav.value.length, args.open)
+          args.selectedNav2.value.splice(0, args.selectedNav2.value.length, args.nav2)
           break
         default:
-          args.selectedNav.value.splice(0, args.selectedNav.value.length)
+          args.selectedNav2.value.splice(0, args.selectedNav2.value.length)
           break
       }
       return null
     }
-    args.selectedNav.value.splice(0, args.selectedNav.value.length, 'entrance')
-    args.selectedUserUuid.value.splice(0, args.selectedUserUuid.value.length)
+    args.selectedNav2.value.splice(0, args.selectedNav2.value.length, 'entrance')
+    args.selectedNav1.value.splice(0, args.selectedNav1.value.length)
     if (data.reason === 'expire_room_token' || data.reason === 'no_such_room') {
       toLobby(args, data.reason.startsWith('expire')).then()
     }
@@ -401,14 +398,11 @@ export function createRoomChannel(args: RoomProps & {
           userSort(args.users)
           break
         case '[api_v1_users]-[destroy-data]':
-          console.log('[api_v1_users]-[destroy-data]')
           const index = args.users.value.findIndex(r => r.uuid === data.uuid)
-          console.log(index)
           if (index < 0) {
             return
           }
           args.users.value.splice(index, 1)
-          console.log(data.uuid === args.user_uuid, data.uuid, args.user_uuid)
           if (data.uuid === args.user_uuid) {
             toRoom(args, false).then()
           }
@@ -425,7 +419,7 @@ export function createRoomChannel(args: RoomProps & {
           args.room.value = data.data
           break
         default:
-          console.log('ignore')
+          console.log(`ignore: [${data.table}]-[${data.type}]`)
           break
       }
     },

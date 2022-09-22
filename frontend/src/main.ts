@@ -44,6 +44,11 @@ const i18n = createI18n({
                                 hour   : 'numeric',
                                 minute : 'numeric',
                               },
+                              time : {
+                                hour  : 'numeric',
+                                minute: 'numeric',
+                                second: 'numeric',
+                              },
                             },
                             'ja-JP': {
                               short: {
@@ -59,6 +64,12 @@ const i18n = createI18n({
                                 hour   : 'numeric',
                                 minute : 'numeric',
                                 hour12 : true,
+                              },
+                              time : {
+                                hour  : 'numeric',
+                                minute: 'numeric',
+                                hour12: true,
+                                second: 'numeric',
                               },
                             },
                           },

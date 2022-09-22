@@ -7,7 +7,8 @@ defineProps<{
   user_uuid?: string
   user_name?: string
   user_password?: string
-  open?: Nav
+  nav1?: Nav
+  nav2?: Nav
 }>()
 </script>
 
@@ -17,5 +18,7 @@ defineProps<{
     :user_uuid='user_uuid'
     :user_name='user_name'
     :user_password='user_password'
+    :nav1='nav1'
+    :nav2='nav2'
   />
 </template>

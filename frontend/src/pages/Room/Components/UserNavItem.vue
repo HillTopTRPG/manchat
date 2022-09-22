@@ -47,7 +47,7 @@ const iconClass = computed(() => props.bigIcon ? 'ma-2' : 'mr-2')
   </v-tooltip>
 </template>
 
-<!--suppress CssUnusedSymbol -->
+<!--suppress CssUnusedSymbol, HtmlUnknownAttribute -->
 <style deep lang='css'>
 .fade-enter-active,
 .fade-leave-active {

@@ -28,7 +28,8 @@ const router = createRouter({
                                       user_uuid    : r.query.u,
                                       user_name    : r.query.n,
                                       user_password: r.query.p,
-                                      open         : r.query.open,
+                                      nav1         : r.query.nav1,
+                                      nav2         : r.query.nav2,
                                     }
                                   ),
                                 }, {
@@ -41,7 +42,8 @@ const router = createRouter({
                                       user_uuid    : r.params.user_uuid,
                                       user_name    : r.query.n,
                                       user_password: r.query.p,
-                                      open         : r.query.open,
+                                      nav1         : r.query.nav1,
+                                      nav2         : r.query.nav2,
                                     }
                                   ),
                                 }, {
