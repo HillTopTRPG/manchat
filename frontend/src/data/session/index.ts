@@ -41,6 +41,12 @@ export default function SessionStore() {
     user_uuid,
     nav1,
     nav2,
+    navType     : computed(() => {
+      if (state.nav1 === 'room-info') {
+        return 'room'
+      }
+      return state.nav1 === state.user_uuid ? 'player' : 'other-player'
+    }),
   }
 }
 

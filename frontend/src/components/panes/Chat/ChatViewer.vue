@@ -10,7 +10,7 @@ export const componentInfo = {
 </script>
 
 <script setup lang='ts'>
-import { inject, ref, watch } from 'vue'
+import { computed, inject, ref, watch } from 'vue'
 import { InjectionKeySymbol as roomCollectionsKey, StoreType as RoomCollectionStore } from '~/data/RoomCollections'
 import UserAvatar from '~/components/UserAvatar.vue'
 import { Chat } from '~/data/RoomCollections/Chat'
@@ -21,13 +21,6 @@ const paneId = uuid.v4()
 
 const store        = inject(roomCollectionsKey) as RoomCollectionStore
 const sessionStore = inject(sessionKey) as SessionStore
-
-watch(() => store.chats.value.length, (after, before) => {
-  if (before < after) {
-    const chat_uuid = store.chats.value[store.chats.value.length - 1].uuid
-    setTimeout(() => document.getElementById(`${paneId}-${chat_uuid}`)?.scrollIntoView())
-  }
-})
 
 const getUser    = (chat: Chat) => store.users.value.find(u => u.uuid === chat.owner_user)
 const isToday    = (date: Date) => {
@@ -46,7 +39,54 @@ const deleteChat = (chat_uuid: string) => {
 
 }
 
-const tab = ref('one')
+const tabs = computed(() => {
+  if (sessionStore.navType.value === 'other-player') {
+    const user = store.users.value.find(u => u.uuid === sessionStore.nav1.value)
+    return [
+      {
+        title: `${user?.name || ''}`,
+        icon : 'key-variant',
+        value: user?.uuid,
+      },
+    ]
+  } else {
+    return [
+      {
+        title: 'メイン',
+        icon : 'home',
+        value: '',
+      }, {
+        title: 'システム',
+        icon : 'desktop-classic',
+        value: 'system',
+      },
+    ]
+  }
+})
+const tab  = ref(tabs.value[0].value)
+watch(tabs, () => {
+  if (tabs.value.some(t => t.value === tab.value)) {
+    return
+  }
+  tab.value = tabs.value[0].value
+}, {
+        immediate: true,
+        deep     : true,
+      })
+watch(tab, value => {
+  console.log(value)
+})
+const chats = computed(() => store.chats.value.filter(c => c.tab ===
+                                                           (
+                                                             tab.value || null
+                                                           )))
+
+watch(() => chats.value.length, (after, before) => {
+  if (before < after) {
+    const chat_uuid = store.chats.value[store.chats.value.length - 1].uuid
+    setTimeout(() => document.getElementById(`${paneId}-${chat_uuid}`)?.scrollIntoView())
+  }
+})
 </script>
 
 <template>
@@ -63,18 +103,22 @@ const tab = ref('one')
     :show-arrows='true'
     :center-active='true'
   >
-    <v-badge location='right top' :dot='true' offset-y='6' offset-x='10' color='pink-accent-3'>
-      <v-tab value='one'>メイン</v-tab>
-    </v-badge>
-    <v-badge location='right top' :dot='true' offset-y='6' offset-x='10' color='pink-accent-3'>
-      <v-tab value='two'>雑談</v-tab>
-    </v-badge>
-    <v-badge location='right top' :dot='true' offset-y='6' offset-x='10' color='pink-accent-3'>
-      <v-tab value='three'>隠し事</v-tab>
-    </v-badge>
+    <template v-for='tab in tabs'>
+      <v-badge location='right top' :dot='true' offset-y='6' offset-x='10' color='pink-accent-3'>
+        <v-tab :value='tab.value'>
+          <v-icon :key='tab.value'>mdi-{{ tab.icon }}</v-icon>
+          {{ tab.title }}
+        </v-tab>
+      </v-badge>
+    </template>
   </v-tabs>
   <v-list class='chat-viewer scroll h-100'>
-    <v-list-item v-for='chat in store.chats.value' :id='`${paneId}-${chat.uuid}`' :key='chat.uuid' class='px-1'>
+    <v-list-item
+      v-for='chat in chats'
+      :id='`${paneId}-${chat.uuid}`'
+      :key='chat.uuid'
+      class='px-1'
+    >
       <template #prepend>
         <user-avatar
           v-if='getUser(chat)'
