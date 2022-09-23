@@ -46,12 +46,24 @@ const tabs = computed(() => {
       {
         title: `${user?.name || ''}`,
         icon : 'key-variant',
-        value: user?.uuid,
+        value: '$$$ALL$$$',
+      }, {
+        title: 'メイン',
+        icon : 'home',
+        value: '',
+      }, {
+        title: 'システム',
+        icon : 'desktop-classic',
+        value: 'system',
       },
     ]
   } else {
     return [
       {
+        title: '全体',
+        icon : 'moon-full',
+        value: '$$$ALL$$$',
+      }, {
         title: 'メイン',
         icon : 'home',
         value: '',
@@ -76,10 +88,45 @@ watch(tabs, () => {
 watch(tab, value => {
   console.log(value)
 })
-const chats = computed(() => store.chats.value.filter(c => c.tab ===
-                                                           (
-                                                             tab.value || null
-                                                           )))
+const chats = computed(() => {
+  const chats   = store.chats.value
+  const navType = sessionStore.navType.value
+  if (navType === 'room' || navType === 'player') {
+    if (tab.value === '$$$ALL$$$') {
+      return chats.filter(c => !c.target_uuid)
+    }
+    return store.chats.value.filter(c => !c.target_uuid &&
+                                         (
+                                           c.tab || ''
+                                         ) ===
+                                         tab.value)
+  }
+  if (navType === 'other-player') {
+    const nav1      = sessionStore.nav1.value
+    const user_uuid = sessionStore.user_uuid.value
+    if (tab.value === '$$$ALL$$$') {
+      return chats.filter(c => (
+                                 c.owner_user === user_uuid && c.target_uuid === nav1
+                               ) ||
+                               (
+                                 c.owner_user === nav1 && c.target_uuid === user_uuid
+                               ))
+    }
+    return store.chats.value.filter(c => (
+                                           c.tab || ''
+                                         ) ===
+                                         tab.value &&
+                                         (
+                                           (
+                                             c.owner_user === user_uuid && c.target_uuid === nav1
+                                           ) ||
+                                           (
+                                             c.owner_user === nav1 && c.target_uuid === user_uuid
+                                           )
+                                         ))
+  }
+  return []
+})
 
 watch(() => chats.value.length, (after, before) => {
   if (before < after) {

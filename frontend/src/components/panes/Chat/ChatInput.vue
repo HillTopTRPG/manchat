@@ -11,9 +11,14 @@ export const componentInfo = {
 
 <script setup lang='ts'>
 import { inject, ref } from 'vue'
-import { InjectionKeySymbol as collectionsKey, StoreType as CollectionsStore } from '~/data/RoomCollections'
+import {
+  InjectionKeySymbol as collectionsKey, StoreType as CollectionsStore,
+} from '~/data/RoomCollections'
+import { InjectionKeySymbol as sessionKey, StoreType as SessionStore } from '~/data/session'
 
-const store      = inject(collectionsKey) as CollectionsStore
+const store        = inject(collectionsKey) as CollectionsStore
+const sessionStore = inject(sessionKey) as SessionStore
+
 const axios: any = inject('axios')
 
 const raw      = ref('')
@@ -23,12 +28,18 @@ const sendChat = (e: { target: HTMLTextAreaElement, shiftKey: boolean }) => {
     raw.value += '\n'
     return
   }
+
+  const nav1         = sessionStore.nav1.value
+  const getTargetVal = (val: string | null) => nav1 === 'room-info' || nav1 === sessionStore.user_uuid.value
+                                               ? null
+                                               : store.users.value.some(u => u.uuid === nav1) ? val : null
+
   store.sendChat({
                    tab            : null,
                    raw            : raw.value,
                    owner_character: null,
-                   target_type    : null,
-                   target_uuid    : null,
+                   target_type    : getTargetVal('user'),
+                   target_uuid    : getTargetVal(nav1 || null),
                    secret         : 0,
                    axios,
                  })
