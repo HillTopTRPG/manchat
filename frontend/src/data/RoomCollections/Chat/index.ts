@@ -32,7 +32,10 @@ export function createChatFunctions(state: { chats: Chat[] }, args: RoomProps) {
                                                 ),
                                               }),
     )
-    console.log(JSON.stringify(data, null, '  '))
+    //    console.log(JSON.stringify(data, null, '  '))
+    if (data.verify !== 'success') {
+      console.log(JSON.stringify(data, null, '  '))
+    }
   }
   return {
     sendChat,

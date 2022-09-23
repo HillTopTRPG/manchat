@@ -19,13 +19,10 @@ import { InjectionKeySymbol as sessionKey, StoreType as SessionStore } from '~/d
 
 const paneId = uuid.v4()
 
-const chatViewerContainer = ref()
-
 const store        = inject(roomCollectionsKey) as RoomCollectionStore
 const sessionStore = inject(sessionKey) as SessionStore
 
 watch(() => store.chats.value.length, (after, before) => {
-  console.log(chatViewerContainer.value)
   if (before < after) {
     const chat_uuid = store.chats.value[store.chats.value.length - 1].uuid
     setTimeout(() => document.getElementById(`${paneId}-${chat_uuid}`)?.scrollIntoView())
@@ -35,8 +32,6 @@ watch(() => store.chats.value.length, (after, before) => {
 const getUser    = (chat: Chat) => store.users.value.find(u => u.uuid === chat.owner_user)
 const isToday    = (date: Date) => {
   const today = new Date()
-  console.log(typeof date)
-  console.log(date)
   return date.getDate() ==
          today.getDate() &&
          date.getMonth() ==
@@ -78,7 +73,7 @@ const tab = ref('one')
       <v-tab value='three'>隠し事</v-tab>
     </v-badge>
   </v-tabs>
-  <v-list class='chat-viewer scroll' ref='chatViewerContainer'>
+  <v-list class='chat-viewer scroll h-100'>
     <v-list-item v-for='chat in store.chats.value' :id='`${paneId}-${chat.uuid}`' :key='chat.uuid' class='px-1'>
       <template #prepend>
         <user-avatar

@@ -16,7 +16,7 @@ import {
 } from '~/pages/AccountHelper'
 
 import { InjectionKeySymbol as sessionKey, StoreType as SessionStore } from '~/data/session'
-import { merge } from 'lodash'
+import { forEach, merge } from 'lodash'
 import { User } from '~/data/user'
 import { Room } from '~/data/room'
 import UserNavItem from '~/pages/Room/Components/UserNavItem.vue'
@@ -31,6 +31,7 @@ const props = defineProps<{
   user_password?: string
   nav1?: string | 'room-info' | undefined
   nav2?: Nav | undefined
+  rail?: string
 }>()
 
 const theme             = useTheme()
@@ -51,7 +52,6 @@ const env = {
   subscription_uuid: sessionStore.session_uuid.value,
 }
 
-const drawerRail = ref(true)
 const contentRef = ref()
 const room       = ref<Room | null>(null)
 const users      = ref<User[]>([])
@@ -60,6 +60,8 @@ const collections = {
   room,
   users,
 }
+
+const userLoggedInFlg = ref(false)
 
 const breadcrumbsItems = computed(() => {
   const user = userLoggedInFlg.value && users.value.find(u => u.uuid === selectedNav1.value[0])
@@ -97,12 +99,19 @@ const loginAlertText    = ref('')
 const userPasswordInput = ref<HTMLInputElement>()
 const userNameInput     = ref<HTMLInputElement>()
 
-const selectedNav1 = ref<string[]>(['room-info'])
+const drawerRail = ref<boolean | null>(parseInt(props.rail || '0') > 0)
+watch(drawerRail, value => {
+  if (!userLoggedInFlg.value || value === null) {
+    return
+  }
+  const args = { rail: drawerRail.value ? '1' : '0' }
+  toRoomUser(merge({}, env, props, args), true)
+})
+
+const selectedNav1 = ref<string[]>([props.nav1 || 'room-info'])
 const nav1         = computed(() => selectedNav1.value[0])
 const updateNav1   = (newList: string[]) => {
-  console.log(`###${newList[0]}###`)
   selectedNav1.value.splice(0, selectedNav1.value.length, ...newList)
-  //  toRoomUser(merge({}, env, props, { nav1: newList[0] }), true)
 }
 watch(nav1, (value) => {
   if (!userLoggedInFlg.value) {
@@ -116,7 +125,12 @@ watch(nav1, (value) => {
   const otherUserNav      = getNextNav('profile')
 
   const nextNav = value === 'room-info' ? roomNav : value === props.user_uuid ? userNav : otherUserNav
-  toRoomUser(merge({}, env, props, { nav1: value }), true)
+  const args    = {
+    nav1: nav1.value,
+    rail: drawerRail.value ? '1' : '0',
+    nav2: nextNav,
+  }
+  toRoomUser(merge({}, env, props, args), true)
   updateNav2([nextNav], true)
 })
 
@@ -130,19 +144,25 @@ const updateNav2 = (navs: (Nav | undefined)[], force?: boolean) => {
     case 'profile':
     case 'notification':
     case 'room-basic':
-      toRoomUser(merge({}, env, props, {
+      const args = {
         nav1: nav1.value,
+        rail: drawerRail.value ? '1' : '0',
         nav2: nav2.value,
-      }), true)
+      }
+      toRoomUser(merge({}, env, props, args), true)
       break
     default:
       if (force) {
-        const args = merge({}, env, { ...props })
-        //noinspection JSConstantReassignment
-        args.nav2  = undefined
-        //noinspection JSConstantReassignment
-        args.nav1  = nav1.value
-        toRoomUser(args, true)
+        const args = {
+          nav1: nav1.value,
+          rail: drawerRail.value ? '1' : '0',
+          nav2: undefined,
+        }
+
+        const payload: any = merge({}, env, { ...props })
+        // mergeではundefinedに更新できない
+        forEach(args, (v, k) => payload[k] = v)
+        toRoomUser(payload, true)
       }
   }
 }
@@ -183,13 +203,11 @@ const logoutUser = async () => {
 
 let isInitialLogin = false
 
-const existsUserName  = computed(() => users.value.find(u => u.uuid === sessionStore.user_uuid.value)?.name || '')
-const userLoggedInFlg = ref(false)
+const existsUserName = computed(() => users.value.find(u => u.uuid === sessionStore.user_uuid.value)?.name || '')
 
 const successUserLoggedIn = (user_uuid: string) => {
   loginDialog.value     = false
   userLoggedInFlg.value = true
-  drawerRail.value      = false
   props.nav1 === undefined && updateNav1([user_uuid])
 
   const next = {
@@ -278,8 +296,7 @@ onBeforeUnmount(() => {
 
 const initialize = async () => {
   userLoggedInFlg.value = false
-  updateNav1(['room-info'])
-  drawerRail.value = !!props.user_uuid
+  //  updateNav1(['room-info'])
 
   if (roomChannel) {
     cable.subscriptions.remove(roomChannel)

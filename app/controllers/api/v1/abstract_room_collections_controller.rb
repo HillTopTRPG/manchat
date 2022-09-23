@@ -12,9 +12,14 @@ module Api
       def create
         return if get_room_user(params).nil?
 
+        data = make_create_data
+        render json: data.save ? { verify: 'success' } : data.errors
+      end
+
+      def make_create_data
         data = model.new(params_for_create)
         data.room_uuid = params[:room_uuid]
-        render json: data.save ? { verify: 'success' } : data.errors
+        data
       end
 
       # PATCH /api/v1/~~~/:uuid

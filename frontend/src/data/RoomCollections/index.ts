@@ -34,7 +34,7 @@ export default function RoomCollectionStore(payload: {
       state.chats.splice(0, state.chats.length)
       state.changeLogs.splice(0, state.changeLogs.length)
       const { data } = await axios.get(`/api/v1/room_collections/${payload.room_uuid}`)
-      console.log(JSON.stringify(data, null, '  '))
+      //      console.log(JSON.stringify(data, null, '  '))
       state.users.splice(0, state.users.length, ...data.users.map((d: any) => changeDate(d)))
       state.chats.splice(0, state.chats.length, ...data.chats.map((d: any) => changeDate(d)))
       state.changeLogs.splice(0, state.changeLogs.length, ...data.change_logs)
@@ -50,8 +50,8 @@ export default function RoomCollectionStore(payload: {
 
   const roomChannelSubscriptionHandler = {
     received(data: any) {
-      console.log(JSON.stringify(data, null, '  '))
-      console.log(`[${data.table}]-[${data.type}]`)
+      //      console.log(JSON.stringify(data, null, '  '))
+      //      console.log(`[${data.table}]-[${data.type}]`)
       switch (data.table) {
         case 'api_v1_users':
           basicDataHandler(data, state.users)

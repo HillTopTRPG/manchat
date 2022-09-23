@@ -44,6 +44,7 @@ const router = createRouter({
                                       user_password: r.query.p,
                                       nav1         : r.query.nav1,
                                       nav2         : r.query.nav2,
+                                      rail         : r.query.rail,
                                     }
                                   ),
                                 }, {

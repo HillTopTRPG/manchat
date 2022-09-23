@@ -5,7 +5,7 @@ import UserIcon from '~/pages/Room/Components/UserIcon.vue'
 
 defineProps<{
   user: User
-  hideTitle: boolean
+  hideTitle: boolean | null
 }>()
 
 const emits = defineEmits<{
