@@ -108,9 +108,10 @@ watch(drawerRail, value => {
   toRoomUser(merge({}, env, props, args), true)
 })
 
-const selectedNav1 = ref<string[]>([props.nav1 || 'room-info'])
-const nav1         = computed(() => selectedNav1.value[0])
-const updateNav1   = (newList: string[]) => {
+const selectedNav1      = ref<string[]>([props.nav1 || 'room-info'])
+const nav1              = computed(() => selectedNav1.value[0])
+sessionStore.nav1.value = nav1.value
+const updateNav1        = (newList: string[]) => {
   selectedNav1.value.splice(0, selectedNav1.value.length, ...newList)
 }
 watch(nav1, (value) => {
@@ -127,8 +128,8 @@ watch(nav1, (value) => {
   const nextNav = value === 'room-info' ? roomNav : value === props.user_uuid ? userNav : otherUserNav
   const args    = {
     nav1: nav1.value,
-    rail: drawerRail.value ? '1' : '0',
     nav2: nextNav,
+    rail: drawerRail.value ? '1' : '0',
   }
   toRoomUser(merge({}, env, props, args), true)
   updateNav2([nextNav], true)
@@ -146,8 +147,8 @@ const updateNav2 = (navs: (Nav | undefined)[], force?: boolean) => {
     case 'room-basic':
       const args = {
         nav1: nav1.value,
-        rail: drawerRail.value ? '1' : '0',
         nav2: nav2.value,
+        rail: drawerRail.value ? '1' : '0',
       }
       toRoomUser(merge({}, env, props, args), true)
       break
@@ -155,8 +156,8 @@ const updateNav2 = (navs: (Nav | undefined)[], force?: boolean) => {
       if (force) {
         const args = {
           nav1: nav1.value,
-          rail: drawerRail.value ? '1' : '0',
           nav2: undefined,
+          rail: drawerRail.value ? '1' : '0',
         }
 
         const payload: any = merge({}, env, { ...props })
@@ -375,6 +376,7 @@ const rootClass = computed(() => {
         variant='text'
         :icon='collapse ? "mdi-arrow-expand-right" : "mdi-arrow-collapse-left"'
         @click='collapse = !collapse'
+        v-if='userLoggedInFlg'
       ></v-btn>
       <v-btn
         variant='text'
@@ -392,28 +394,20 @@ const rootClass = computed(() => {
         :selected='readonly(selectedNav1)'
         @update:selected='updateNav1'
       >
-        <user-nav-item
-          label='部屋'
-          :show-label='!drawerRail'
-          value='room-info'
-          append-icon='home'
-          tooltip-text='部屋'
-          :big-icon='true'
-        />
-
         <template v-if='userLoggedInFlg'>
-          <v-list-subheader v-if='!drawerRail && !userLoggedInFlg'>あなた</v-list-subheader>
-          <v-divider v-else />
+          <user-nav-item
+            label='部屋'
+            :show-label='!drawerRail'
+            value='room-info'
+            append-icon='home'
+            tooltip-text='部屋'
+            :big-icon='true'
+          />
           <user-list-item :user='users.find(u => u.uuid === user_uuid)' :hide-title='drawerRail' />
-        </template>
-
-        <template v-if='user_uuid'>
-          <v-list-subheader v-if='!drawerRail && !userLoggedInFlg'>他のユーザー</v-list-subheader>
-          <v-divider v-else />
+          <v-divider class='my-2' />
         </template>
         <template v-else>
           <v-list-subheader v-if='!drawerRail'>ログイン</v-list-subheader>
-          <v-divider v-else />
         </template>
 
         <user-nav-item

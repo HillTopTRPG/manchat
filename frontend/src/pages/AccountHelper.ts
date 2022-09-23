@@ -272,7 +272,7 @@ export async function requestTokenCheckWrap(args: Env & RoomProps & {
       args.router.replace({
                             name  : 'room-user',
                             params: pick(args, 'room_uuid', 'user_uuid'),
-                            query : pick(args, 'nav1', 'nav2'),
+                            query : pick(args, 'nav1', 'nav2', 'rail'),
                           }).then()
       switch (args.nav2) {
         case 'profile':
