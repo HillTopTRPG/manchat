@@ -12,6 +12,13 @@ module Api
       def to_response
         attributes
       end
+
+      def self.make_system_message(room_uuid, raw)
+        chat = new(room_uuid: room_uuid, tab: "system", raw: raw, secret: 0)
+        unless chat.save
+          puts chat.errors.full_messages
+        end
+      end
     end
   end
 end
