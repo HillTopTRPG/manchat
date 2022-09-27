@@ -15,6 +15,11 @@ import {
   InjectionKeySymbol as collectionsKey, StoreType as CollectionsStore,
 } from '~/data/RoomCollections'
 import { InjectionKeySymbol as sessionKey, StoreType as SessionStore } from '~/data/session'
+import { Layout } from '~/components/panes'
+
+const props = defineProps<{
+  layout: Layout
+}>()
 
 const store        = inject(collectionsKey) as CollectionsStore
 const sessionStore = inject(sessionKey) as SessionStore

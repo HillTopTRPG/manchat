@@ -1,20 +1,9 @@
-<script lang='ts'>
-//noinspection JSUnusedGlobalSymbols
-export interface Layout {
-  type: string
-  uuid: string
-  componentGroup?: string
-  component?: string
-  size?: number
-  panes: Layout[]
-}
-</script>
 <script setup lang='ts'>
-import { Splitpanes, Pane } from 'splitpanes'
+import { Pane, Splitpanes } from 'splitpanes'
 import 'splitpanes/dist/splitpanes.css'
 import { ref } from 'vue'
 import { uuid } from 'vue-uuid'
-import { componentMap } from './panes'
+import { componentMap, Layout } from './panes'
 
 interface Props {
   layout: Layout
@@ -38,9 +27,10 @@ const addChildPane = (idx: number, isAfter: boolean) => {
   }
   if (!isAfter) {
     cLayout.value.panes[idx].panes.push({
-                                          type : 'normal',
-                                          uuid : uuid.v4(),
-                                          panes: [],
+                                          type   : 'normal',
+                                          uuid   : uuid.v4(),
+                                          panes  : [],
+                                          payload: null,
                                         })
   }
   if (cLayout.value.panes[idx].type !== 'horizontal' && cLayout.value.panes[idx].type !== 'vertical') {
@@ -53,14 +43,16 @@ const addChildPane = (idx: number, isAfter: boolean) => {
                                           panes         : [],
                                           componentGroup: cLayout.value.panes[idx].componentGroup,
                                           component     : cLayout.value.panes[idx].component,
+                                          payload       : null,
                                         })
     cLayout.value.panes[idx].component = ''
   }
   if (isAfter) {
     cLayout.value.panes[idx].panes.push({
-                                          type : 'normal',
-                                          uuid : uuid.v4(),
-                                          panes: [],
+                                          type   : 'normal',
+                                          uuid   : uuid.v4(),
+                                          panes  : [],
+                                          payload: null,
                                         })
   }
 }
@@ -140,9 +132,10 @@ const hideBorderChildren = (event: { target: HTMLElement }) => {
 
 const addBrotherPane = (idx: number, isAfter: boolean) => {
   const addObj: Layout = {
-    type : 'normal',
-    uuid : uuid.v4(),
-    panes: [],
+    type   : 'normal',
+    uuid   : uuid.v4(),
+    panes  : [],
+    payload: null,
   }
   cLayout.value.panes.splice(idx +
                              (
@@ -373,7 +366,10 @@ const onResizedPanes = (event: { size: number }[]) => event.forEach(({ size }, i
     </pane>
   </splitpanes>
   <keep-alive v-else-if='cLayout.component'>
-    <component :is='componentMap.find(p => p.group === cLayout.componentGroup)?.items[cLayout.component]' />
+    <component
+      :is='componentMap.find(p => p.group === cLayout.componentGroup)?.items[cLayout.component]'
+      :layout='cLayout'
+    />
   </keep-alive>
   <v-list v-else density='compact'>
     <template

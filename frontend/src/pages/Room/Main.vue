@@ -52,9 +52,8 @@ const env = {
   subscription_uuid: sessionStore.session_uuid.value,
 }
 
-const contentRef = ref()
-const room       = ref<Room | null>(null)
-const users      = ref<User[]>([])
+const room  = ref<Room | null>(null)
+const users = ref<User[]>([])
 
 const collections = {
   room,
@@ -490,7 +489,6 @@ const rootClass = computed(() => {
           @requireUserLogin='showUserLogin'
           @logoutUser='logoutUser()'
           @close-overlay='updateNav2([], true)'
-          ref='contentRef'
         />
       </suspense>
     </v-main>

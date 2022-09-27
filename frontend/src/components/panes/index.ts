@@ -7,6 +7,16 @@ const panes = [
   ...samplePanes, ...samplePanes2, ...userPanes, ...chatPanes,
 ]
 
+export interface Layout {
+  type: string
+  uuid: string
+  componentGroup?: string
+  component?: string
+  size?: number
+  payload: any | null
+  panes: Layout[]
+}
+
 export default panes
 
 const map: { group: string, items: { [key: string]: string } }[] = []

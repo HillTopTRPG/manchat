@@ -14,10 +14,12 @@ import { computed, inject, ref, watch } from 'vue'
 import { InjectionKeySymbol as roomCollectionsKey, StoreType as RoomCollectionStore } from '~/data/RoomCollections'
 import UserAvatar from '~/components/UserAvatar.vue'
 import { Chat } from '~/data/RoomCollections/Chat'
-import { uuid } from 'vue-uuid'
 import { InjectionKeySymbol as sessionKey, StoreType as SessionStore } from '~/data/session'
+import { Layout } from '~/components/panes'
 
-const paneId = uuid.v4()
+const props = defineProps<{
+  layout: Layout
+}>()
 
 const store        = inject(roomCollectionsKey) as RoomCollectionStore
 const sessionStore = inject(sessionKey) as SessionStore
@@ -75,12 +77,21 @@ const tabs = computed(() => {
     ]
   }
 })
-const tab  = ref(tabs.value[0].value)
+
+const setTab = (tab: string) => {
+  if (!props.layout.payload) {
+    props.layout.payload = {}
+  }
+  props.layout.payload.tab = tab
+}
+const tab    = computed(() => props.layout.payload?.tab !== undefined ? props.layout.payload?.tab : (
+  tabs.value[0]?.value || ''
+))
 watch(tabs, () => {
   if (tabs.value.some(t => t.value === tab.value)) {
     return
   }
-  tab.value = tabs.value[0].value
+  setTab(tabs.value[0].value)
 }, {
         immediate: true,
         deep     : true,
@@ -128,21 +139,20 @@ const chats = computed(() => {
   return []
 })
 
+const list = ref()
 watch(() => chats.value.length, (after, before) => {
+  console.log(`${after}件`)
   if (before < after) {
-    const chat_uuid = store.chats.value[store.chats.value.length - 1].uuid
-    setTimeout(() => document.getElementById(`${paneId}-${chat_uuid}`)?.scrollIntoView())
+    const elm = list.value.$el
+    setTimeout(() => elm.scrollTo(0, elm.scrollHeight))
   }
 })
 </script>
 
 <template>
-  <div>room_uuid: {{ sessionStore.room_uuid }}</div>
-  <div>user_uuid: {{ sessionStore.user_uuid }}</div>
-  <div>nav1: {{ sessionStore.nav1 }}</div>
-  <div>nav2: {{ sessionStore.nav2 }}</div>
   <v-tabs
-    v-model='tab'
+    :model-value='tab'
+    @update:modelValue='setTab'
     background-color='transparent'
     slider-color='pink-accent-3'
     density='compact'
@@ -150,51 +160,63 @@ watch(() => chats.value.length, (after, before) => {
     :show-arrows='true'
     :center-active='true'
   >
-    <template v-for='tab in tabs'>
+    <template v-for='tab in tabs' :key='tab.value'>
       <v-badge location='right top' :dot='true' offset-y='6' offset-x='10' color='pink-accent-3'>
         <v-tab :value='tab.value'>
-          <v-icon :key='tab.value'>mdi-{{ tab.icon }}</v-icon>
+          <v-icon :key='tab.icon'>mdi-{{ tab.icon }}</v-icon>
           {{ tab.title }}
         </v-tab>
       </v-badge>
     </template>
   </v-tabs>
-  <v-list class='chat-viewer scroll h-100'>
-    <v-list-item
-      v-for='chat in chats'
-      :id='`${paneId}-${chat.uuid}`'
-      :key='chat.uuid'
-      class='px-1'
-    >
-      <template #prepend>
-        <user-avatar
-          v-if='getUser(chat)'
-          :user='getUser(chat)'
-        ></user-avatar>
-        <v-icon v-else icon='mdi-penguin'></v-icon>
-      </template>
-      <template #append>
-        <v-menu open-on-hover>
-          <template v-slot:activator='{ props }'>
-            <v-btn icon='mdi-dots-vertical' size='x-small' variant='text' class='text-grey' v-bind='props'></v-btn>
-          </template>
+  <v-list class='chat-viewer scroll h-100' ref='list'>
+    <DynamicScroller :items='chats' key-field='uuid' :min-item-size='57' :page-mode='true'>
+      <template v-slot='{ item, index, active }'>
+        <DynamicScrollerItem
+          :item='item'
+          :active='active'
+          :size-dependencies='[ item.raw, ]'
+          :data-index='index'
+        >
+          <v-list-item class='px-1'>
+            <template #prepend>
+              <user-avatar
+                v-if='getUser(item)'
+                :user='getUser(item)'
+              ></user-avatar>
+              <v-icon v-else icon='mdi-penguin'></v-icon>
+            </template>
+            <template #append>
+              <v-menu open-on-hover>
+                <template v-slot:activator='{ props }'>
+                  <v-btn
+                    icon='mdi-dots-vertical'
+                    size='x-small'
+                    variant='text'
+                    class='text-grey'
+                    v-bind='props'
+                  ></v-btn>
+                </template>
 
-          <v-list class='border-solid'>
-            <v-list-item @click='editChat(chat.uuid)'>編集</v-list-item>
-            <v-list-item @click='deleteChat(chat.uuid)'>削除</v-list-item>
-          </v-list>
-        </v-menu>
+                <v-list class='border-solid'>
+                  <v-list-item @click='editChat(item.uuid)'>編集</v-list-item>
+                  <v-list-item @click='deleteChat(item.uuid)'>削除</v-list-item>
+                </v-list>
+              </v-menu>
+            </template>
+            <v-list-item-title class='ml-3'>
+              <span class='font-weight-bold mr-2' v-if='getUser(item)?.name'>{{ getUser(item)?.name }}</span>
+              <span style='font-size: 70%'>{{
+                  isToday(item.updated_at) ? $d(item.updated_at, 'time') : $d(item.updated_at, 'short')
+                }}</span>
+            </v-list-item-title>
+            <div class='ml-3' style='white-space: pre'>
+              {{ item.raw }}
+            </div>
+          </v-list-item>
+        </DynamicScrollerItem>
       </template>
-      <v-list-item-title class='ml-3'>
-        <span class='font-weight-bold mr-2' v-if='getUser(chat)?.name'>{{ getUser(chat)?.name }}</span>
-        <span style='font-size: 70%'>{{
-            isToday(chat.updated_at) ? $d(chat.updated_at, 'time') : $d(chat.updated_at, 'short')
-          }}</span>
-      </v-list-item-title>
-      <div class='ml-3' style='white-space: pre'>
-        {{ chat.raw }}
-      </div>
-    </v-list-item>
+    </DynamicScroller>
   </v-list>
 </template>
 
