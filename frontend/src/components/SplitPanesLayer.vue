@@ -207,100 +207,95 @@ const onResizedPanes = (event: { size: number }[]) => event.forEach(({ size }, i
             style='gap: 1em; top: 0; left: 0;'
           >
             <template v-if="pane.type === 'horizontal' || pane.type === 'vertical'">
-              <v-btn
-                size='x-small'
-                icon='mdi-view-split-vertical'
-                :data-idx='idx'
-                v-if="pane.type !== 'horizontal'"
-                @click="pane.type = 'horizontal'"
-                @mouseenter='showBorderChildren'
-                @mouseleave='hideBorderChildren'
-              ></v-btn>
-              <v-btn
-                size='x-small'
-                icon='mdi-view-split-horizontal'
-                :data-idx='idx'
-                v-if="pane.type !== 'vertical'"
-                @click="pane.type = 'vertical'"
-                @mouseenter='showBorderChildren'
-                @mouseleave='hideBorderChildren'
-              ></v-btn>
+              <v-defaults-provider :defaults='{ VBtn: { size: "x-small" } }'>
+                <v-btn
+                  icon='mdi-view-split-vertical'
+                  :data-idx='idx'
+                  v-if="pane.type !== 'horizontal'"
+                  @click="pane.type = 'horizontal'"
+                  @mouseenter='showBorderChildren'
+                  @mouseleave='hideBorderChildren'
+                ></v-btn>
+                <v-btn
+                  icon='mdi-view-split-horizontal'
+                  :data-idx='idx'
+                  v-if="pane.type !== 'vertical'"
+                  @click="pane.type = 'vertical'"
+                  @mouseenter='showBorderChildren'
+                  @mouseleave='hideBorderChildren'
+                ></v-btn>
+              </v-defaults-provider>
             </template>
             <v-menu location='center'>
               <template #activator='{ props: menu }'>
                 <v-btn size='x-small' color='primary' v-bind='menu' icon='mdi-plus' />
               </template>
               <v-container class='text-center'>
-                <v-row>
-                  <v-col class='pa-0'>
-                    <v-btn
-                      icon='mdi-chevron-up'
-                      :rounded='0'
-                      variant='text'
-                      class='bg-white border-opacity-50'
-                      v-if="cLayout.type === 'horizontal' || cLayout.panes[idx].panes.length === 0"
-                      :data-idx='idx'
-                      data-direction='up'
-                      @click='addPane'
-                      @mouseenter='showBorderSelf'
-                      @mouseleave='hideBorderSelf'
-                    />
-                  </v-col>
-                </v-row>
-                <v-row class='my-3'>
-                  <v-col class='pa-0'>
-                    <v-btn
-                      icon='mdi-chevron-left'
-                      :rounded='0'
-                      variant='text'
-                      class='bg-white'
-                      v-if="cLayout.type === 'vertical' || cLayout.panes[idx].panes.length === 0"
-                      :data-idx='idx'
-                      data-direction='left'
-                      @click='addPane'
-                      @mouseenter='showBorderSelf'
-                      @mouseleave='hideBorderSelf'
-                    ></v-btn>
-                  </v-col>
-                  <v-col class='pa-0'>
-                    <v-btn
-                      icon=''
-                      v-ripple='false'
-                      :rounded='0'
-                      variant='plain'
-                    ></v-btn>
-                  </v-col>
-                  <v-col class='pa-0'>
-                    <v-btn
-                      icon='mdi-chevron-right'
-                      :rounded='0'
-                      variant='text'
-                      class='bg-white'
-                      v-if="cLayout.type === 'vertical' || cLayout.panes[idx].panes.length === 0"
-                      :data-idx='idx'
-                      data-direction='right'
-                      @click='addPane'
-                      @mouseenter='showBorderSelf'
-                      @mouseleave='hideBorderSelf'
-                    ></v-btn>
-                  </v-col>
-                </v-row>
-                <v-row>
-                  <v-col class='pa-0'>
-                    <v-btn
-                      icon='mdi-chevron-down'
-                      :rounded='0'
-                      variant='text'
-                      class='bg-white'
-                      v-if="cLayout.type === 'horizontal' || cLayout.panes[idx].panes.length === 0"
-                      :data-idx='idx'
-                      data-direction='down'
-                      @click='addPane'
-                      @mouseenter='showBorderSelf'
-                      @mouseleave='hideBorderSelf'
-                    ></v-btn>
-                  </v-col>
-                </v-row>
+                <v-defaults-provider :defaults='{ VBtn: { rounded: 0, variant: "text" } }'>
+                  <v-row>
+                    <v-col class='pa-0'>
+                      <v-btn
+                        icon='mdi-chevron-up'
+                        class='bg-white'
+                        v-if="cLayout.type === 'horizontal' || cLayout.panes[idx].panes.length === 0"
+                        :data-idx='idx'
+                        data-direction='up'
+                        @click='addPane'
+                        @mouseenter='showBorderSelf'
+                        @mouseleave='hideBorderSelf'
+                      />
+                    </v-col>
+                  </v-row>
+                  <v-row class='my-3'>
+                    <v-col class='pa-0'>
+                      <v-btn
+                        icon='mdi-chevron-left'
+                        class='bg-white'
+                        v-if="cLayout.type === 'vertical' || cLayout.panes[idx].panes.length === 0"
+                        :data-idx='idx'
+                        data-direction='left'
+                        @click='addPane'
+                        @mouseenter='showBorderSelf'
+                        @mouseleave='hideBorderSelf'
+                      ></v-btn>
+                    </v-col>
+                    <v-col class='pa-0'>
+                      <v-btn
+                        icon=''
+                        v-ripple='false'
+                        variant='plain'
+                      ></v-btn>
+                    </v-col>
+                    <v-col class='pa-0'>
+                      <v-btn
+                        icon='mdi-chevron-right'
+                        class='bg-white'
+                        v-if="cLayout.type === 'vertical' || cLayout.panes[idx].panes.length === 0"
+                        :data-idx='idx'
+                        data-direction='right'
+                        @click='addPane'
+                        @mouseenter='showBorderSelf'
+                        @mouseleave='hideBorderSelf'
+                      ></v-btn>
+                    </v-col>
+                  </v-row>
+                  <v-row>
+                    <v-col class='pa-0'>
+                      <v-btn
+                        icon='mdi-chevron-down'
+                        :rounded='0'
+                        variant='text'
+                        class='bg-white'
+                        v-if="cLayout.type === 'horizontal' || cLayout.panes[idx].panes.length === 0"
+                        :data-idx='idx'
+                        data-direction='down'
+                        @click='addPane'
+                        @mouseenter='showBorderSelf'
+                        @mouseleave='hideBorderSelf'
+                      ></v-btn>
+                    </v-col>
+                  </v-row>
+                </v-defaults-provider>
               </v-container>
             </v-menu>
             <v-menu
@@ -311,10 +306,7 @@ const onResizedPanes = (event: { size: number }[]) => event.forEach(({ size }, i
                 <v-btn size='x-small' color='secondary' v-bind='menu' icon='mdi-package-variant-closed' />
               </template>
               <v-list density='compact'>
-                <template
-                  v-for='g in componentMap'
-                  :key='g.group'
-                >
+                <template v-for='g in componentMap' :key='g.group'>
                   <v-list-group v-if='g.group'>
                     <template #activator='{ props }'>
                       <v-list-item v-bind='props' :title='g.group' />

@@ -147,6 +147,25 @@ watch(() => chats.value.length, (after, before) => {
     setTimeout(() => elm.scrollTo(0, elm.scrollHeight))
   }
 })
+
+const isScrolling                     = ref(false)
+let isScrollingTimeout: number | null = null
+
+const onScroll = (evt: { target: HTMLElement }) => {
+  isScrolling.value = true
+  if (isScrollingTimeout !== null) {
+    clearTimeout(isScrollingTimeout)
+  }
+  isScrollingTimeout = window.setTimeout(() => {
+    isScrolling.value = false
+  }, 100)
+
+  evt.target.dispatchEvent(new MouseEvent('move', {
+    screenX: 0,
+    screenY: 0,
+    bubbles: false,
+  }))
+}
 </script>
 
 <template>
@@ -169,7 +188,7 @@ watch(() => chats.value.length, (after, before) => {
       </v-badge>
     </template>
   </v-tabs>
-  <v-list class='chat-viewer scroll h-100' ref='list'>
+  <v-list class='chat-viewer scroll h-100' :class='{ isScrolling }' ref='list' @scroll='onScroll'>
     <DynamicScroller :items='chats' key-field='uuid' :min-item-size='57' :page-mode='true'>
       <template v-slot='{ item, index, active }'>
         <DynamicScrollerItem
@@ -178,42 +197,63 @@ watch(() => chats.value.length, (after, before) => {
           :size-dependencies='[ item.raw, ]'
           :data-index='index'
         >
-          <v-list-item class='px-1'>
-            <template #prepend>
-              <user-avatar
-                v-if='getUser(item)'
-                :user='getUser(item)'
-              ></user-avatar>
-              <v-icon v-else icon='mdi-penguin'></v-icon>
-            </template>
-            <template #append>
-              <v-menu open-on-hover>
-                <template v-slot:activator='{ props }'>
-                  <v-btn
-                    icon='mdi-dots-vertical'
-                    size='x-small'
-                    variant='text'
-                    class='text-grey'
-                    v-bind='props'
-                  ></v-btn>
-                </template>
+          <v-hover v-slot='{ isHovering, props: hoverProps }'>
+            <v-menu
+              open-on-hover
+              location='top right'
+              :transition='false'
+              class='chat-viewer-menu'
+              open-delay='0'
+              close-delay='0'
+              v-bind='hoverProps'
+            >
+              <template v-slot:activator='{ props }'>
+                <div v-bind='hoverProps'>
+                  <v-list-item class='px-1' :class='{ hover: isHovering }' v-bind='props'>
+                    <template #prepend>
+                      <user-avatar
+                        v-if='getUser(item)'
+                        :user='getUser(item)'
+                      ></user-avatar>
+                      <v-icon v-else icon='mdi-desktop-classic' class='mx-2 mt-2'></v-icon>
+                    </template>
+                    <v-list-item-title class='ml-3'>
+                      <span class='font-weight-bold mr-2' v-if='getUser(item)?.name'>{{ getUser(item)?.name }}</span>
+                      <span style='font-size: 70%'>{{
+                          isToday(item.updated_at) ? $d(item.updated_at, 'time') : $d(item.updated_at, 'short')
+                        }}</span>
+                    </v-list-item-title>
+                    <div class='ml-3' style='white-space: pre'>
+                      {{ item.raw }}
+                    </div>
+                  </v-list-item>
+                </div>
+              </template>
 
-                <v-list class='border-solid'>
-                  <v-list-item @click='editChat(item.uuid)'>編集</v-list-item>
-                  <v-list-item @click='deleteChat(item.uuid)'>削除</v-list-item>
-                </v-list>
-              </v-menu>
-            </template>
-            <v-list-item-title class='ml-3'>
-              <span class='font-weight-bold mr-2' v-if='getUser(item)?.name'>{{ getUser(item)?.name }}</span>
-              <span style='font-size: 70%'>{{
-                  isToday(item.updated_at) ? $d(item.updated_at, 'time') : $d(item.updated_at, 'short')
-                }}</span>
-            </v-list-item-title>
-            <div class='ml-3' style='white-space: pre'>
-              {{ item.raw }}
-            </div>
-          </v-list-item>
+              <div v-bind='hoverProps'>
+                <v-defaults-provider :defaults='{ VBtn: { size: "small", variant: "text", rounded: 0 }, VTooltip: { location: "top", origin: "center", transition: "none" } }'>
+                  <v-tooltip>
+                    <template #activator='{ props }'>
+                      <v-btn v-bind='props' @click='editChat(item.uuid)' icon='mdi-heart-plus' />
+                    </template>
+                    リアクション
+                  </v-tooltip>
+                  <v-tooltip>
+                    <template #activator='{ props }'>
+                      <v-btn v-bind='props' @click='editChat(item.uuid)' icon='mdi-pen' />
+                    </template>
+                    編集
+                  </v-tooltip>
+                  <v-tooltip>
+                    <template #activator='{ props }'>
+                      <v-btn v-bind='props' @click='deleteChat(item.uuid)' icon='mdi-delete' />
+                    </template>
+                    削除
+                  </v-tooltip>
+                </v-defaults-provider>
+              </div>
+            </v-menu>
+          </v-hover>
         </DynamicScrollerItem>
       </template>
     </DynamicScroller>
@@ -225,6 +265,30 @@ watch(() => chats.value.length, (after, before) => {
 .chat-viewer .v-list-item__prepend,
 .chat-viewer .v-list-item__append {
   align-self: flex-start;
+}
+
+.chat-viewer .v-list-item.hover {
+  background: rgb(var(--v-theme-on-surface-variant));
+}
+
+.chat-viewer-menu .v-overlay__content {
+  pointer-events: none !important;
+}
+
+.chat-viewer-menu .v-overlay__content > * {
+  align-self: flex-end;
+  pointer-events: auto !important;
+  height: 30px !important;
+  transform: translateY(50%);
+}
+
+.chat-viewer-menu .v-overlay__content .v-btn {
+  background: rgb(var(--v-theme-on-surface-variant)) !important;
+}
+
+.chat-viewer-menu .v-overlay__content .v-btn--icon {
+  width: calc(var(--v-btn-height) + 4px) !important;
+  height: calc(var(--v-btn-height) + 4px) !important;;
 }
 
 .v-tab {

@@ -208,7 +208,6 @@ const existsUserName = computed(() => users.value.find(u => u.uuid === sessionSt
 const successUserLoggedIn = (user_uuid: string) => {
   loginDialog.value     = false
   userLoggedInFlg.value = true
-  props.nav1 === undefined && updateNav1([user_uuid])
 
   const next = {
     name  : 'room-user',
@@ -496,7 +495,7 @@ const rootClass = computed(() => {
 
   <v-dialog :model-value='loginDialog'>
     <v-card class='mx-auto mt-5 pa-3' :loading='loading'>
-      <v-card-title v-text='sessionStore.user_uuid !== undefined ? existsUserName : "新しいユーザー"' />
+      <v-card-title v-text='sessionStore.user_uuid.value !== undefined ? existsUserName : "新しいユーザー"' />
       <v-card-subtitle>ログイン</v-card-subtitle>
       <v-card-text>
         <v-alert
@@ -513,10 +512,10 @@ const rootClass = computed(() => {
         <v-text-field
           v-model='userName'
           append-icon='empty'
-          :autofocus='sessionStore.user_uuid === undefined'
+          :autofocus='sessionStore.user_uuid.value === undefined'
           @keydown.esc='loginDialog = false'
           @keydown.enter='userPasswordInput.focus()'
-          v-if='sessionStore.user_uuid === undefined'
+          v-if='sessionStore.user_uuid.value === undefined'
           ref='userNameInput'
         >
           <template #label>
@@ -531,7 +530,7 @@ const rootClass = computed(() => {
           @click:append='userShowPassword = !userShowPassword'
           @keydown.enter='userLogin'
           @keydown.esc='loginDialog = false'
-          :autofocus='sessionStore.user_uuid !== undefined'
+          :autofocus='sessionStore.user_uuid.value !== undefined'
           ref='userPasswordInput'
         >
           <template #label>
@@ -545,9 +544,9 @@ const rootClass = computed(() => {
             variant='flat'
             @click='userLogin'
             :loading='loading'
-            :disabled='loading || (sessionStore.user_uuid === undefined && (!userName || users.some(u => u.name === userName)))'
-            :append-icon='sessionStore.user_uuid === undefined ? "mdi-account-plus" : "mdi-login"'
-          >{{ sessionStore.user_uuid === undefined ? '新規登録' : 'ログイン' }}
+            :disabled='loading || (sessionStore.user_uuid.value === undefined && (!userName || users.some(u => u.name === userName)))'
+            :append-icon='sessionStore.user_uuid.value === undefined ? "mdi-account-plus" : "mdi-login"'
+          >{{ sessionStore.user_uuid.value === undefined ? '新規登録' : 'ログイン' }}
           </v-btn>
           <v-btn color='secondary' variant='flat' @click='loginDialogCancel()'>キャンセル</v-btn>
         </v-card-actions>

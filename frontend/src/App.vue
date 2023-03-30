@@ -15,7 +15,7 @@ provide(SessionKey, SessionStore())
 </template>
 
 <!--suppress CssUnusedSymbol -->
-<style>
+<style lang='css'>
 html {
   overflow: auto !important;
 }
