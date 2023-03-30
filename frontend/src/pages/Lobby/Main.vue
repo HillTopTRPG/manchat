@@ -26,7 +26,7 @@ const contentRef = ref()
 </script>
 
 <template>
-  <v-layout>
+  <v-layout class='lobby'>
     <v-navigation-drawer v-model='drawer' :temporary='true'>
       <v-list>
         <v-list-item class='px-2 py-0'>

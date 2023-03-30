@@ -190,6 +190,10 @@ export function getTokens(args: RoomProps) {
   }
 }
 
+export function getRoomBaseParams(args: RoomProps) {
+  return merge(pick(args, 'room_uuid', 'user_uuid'), getTokens(args))
+}
+
 export async function requestUserTokenCheck(args: {
   axios: any
   subscription_uuid: string

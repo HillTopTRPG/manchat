@@ -119,8 +119,10 @@ watch(nav1, (value) => {
   }
 
   sessionStore.nav1.value = nav1.value
-  const getNextNav        = (...list: Nav[]) => list.some(n => n === sessionStore.nav2.value) ? props.nav2 : undefined
-  const roomNav           = getNextNav('room-basic')
+  const getNextNav        = (...list: Nav[]) => {
+    return list.some(n => n === sessionStore.nav2.value) ? props.nav2 : undefined
+  }
+  const roomNav           = getNextNav('room-basic') || 'room-basic' as const
   const userNav           = getNextNav('profile', 'notification')
   const otherUserNav      = getNextNav('profile')
 
@@ -342,10 +344,11 @@ watch([() => props.room_uuid, () => props.user_uuid], initialize)
 const collapse  = ref(false)
 const showBar   = ref(false)
 const rootClass = computed(() => {
-  const result = []
+  const result = ['room']
   if (collapse.value) {
     result.push('toolbar-collapse')
   }
+  result.push(nav1.value)
   result.push(nav2.value)
   if (drawerRail.value) {
     result.push('drawer-rail')
@@ -555,6 +558,7 @@ const rootClass = computed(() => {
   </v-dialog>
   <v-overlay class='chat-overlay' scroll-strategy='none' :model-value='true'>
     <div>こんにちはーー！！！！</div>
+    <div>こんばんはーー！！！！</div>
   </v-overlay>
 </template>
 
@@ -587,8 +591,11 @@ const rootClass = computed(() => {
   margin-left: 0;
 }
 
-.v-navigation-drawer {
+.room .v-navigation-drawer {
   padding-top: 48px;
+}
+
+.v-navigation-drawer {
   margin-top: 0 !important;
   height: 100% !important;
 }

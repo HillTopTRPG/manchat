@@ -33,8 +33,13 @@ module Api
       def destroy
         return if (data = get_data(params)).nil?
 
-        data.destroy
-        render json: { verify: 'success' }
+        # リクエストによる処理では登録者しかデータを削除できないようにする
+        if data.owner_user == params[:user_uuid]
+          data.destroy
+          render json: { verify: 'success' }
+        else
+          render json: { verify: 'failed different owner.' }
+        end
       end
 
       protected

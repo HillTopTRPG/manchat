@@ -10,12 +10,12 @@ export const componentInfo = {
 </script>
 
 <script setup lang='ts'>
-import { computed, inject, ref, watch } from 'vue'
+import { computed, inject, reactive, ref, watch } from 'vue'
 import { InjectionKeySymbol as roomCollectionsKey, StoreType as RoomCollectionStore } from '~/data/RoomCollections'
-import UserAvatar from '~/components/UserAvatar.vue'
 import { Chat } from '~/data/RoomCollections/Chat'
 import { InjectionKeySymbol as sessionKey, StoreType as SessionStore } from '~/data/session'
 import { Layout } from '~/components/panes'
+import ChatViewerItem from '~/components/panes/Chat/ChatViewerItem.vue'
 
 const props = defineProps<{
   layout: Layout
@@ -23,23 +23,7 @@ const props = defineProps<{
 
 const store        = inject(roomCollectionsKey) as RoomCollectionStore
 const sessionStore = inject(sessionKey) as SessionStore
-
-const getUser    = (chat: Chat) => store.users.value.find(u => u.uuid === chat.owner_user)
-const isToday    = (date: Date) => {
-  const today = new Date()
-  return date.getDate() ==
-         today.getDate() &&
-         date.getMonth() ==
-         today.getMonth() &&
-         date.getFullYear() ==
-         today.getFullYear()
-}
-const editChat   = (chat_uuid: string) => {
-
-}
-const deleteChat = (chat_uuid: string) => {
-
-}
+const axios: any   = inject('axios')
 
 const tabs = computed(() => {
   if (sessionStore.navType.value === 'other-player') {
@@ -96,48 +80,44 @@ watch(tabs, () => {
         immediate: true,
         deep     : true,
       })
-watch(tab, value => {
-  console.log(value)
-})
-const chats = computed(() => {
-  const chats   = store.chats.value
-  const navType = sessionStore.navType.value
+const chatContainFunc = (tabValue: string) => {
+  const navType   = sessionStore.navType.value
+  const tabFilter = (c: Chat) => (
+                                   c.tab || ''
+                                 ) === tabValue
+
   if (navType === 'room' || navType === 'player') {
-    if (tab.value === '$$$ALL$$$') {
-      return chats.filter(c => !c.target_uuid)
+    if (tabValue === '$$$ALL$$$') {
+      return (c: Chat) => !c.target_uuid
     }
-    return store.chats.value.filter(c => !c.target_uuid &&
-                                         (
-                                           c.tab || ''
-                                         ) ===
-                                         tab.value)
+    return (c: Chat) => tabFilter(c) && !c.target_uuid
   }
   if (navType === 'other-player') {
-    const nav1      = sessionStore.nav1.value
-    const user_uuid = sessionStore.user_uuid.value
-    if (tab.value === '$$$ALL$$$') {
-      return chats.filter(c => (
-                                 c.owner_user === user_uuid && c.target_uuid === nav1
-                               ) ||
-                               (
-                                 c.owner_user === nav1 && c.target_uuid === user_uuid
-                               ))
+    const nav1       = sessionStore.nav1.value
+    const user_uuid  = sessionStore.user_uuid.value
+    const baseFilter = (c: Chat) => (
+                                      c.owner_user === user_uuid && c.target_uuid === nav1
+                                    ) ||
+                                    (
+                                      c.owner_user === nav1 && c.target_uuid === user_uuid
+                                    )
+    if (tabValue === '$$$ALL$$$') {
+      return (c: Chat) => baseFilter(c)
     }
-    return store.chats.value.filter(c => (
-                                           c.tab || ''
-                                         ) ===
-                                         tab.value &&
-                                         (
-                                           (
-                                             c.owner_user === user_uuid && c.target_uuid === nav1
-                                           ) ||
-                                           (
-                                             c.owner_user === nav1 && c.target_uuid === user_uuid
-                                           )
-                                         ))
+    return (c: Chat) => tabFilter(c) && baseFilter(c)
   }
-  return []
+  return null
+}
+const chats           = computed(() => {
+  const func = chatContainFunc(tab.value)
+  if (func === null) {
+    return []
+  }
+  return store.chats.value.filter(func)
 })
+
+const unreadChatList     = reactive<string[]>([])
+const unreadChatListLate = reactive<string[]>([])
 
 const list = ref()
 watch(() => chats.value.length, (after, before) => {
@@ -145,6 +125,12 @@ watch(() => chats.value.length, (after, before) => {
   if (before < after) {
     const elm = list.value.$el
     setTimeout(() => elm.scrollTo(0, elm.scrollHeight))
+  }
+})
+watch(() => store.chats.value.length, (after, before) => {
+  if (before < after) {
+    unreadChatList.splice(-1, 0, store.chats.value[store.chats.value.length - 1].uuid)
+    unreadChatListLate.splice(-1, 0, store.chats.value[store.chats.value.length - 1].uuid)
   }
 })
 
@@ -166,6 +152,15 @@ const onScroll = (evt: { target: HTMLElement }) => {
     bubbles: false,
   }))
 }
+
+const viewedChatItem = (uuid: string) => {
+  const idx = unreadChatList.indexOf(uuid)
+  if (idx < 0) {
+    return
+  }
+  unreadChatList.splice(idx, 1)
+  setTimeout(() => unreadChatListLate.splice(unreadChatListLate.indexOf(uuid), 1), 3000)
+}
 </script>
 
 <template>
@@ -180,7 +175,14 @@ const onScroll = (evt: { target: HTMLElement }) => {
     :center-active='true'
   >
     <template v-for='tab in tabs' :key='tab.value'>
-      <v-badge location='right top' :dot='true' offset-y='6' offset-x='10' color='pink-accent-3'>
+      <v-badge
+        location='right top'
+        :dot='true'
+        :model-value='unreadChatList.some(uc => chatContainFunc(tab.value)(store.chats.value.find(c => c.uuid === uc)))'
+        offset-y='6'
+        offset-x='10'
+        color='pink-accent-3'
+      >
         <v-tab :value='tab.value'>
           <v-icon :key='tab.icon'>mdi-{{ tab.icon }}</v-icon>
           {{ tab.title }}
@@ -191,70 +193,13 @@ const onScroll = (evt: { target: HTMLElement }) => {
   <v-list class='chat-viewer scroll h-100' :class='{ isScrolling }' ref='list' @scroll='onScroll'>
     <DynamicScroller :items='chats' key-field='uuid' :min-item-size='57' :page-mode='true'>
       <template v-slot='{ item, index, active }'>
-        <DynamicScrollerItem
+        <ChatViewerItem
           :item='item'
+          :index='index'
           :active='active'
-          :size-dependencies='[ item.raw, ]'
-          :data-index='index'
-        >
-          <v-hover v-slot='{ isHovering, props: hoverProps }'>
-            <v-menu
-              open-on-hover
-              location='top right'
-              :transition='false'
-              class='chat-viewer-menu'
-              open-delay='0'
-              close-delay='0'
-              v-bind='hoverProps'
-            >
-              <template v-slot:activator='{ props }'>
-                <div v-bind='hoverProps'>
-                  <v-list-item class='px-1' :class='{ hover: isHovering }' v-bind='props'>
-                    <template #prepend>
-                      <user-avatar
-                        v-if='getUser(item)'
-                        :user='getUser(item)'
-                      ></user-avatar>
-                      <v-icon v-else icon='mdi-desktop-classic' class='mx-2 mt-2'></v-icon>
-                    </template>
-                    <v-list-item-title class='ml-3'>
-                      <span class='font-weight-bold mr-2' v-if='getUser(item)?.name'>{{ getUser(item)?.name }}</span>
-                      <span style='font-size: 70%'>{{
-                          isToday(item.updated_at) ? $d(item.updated_at, 'time') : $d(item.updated_at, 'short')
-                        }}</span>
-                    </v-list-item-title>
-                    <div class='ml-3' style='white-space: pre'>
-                      {{ item.raw }}
-                    </div>
-                  </v-list-item>
-                </div>
-              </template>
-
-              <div v-bind='hoverProps'>
-                <v-defaults-provider :defaults='{ VBtn: { size: "small", variant: "text", rounded: 0 }, VTooltip: { location: "top", origin: "center", transition: "none" } }'>
-                  <v-tooltip>
-                    <template #activator='{ props }'>
-                      <v-btn v-bind='props' @click='editChat(item.uuid)' icon='mdi-heart-plus' />
-                    </template>
-                    リアクション
-                  </v-tooltip>
-                  <v-tooltip>
-                    <template #activator='{ props }'>
-                      <v-btn v-bind='props' @click='editChat(item.uuid)' icon='mdi-pen' />
-                    </template>
-                    編集
-                  </v-tooltip>
-                  <v-tooltip>
-                    <template #activator='{ props }'>
-                      <v-btn v-bind='props' @click='deleteChat(item.uuid)' icon='mdi-delete' />
-                    </template>
-                    削除
-                  </v-tooltip>
-                </v-defaults-provider>
-              </div>
-            </v-menu>
-          </v-hover>
-        </DynamicScrollerItem>
+          @viewed='viewedChatItem'
+          :is-new-read='unreadChatListLate.some(uc => uc === item.uuid)'
+        />
       </template>
     </DynamicScroller>
   </v-list>
