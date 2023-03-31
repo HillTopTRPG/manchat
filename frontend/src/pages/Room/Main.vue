@@ -16,20 +16,22 @@ import {
 } from '~/pages/AccountHelper'
 
 import { InjectionKeySymbol as sessionKey, StoreType as SessionStore } from '~/data/session'
-import { merge } from 'lodash'
+import { forEach, merge } from 'lodash'
 import { User } from '~/data/user'
 import { Room } from '~/data/room'
 import UserNavItem from '~/pages/Room/Components/UserNavItem.vue'
 import UserListItem from '~/pages/Room/Components/UserListItem.vue'
 
-const sessionState = inject(sessionKey) as SessionStore
+const sessionStore = inject(sessionKey) as SessionStore
 
 const props = defineProps<{
   room_uuid: string
-  user_uuid?: string
+  user_uuid?: string | undefined
   user_name?: string
   user_password?: string
-  open?: Nav
+  nav1?: string | 'room-info' | undefined
+  nav2?: Nav | undefined
+  rail?: string
 }>()
 
 const theme             = useTheme()
@@ -47,21 +49,21 @@ const env = {
   router,
   axios,
   cable,
-  subscription_uuid: sessionState.state.session_uuid,
+  subscription_uuid: sessionStore.session_uuid.value,
 }
 
-const drawerRail = ref(true)
-const contentRef = ref()
-const room       = ref<Room | null>(null)
-const users      = ref<User[]>([])
+const room  = ref<Room | null>(null)
+const users = ref<User[]>([])
 
 const collections = {
   room,
   users,
 }
 
+const userLoggedInFlg = ref(false)
+
 const breadcrumbsItems = computed(() => {
-  const user = userLoggedInFlg.value && users.value.find(u => u.uuid === selectedUserUuid.value[0])
+  const user = userLoggedInFlg.value && users.value.find(u => u.uuid === selectedNav1.value[0])
   return [
     [
       {
@@ -75,9 +77,9 @@ const breadcrumbsItems = computed(() => {
         disabled: false,
         href    : '',
       },
-    ] : [], currentNavText.value ? [
+    ] : [], nav2Text.value ? [
       {
-        title   : currentNavText.value,
+        title   : nav2Text.value,
         disabled: false,
         href    : '',
       },
@@ -85,7 +87,6 @@ const breadcrumbsItems = computed(() => {
   ].flatMap(a => a)
 })
 
-const userUuid          = ref<string | undefined>(undefined)
 const loginDialog       = ref(false)
 const userName          = ref('')
 const userPassword      = ref('')
@@ -97,49 +98,88 @@ const loginAlertText    = ref('')
 const userPasswordInput = ref<HTMLInputElement>()
 const userNameInput     = ref<HTMLInputElement>()
 
-const selectedUserUuid       = ref<string[]>(['room-info'])
-const currentUserUuid        = computed(() => selectedUserUuid.value[0])
-const updateSelectedUserUuid = (newList: string[]) => {
-  selectedUserUuid.value.splice(0, selectedUserUuid.value.length, ...newList)
+const drawerRail = ref<boolean | null>(parseInt(props.rail || '0') > 0)
+watch(drawerRail, value => {
+  if (!userLoggedInFlg.value || value === null) {
+    return
+  }
+  const args = { rail: drawerRail.value ? '1' : '0' }
+  toRoomUser(merge({}, env, props, args), true)
+})
+
+const selectedNav1      = ref<string[]>([props.nav1 || 'room-info'])
+const nav1              = computed(() => selectedNav1.value[0])
+sessionStore.nav1.value = nav1.value
+const updateNav1        = (newList: string[]) => {
+  selectedNav1.value.splice(0, selectedNav1.value.length, ...newList)
 }
-watch(currentUserUuid, (value) => {
+watch(nav1, (value) => {
   if (!userLoggedInFlg.value) {
     return
   }
-  const userNav: Nav | undefined = value === props.user_uuid ? props.open : 'profile'
-  const nextNav                  = value === 'room-info' ? 'room-basic' : userNav
-  if (nextNav) {
-    selectedNav.value.splice(0, selectedNav.value.length, nextNav)
-  } else {
-    selectedNav.value.splice(0, selectedNav.value.length)
+
+  sessionStore.nav1.value = nav1.value
+  const getNextNav        = (...list: Nav[]) => {
+    return list.some(n => n === sessionStore.nav2.value) ? props.nav2 : undefined
   }
+  const roomNav           = getNextNav('room-basic') || 'room-basic' as const
+  const userNav           = getNextNav('profile', 'notification')
+  const otherUserNav      = getNextNav('profile')
+
+  const nextNav = value === 'room-info' ? roomNav : value === props.user_uuid ? userNav : otherUserNav
+  const args    = {
+    nav1: nav1.value,
+    nav2: nextNav,
+    rail: drawerRail.value ? '1' : '0',
+  }
+  toRoomUser(merge({}, env, props, args), true)
+  updateNav2([nextNav], true)
 })
 
-const selectedNav = ref<Nav[]>(['init'])
-switch (props.open) {
-  case 'profile':
-  case 'notification':
-  case 'room-basic':
-    selectedNav.value[0] = props.open
-    break
-  default:
-    selectedNav.value[0] = 'init'
-    break
-}
-const currentNav = computed(() => selectedNav.value[0])
-watch(currentNav, () => {
-  console.log(currentNav.value)
-  switch (currentNav.value) {
+const selectedNav2 = ref<Nav[]>(['init'])
+const nav2         = computed(() => selectedNav2.value[0])
+watch(nav2, (value) => sessionStore.nav2.value = value)
+const updateNav2 = (navs: (Nav | undefined)[], force?: boolean) => {
+  const filtered = navs.filter((n): n is NonNullable<typeof n> => n !== undefined)
+  selectedNav2.value.splice(0, selectedNav2.value.length, ...filtered)
+  switch (nav2.value) {
     case 'profile':
     case 'notification':
     case 'room-basic':
-      toRoomUser(merge({}, env, props, { open: currentNav.value }), true)
+      const args = {
+        nav1: nav1.value,
+        nav2: nav2.value,
+        rail: drawerRail.value ? '1' : '0',
+      }
+      toRoomUser(merge({}, env, props, args), true)
       break
     default:
+      if (force) {
+        const args = {
+          nav1: nav1.value,
+          nav2: undefined,
+          rail: drawerRail.value ? '1' : '0',
+        }
+
+        const payload: any = merge({}, env, { ...props })
+        // mergeではundefinedに更新できない
+        forEach(args, (v, k) => payload[k] = v)
+        toRoomUser(payload, true)
+      }
   }
-})
-const currentNavText    = computed(() => {
-  switch (currentNav.value) {
+}
+switch (props.nav2) {
+  case 'profile':
+  case 'notification':
+  case 'room-basic':
+    updateNav2([props.nav2])
+    break
+  default:
+    updateNav2(['init'])
+    break
+}
+const nav2Text = computed(() => {
+  switch (nav2.value) {
     case 'profile':
       return 'プロフィール'
     case 'entrance':
@@ -151,43 +191,34 @@ const currentNavText    = computed(() => {
   }
   return ''
 })
-const updateSelectedNav = (newList: Nav[]) => {
-  selectedNav.value.splice(0, selectedNav.value.length, ...newList)
-}
 
-watch(() => props.user_uuid, () => {
-  selectedUserUuid.value.splice(0, selectedUserUuid.value.length, props.user_uuid || 'room-info')
+watch(() => props.user_uuid, (value) => {
+  sessionStore.user_uuid.value = value
+  props.nav1 === undefined && updateNav1([value || 'room-info'])
 })
 
 const logoutUser = async () => {
-  selectedUserUuid.value.splice(0, selectedUserUuid.value.length, 'room-info')
-  userUuid.value = undefined
+  updateNav1(['room-info'])
+  sessionStore.user_uuid.value = undefined
   return toRoom(merge({}, env, props), false)
-}
-
-const closeOverlay = () => {
-  selectedNav.value.splice(0, selectedNav.value.length)
-  const args = merge({}, env, { ...props })
-  args.open  = undefined
-  toRoomUser(args, true)
 }
 
 let isInitialLogin = false
 
-const existsUserName  = computed(() => users.value.find(u => u.uuid === userUuid.value)?.name || '')
-const userLoggedInFlg = ref(false)
+const existsUserName = computed(() => users.value.find(u => u.uuid === sessionStore.user_uuid.value)?.name || '')
 
 const successUserLoggedIn = (user_uuid: string) => {
   loginDialog.value     = false
   userLoggedInFlg.value = true
-  drawerRail.value      = false
-  selectedUserUuid.value.splice(0, selectedUserUuid.value.length, user_uuid)
 
   const next = {
     name  : 'room-user',
     params: {
       room_uuid: props.room_uuid,
       user_uuid,
+    },
+    query : {
+      nav1: user_uuid,
     },
   }
   if (isInitialLogin) {
@@ -211,12 +242,12 @@ const showUserLogin = async (user_uuid?: string) => {
   if (await preUserLogin(user_uuid)) {
     return
   }
-  loginDialog.value    = true
-  userUuid.value       = user_uuid
-  loginAlertText.value = ''
-  loading.value        = false
-  userName.value       = ''
-  userPassword.value   = ''
+  loginDialog.value            = true
+  sessionStore.user_uuid.value = user_uuid
+  loginAlertText.value         = ''
+  loading.value                = false
+  userName.value               = ''
+  userPassword.value           = ''
 }
 
 const userLogin = async () => {
@@ -226,7 +257,7 @@ const userLogin = async () => {
   loading.value = true
 
   const userLoginWrapResult = await requestUserLoginWrap(merge({}, env, props, {
-    user_uuid    : userUuid.value,
+    user_uuid    : sessionStore.user_uuid.value,
     user_name    : userName.value,
     user_password: userPassword.value,
     loginAlertType,
@@ -266,8 +297,7 @@ onBeforeUnmount(() => {
 
 const initialize = async () => {
   userLoggedInFlg.value = false
-  selectedUserUuid.value.splice(0, selectedUserUuid.value.length, 'room-info')
-  drawerRail.value = !!props.user_uuid
+  //  updateNav1(['room-info'])
 
   if (roomChannel) {
     cable.subscriptions.remove(roomChannel)
@@ -280,14 +310,14 @@ const initialize = async () => {
   const result = await requestTokenCheckWrap(merge({}, env, props, collections, {
     userLoggedInFlg,
     drawerRail,
-    selectedUserUuid,
-    selectedNav,
+    selectedNav1,
+    selectedNav2,
   }))
   if (result !== null) {
     if (result === 'expire_user_token') {
-      isInitialLogin    = true
-      loginDialog.value = true
-      userUuid.value    = props.user_uuid
+      isInitialLogin               = true
+      loginDialog.value            = true
+      sessionStore.user_uuid.value = props.user_uuid
     }
     return
   }
@@ -295,15 +325,18 @@ const initialize = async () => {
 
   // ユーザー作成ダイアログを表示する
   if (!userLoggedInFlg.value && props.user_uuid === undefined && props.user_name !== undefined) {
-    isInitialLogin     = true
-    loginDialog.value  = true
-    userUuid.value     = undefined
-    userName.value     = props.user_name
-    userPassword.value = props.user_password || ''
+    isInitialLogin               = true
+    loginDialog.value            = true
+    sessionStore.user_uuid.value = undefined
+    userName.value               = props.user_name
+    userPassword.value           = props.user_password || ''
+    return
   }
 
-  roomChannel  = createRoomChannel(merge({}, env, props, collections))
-  usersChannel = props.user_uuid ? createUserChannel(merge({}, env, props)) : null
+  roomChannel                  = createRoomChannel(merge({}, env, props, collections))
+  usersChannel                 = props.user_uuid ? createUserChannel(merge({}, env, props)) : null
+  sessionStore.room_uuid.value = props.room_uuid
+  sessionStore.user_uuid.value = props.user_uuid
 }
 initialize().then()
 watch([() => props.room_uuid, () => props.user_uuid], initialize)
@@ -311,11 +344,12 @@ watch([() => props.room_uuid, () => props.user_uuid], initialize)
 const collapse  = ref(false)
 const showBar   = ref(false)
 const rootClass = computed(() => {
-  const result = []
+  const result = ['room']
   if (collapse.value) {
     result.push('toolbar-collapse')
   }
-  result.push(currentNav.value)
+  result.push(nav1.value)
+  result.push(nav2.value)
   if (drawerRail.value) {
     result.push('drawer-rail')
   }
@@ -328,7 +362,7 @@ const rootClass = computed(() => {
     <v-app-bar prominent elevation='1' density='compact' :collapse='collapse'>
       <v-app-bar-nav-icon
         variant='text' @click.stop='drawerRail = !drawerRail'
-        :icon='drawerRail ? "mdi-chevron-right" : "mdi-chevron-left"'
+        :icon='drawerRail ? "mdi-menu" : "mdi-backburger"'
       ></v-app-bar-nav-icon>
       <v-avatar image='https://quoridorn.com/img/mascot/normal/mascot_normal.png' class='ml-3' v-if='!collapse' />
       <v-toolbar-title>
@@ -338,43 +372,69 @@ const rootClass = computed(() => {
           </template>
         </v-breadcrumbs>
       </v-toolbar-title>
-      <v-btn
-        variant='text'
-        :icon='collapse ? "mdi-arrow-expand-horizontal" : "mdi-arrow-collapse-horizontal"'
-        @click='collapse = !collapse'
-      ></v-btn>
-      <v-btn
-        variant='text'
-        icon='mdi-pencil-ruler'
-        @click='showBar = !showBar'
-        v-if='currentNav !== "init" && currentNav !== "entrance" && !(drawerRail && collapse)'
-      ></v-btn>
-      <v-btn variant='text' icon='mdi-brightness-6' @click='toggleTheme' v-if='!(drawerRail && collapse)'></v-btn>
+      <v-spacer v-if='collapse' />
+      <v-tooltip v-if='userLoggedInFlg'>
+        <template #activator='{ props }'>
+          <v-btn
+            variant='text'
+            :icon='collapse ? "mdi-arrow-expand-right" : "mdi-arrow-collapse-left"'
+            @click='collapse = !collapse'
+            v-bind='props'
+          ></v-btn>
+        </template>
+        メニューバーを{{ collapse ? "広げる" : "閉じる" }}
+      </v-tooltip>
+      <v-tooltip>
+        <template #activator='{ props }'>
+          <v-btn
+            variant='text'
+            class='split-edit-btn'
+            style='box-sizing: border-box'
+            :class='{ active: showBar}'
+            v-bind='props'
+            icon='mdi-pencil-ruler'
+            @click='showBar = !showBar'
+            v-if='nav2 !== "init" && nav2 !== "entrance" && !(drawerRail && collapse)'
+          ></v-btn>
+        </template>
+        ペインの編集
+      </v-tooltip>
+      <v-tooltip>
+        <template #activator='{ props }'>
+          <v-btn
+            variant='text'
+            icon='mdi-brightness-6'
+            v-bind='props'
+            @click='toggleTheme'
+            v-if='!(drawerRail && collapse)'
+          ></v-btn>
+        </template>
+        テーマの切り替え
+      </v-tooltip>
     </v-app-bar>
 
-    <v-navigation-drawer :rail='drawerRail || userLoggedInFlg' rail-width='80' :permanent='true'>
+    <v-navigation-drawer :rail='drawerRail || userLoggedInFlg' rail-width='70' :permanent='true'>
       <v-list
         :nav='true'
         :mandatory='true'
-        :selected='readonly(selectedUserUuid)'
-        @update:selected='updateSelectedUserUuid'
+        :selected='readonly(selectedNav1)'
+        @update:selected='updateNav1'
       >
-        <user-nav-item
-          label='部屋'
-          :show-label='!drawerRail'
-          value='room-info'
-          append-icon='folder-home'
-          tooltip-text='部屋'
-          :big-icon='true'
-        />
-
         <template v-if='userLoggedInFlg'>
-          <v-list-subheader v-if='user_uuid'>あなた</v-list-subheader>
+          <user-nav-item
+            label='部屋'
+            :show-label='!drawerRail'
+            value='room-info'
+            append-icon='home'
+            tooltip-text='部屋'
+            :big-icon='true'
+          />
           <user-list-item :user='users.find(u => u.uuid === user_uuid)' :hide-title='drawerRail' />
+          <v-divider class='my-2' />
         </template>
-
-        <v-list-subheader v-if='user_uuid'>{{ drawerRail || userLoggedInFlg ? 'Users' : '他のユーザー' }}</v-list-subheader>
-        <v-list-subheader v-else>{{ drawerRail ? 'Log in' : 'ログイン' }}</v-list-subheader>
+        <template v-else>
+          <v-list-subheader v-if='!drawerRail'>ログイン</v-list-subheader>
+        </template>
 
         <user-nav-item
           label='新しいユーザー'
@@ -383,6 +443,7 @@ const rootClass = computed(() => {
           prepend-icon='login-variant'
           tooltip-text='新しいユーザーを作成します'
           @click-list-item='showUserLogin()'
+          :big-icon='true'
           v-if='!user_uuid'
         />
 
@@ -402,15 +463,20 @@ const rootClass = computed(() => {
       :rail='drawerRail'
       rail-width='54'
       :permanent='true'
-      v-if='userLoggedInFlg && currentNav !== "init"'
+      v-if='userLoggedInFlg && nav2 !== "init"'
     >
-      <v-list :nav='true' :selected='readonly(selectedNav)' @update:selected='updateSelectedNav' density='compact'>
-        <template v-if='currentUserUuid === "room-info"'>
+      <v-list
+        :nav='true'
+        :selected='readonly(selectedNav2)'
+        @update:selected='list => updateNav2(list, true)'
+        density='compact'
+      >
+        <template v-if='nav1 === "room-info"'>
           <user-nav-item
             label='基本情報'
             :show-label='!drawerRail'
             value='room-basic'
-            append-icon='book-open-variant'
+            append-icon='cog'
             tooltip-text='部屋の基本情報を表示・編集します。'
           />
         </template>
@@ -422,7 +488,7 @@ const rootClass = computed(() => {
             append-icon='badge-account'
             tooltip-text='プロフィールを表示・編集します。'
           />
-          <template v-if='currentUserUuid === user_uuid'>
+          <template v-if='nav1 === user_uuid'>
             <v-list-subheader v-if='!drawerRail'>アプリの設定</v-list-subheader>
             <v-divider v-else />
             <user-nav-item
@@ -442,16 +508,14 @@ const rootClass = computed(() => {
         <Contents
           :room_uuid='room_uuid'
           :user_uuid='user_uuid'
-          :user_name='user_name'
-          :user_password='user_password'
+          :nav1='nav1'
+          :nav2='nav2'
           :users='users'
           :room='room'
-          :nav='currentNav'
           :showBar='showBar'
           @requireUserLogin='showUserLogin'
           @logoutUser='logoutUser()'
-          @close-overlay='closeOverlay()'
-          ref='contentRef'
+          @close-overlay='updateNav2([], true)'
         />
       </suspense>
     </v-main>
@@ -459,7 +523,7 @@ const rootClass = computed(() => {
 
   <v-dialog :model-value='loginDialog'>
     <v-card class='mx-auto mt-5 pa-3' :loading='loading'>
-      <v-card-title v-text='userUuid !== undefined ? existsUserName : "新しいユーザー"' />
+      <v-card-title v-text='sessionStore.user_uuid.value !== undefined ? existsUserName : "新しいユーザー"' />
       <v-card-subtitle>ログイン</v-card-subtitle>
       <v-card-text>
         <v-alert
@@ -476,10 +540,10 @@ const rootClass = computed(() => {
         <v-text-field
           v-model='userName'
           append-icon='empty'
-          :autofocus='userUuid === undefined'
+          :autofocus='sessionStore.user_uuid.value === undefined'
           @keydown.esc='loginDialog = false'
           @keydown.enter='userPasswordInput.focus()'
-          v-if='userUuid === undefined'
+          v-if='sessionStore.user_uuid.value === undefined'
           ref='userNameInput'
         >
           <template #label>
@@ -494,7 +558,7 @@ const rootClass = computed(() => {
           @click:append='userShowPassword = !userShowPassword'
           @keydown.enter='userLogin'
           @keydown.esc='loginDialog = false'
-          :autofocus='userUuid !== undefined'
+          :autofocus='sessionStore.user_uuid.value !== undefined'
           ref='userPasswordInput'
         >
           <template #label>
@@ -508,29 +572,30 @@ const rootClass = computed(() => {
             variant='flat'
             @click='userLogin'
             :loading='loading'
-            :disabled='loading || (userUuid === undefined && (!userName || users.some(u => u.name === userName)))'
-            :append-icon='userUuid === undefined ? "mdi-account-plus" : "mdi-login"'
-          >{{ userUuid === undefined ? '新規登録' : 'ログイン' }}
+            :disabled='loading || (sessionStore.user_uuid.value === undefined && (!userName || users.some(u => u.name === userName)))'
+            :append-icon='sessionStore.user_uuid.value === undefined ? "mdi-account-plus" : "mdi-login"'
+          >{{ sessionStore.user_uuid.value === undefined ? '新規登録' : 'ログイン' }}
           </v-btn>
           <v-btn color='secondary' variant='flat' @click='loginDialogCancel()'>キャンセル</v-btn>
         </v-card-actions>
       </v-card-text>
     </v-card>
   </v-dialog>
-  <v-overlay class='chat-overlay' scroll-strategy='none' :model-value='true'>
-    <div>こんにちはーー！！！！</div>
-  </v-overlay>
 </template>
 
 <!--suppress HtmlUnknownAttribute, CssUnusedSymbol, CssUnknownProperty -->
 
 <style deep lang='css'>
+.v-main {
+  height: 100vh;
+}
+
 .v-toolbar {
-  min-width: 220px;
+  min-width: 325px;
 }
 
 .drawer-rail .v-toolbar {
-  min-width: 133px;
+  min-width: 124px;
 }
 
 /*noinspection CssUnresolvedCustomProperty*/
@@ -547,13 +612,21 @@ const rootClass = computed(() => {
   margin-left: 0;
 }
 
-.v-navigation-drawer {
+.room .v-navigation-drawer {
   padding-top: 48px;
+}
+
+.v-navigation-drawer {
   margin-top: 0 !important;
+  height: 100% !important;
 }
 
 .v-navigation-drawer .v-list-item {
   overflow: hidden;
+}
+
+.v-toolbar--collapse {
+  border-bottom-right-radius: 16px !important;
 }
 
 /*noinspection CssUnresolvedCustomProperty*/
@@ -571,39 +644,13 @@ const rootClass = computed(() => {
   color: inherit;
 }
 
-.chat-overlay > * {
-  pointer-events: none;
+.v-list-item:hover > .v-list-item__overlay {
+  opacity: calc(0.08 * var(--v-theme-overlay-multiplier));
 }
 
 /*noinspection CssUnresolvedCustomProperty*/
-.chat-overlay .v-overlay__content > * {
-  pointer-events: none;
-  animation: loop 10s -25s linear infinite;
-  position: absolute;
-  top: 20px;
-  font-size: 30px;
-  white-space: pre;
-  font-weight: bold;
-  color: rgb(var(--v-theme-on-surface-variant));
-  text-stroke: 1px rgb(var(--v-theme-surface-variant));
-  -webkit-text-stroke: 1px rgb(var(--v-theme-surface-variant));
-}
-
-.chat-overlay .v-overlay__scrim {
-  background: transparent;
-}
-
-@keyframes loop {
-  0% {
-    left: 100vw;
-  }
-  to {
-    left: 0;
-    transform: translateX(-100%);
-  }
-}
-
-.v-list-item:hover > .v-list-item__overlay {
-  opacity: calc(0.08 * var(--v-theme-overlay-multiplier));
+.split-edit-btn.active {
+  background-color: rgb(var(--v-theme-on-surface));
+  color: rgb(var(--v-theme-surface));
 }
 </style>

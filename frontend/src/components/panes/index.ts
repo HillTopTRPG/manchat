@@ -1,10 +1,21 @@
 import samplePanes from './sample'
 import samplePanes2 from './sample2'
 import userPanes from './user'
+import chatPanes from './Chat'
 
 const panes = [
-  ...samplePanes, ...samplePanes2, ...userPanes,
+  ...samplePanes, ...samplePanes2, ...userPanes, ...chatPanes,
 ]
+
+export interface Layout {
+  type: string
+  uuid: string
+  componentGroup?: string
+  component?: string
+  size?: number
+  payload: any | null
+  panes: Layout[]
+}
 
 export default panes
 
@@ -26,8 +37,7 @@ groups.forEach(g => {
     .filter(p => p.group === g)
     .forEach(p => {
       // Convert to kebab-case and register
-      const kebab         = p.info.name.replace(/([a-z0–9])([A-Z])/g, '$1-$2').toLowerCase()
-      items[p.info.label] = kebab
+      items[p.info.label] = p.info.name.replace(/([a-z0–9])([A-Z])/g, '$1-$2').toLowerCase()
     })
 })
 export const componentMap = map

@@ -8,22 +8,27 @@ Rails.application.routes.draw do
   namespace :api do
     mount ActionCable.server => '/cable'
     namespace :v1 do
-      get 'rooms', to: 'rooms#index', as: 'rooms'
-      post 'rooms', to: 'rooms#create'
-      patch 'rooms/:room_uuid', to: 'rooms#update'
-      delete 'rooms/:room_uuid', to: 'rooms#destroy'
-      post 'rooms/:room_uuid/login', to: 'rooms#login'
-      post 'rooms/:room_uuid/token/:room_token/check', to: 'rooms#check_token'
+      %w[room user].each do |n|
+        get "#{n}s", to: "#{n}s#index", as: "#{n}s"
+        post "#{n}s", to: "#{n}s#create"
+        patch "#{n}s/:#{n}_uuid", to: "#{n}s#update"
+        delete "#{n}s/:#{n}_uuid", to: "#{n}s#destroy"
+        post "#{n}s/:#{n}_uuid/login", to: "#{n}s#login"
+        post "#{n}s/:#{n}_uuid/token/:#{n}_token/check", to: "#{n}s#check_token"
+      end
 
-      get 'users', to: 'users#index', as: 'users'
-      post 'users', to: 'users#create'
-      patch 'users/:user_uuid', to: 'users#update'
-      delete 'users/:user_uuid', to: 'users#destroy'
-      post 'users/:user_uuid/login', to: 'users#login'
-      post 'users/:user_uuid/token/:user_token/check', to: 'users#check_token'
+      get 'room_collections/:room_uuid', to: 'room_collections#index', as: 'room_collections'
 
-      get 'tokens', to: 'tokens#index', as: 'tokens'
-      delete 'tokens/:id', to: 'tokens#destroy'
+      %w[chats].each do |n|
+        get n, to: "#{n}#index", as: n
+        post n, to: "#{n}#create"
+        patch "#{n}/:uuid", to: "#{n}#update"
+        delete "#{n}/:uuid", to: "#{n}#destroy"
+      end
+
+      %w[change_logs].each do |n|
+        get n, to: "#{n}#index", as: n
+      end
     end
   end
 end

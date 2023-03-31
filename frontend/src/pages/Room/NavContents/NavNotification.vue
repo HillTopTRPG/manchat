@@ -9,7 +9,8 @@ const props = defineProps<{
   user_uuid?: string
   user_name?: string
   user_password?: string
-  nav: Nav
+  nav1?: string | 'room-info'
+  nav2: Nav
   users: User[]
 }>()
 
@@ -89,7 +90,7 @@ const defaults = {
   <v-overlay
     class='nav-contents overflow-auto'
     :contained='true'
-    :model-value='nav === "notification"'
+    :model-value='nav2 === "notification"'
   >
     <v-list :nav='true' bg-color='transparent'>
       <v-defaults-provider :defaults='defaults'>

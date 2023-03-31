@@ -1,6 +1,15 @@
 version: '3.9'
+
+x-logging-configuration: &logging-configuration
+  logging:
+    driver: json-file
+    options:
+      max-size: 1m
+      max-file: '3'
+
 services:
   nginx:
+    <<: *logging-configuration
     image: nginx:1.23-alpine
     platform: linux/x86_64
     ports:
@@ -15,11 +24,13 @@ services:
       NGINX_PORT: 80
       NGINX_SERVER_NAME: localhost
   vue:
+    <<: *logging-configuration
     build: ./docker/vue
     volumes:
       - ./frontend:/app
     command: "yarn dev"
   rails:
+    <<: *logging-configuration
     build: ./docker/rails
     tty: true
     stdin_open: true
@@ -33,6 +44,7 @@ services:
       - APP_DOCKER_DB_HOST=mysql
       - APP_DOCKER_DB_PORT=3306
   mysql:
+    <<: *logging-configuration
     build: ./docker/mysql
     ports:
       - "3306:3306"
@@ -43,6 +55,7 @@ services:
       MYSQL_ALLOW_EMPTY_PASSWORD: true
       TZ: 'Asia/Tokyo'
   redis:
+    <<: *logging-configuration
     image: redis:3.2
 
 volumes:

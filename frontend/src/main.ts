@@ -6,6 +6,10 @@ import withUUID from 'vue-uuid'
 import { register } from './components/panes/plugin'
 import axios from 'axios'
 import VueAxios from 'vue-axios'
+//@ts-ignore
+import { DynamicScroller, DynamicScrollerItem } from 'vue-virtual-scroller'
+import 'vue-virtual-scroller/dist/vue-virtual-scroller.css'
+
 // @ts-ignore
 import ActionCable from 'actioncable'
 import router from '../router'
@@ -44,6 +48,11 @@ const i18n = createI18n({
                                 hour   : 'numeric',
                                 minute : 'numeric',
                               },
+                              time : {
+                                hour  : 'numeric',
+                                minute: 'numeric',
+                                second: 'numeric',
+                              },
                             },
                             'ja-JP': {
                               short: {
@@ -60,6 +69,12 @@ const i18n = createI18n({
                                 minute : 'numeric',
                                 hour12 : true,
                               },
+                              time : {
+                                hour  : 'numeric',
+                                minute: 'numeric',
+                                hour12: true,
+                                second: 'numeric',
+                              },
                             },
                           },
                         })
@@ -72,6 +87,8 @@ const app = createApp(App)
 withUUID(app)
 register(app)
 
+app.component('DynamicScroller', DynamicScroller)
+app.component('DynamicScrollerItem', DynamicScrollerItem)
 app
   .use(vuetify)
   .use(router)

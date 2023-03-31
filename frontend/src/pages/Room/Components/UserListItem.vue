@@ -5,7 +5,7 @@ import UserIcon from '~/pages/Room/Components/UserIcon.vue'
 
 defineProps<{
   user: User
-  hideTitle: boolean
+  hideTitle: boolean | null
 }>()
 
 const emits = defineEmits<{
@@ -17,7 +17,7 @@ const emits = defineEmits<{
   <v-tooltip transition='scale-transition' v-if='user'>
     <template #activator='{ props }'>
       <v-list-item
-        class='py-2'
+        class='py-2 px-1'
         :value='user.uuid'
         active-color='primary'
         variant='elevated'

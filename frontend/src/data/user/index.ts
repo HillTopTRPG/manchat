@@ -1,4 +1,4 @@
-import { inject, InjectionKey, reactive } from 'vue'
+import { InjectionKey, reactive } from 'vue'
 
 export type User = {
   id: number
@@ -12,56 +12,16 @@ export type User = {
   updated_at: Date
 }
 
-export default function UserStore(room_uuid: string) {
+export default function UserStore(_users: User[]) {
 
   const state = reactive<{
     users: User[]
   }>({
-       users: [],
+       users: _users,
      })
-
-  const axios: any = inject('axios')
-  axios
-    .get(`/api/v1/users.json?room_uuid=${room_uuid}`)
-    .then((response: { data: any }) => {
-      state.users.push(...response.data)
-      console.log(JSON.stringify(state.users, null, '  '))
-    })
-    .catch((err: any) => {
-      console.log(JSON.stringify(err, null, '  '))
-    })
-
-  const cable   = inject('cable') as any
-  const channel = cable
-    .subscriptions
-    .create({
-              channel: 'RoomChannel',
-              room_uuid,
-            }, {
-              received(data: any) {
-                console.log('- RoomChannel Received ----------')
-                console.log(JSON.stringify(data, null, '  '))
-                if (data.type === 'create-data') {
-                  state.users.push(data.data)
-                }
-                if (data.type === 'destroy-data') {
-                  state.users.splice(state.users.findIndex(r => r.uuid === data.uuid), 1)
-                }
-                console.log('- RoomChannel Received ----------')
-              },
-
-              speak(message: string) {
-                return this.perform('speak', { message: message })
-              },
-            })
-
-  const speak = (message: string) => {
-    channel.speak(message)
-  }
 
   return {
     state,
-    speak,
   }
 }
 

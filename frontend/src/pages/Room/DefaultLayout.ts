@@ -1,55 +1,59 @@
 import { uuid } from 'vue-uuid'
+import { Layout } from '~/components/panes'
 
-export default {
-  type : 'vertical',
-  uuid : uuid.v4(),
-  panes: [
+const object: Layout = {
+  type   : 'vertical',
+  uuid   : uuid.v4(),
+  payload: null,
+  panes  : [
     {
-      type : 'horizontal',
-      uuid : uuid.v4(),
-      size : 90,
-      panes: [
+      type   : 'horizontal',
+      uuid   : uuid.v4(),
+      size   : 90,
+      payload: null,
+      panes  : [
         {
-          type : 'vertical',
-          uuid : uuid.v4(),
-          panes: [
+          type   : 'vertical',
+          uuid   : uuid.v4(),
+          payload: null,
+          panes  : [
             {
               type          : 'normal',
               uuid          : uuid.v4(),
+              componentGroup: 'チャット',
+              component     : 'チャットビューアー',
+              size          : 40,
+              payload       : null,
               panes         : [],
-              componentGroup: 'smpl1',
-              component     : 'サンプルペイン1',
-              size          : 30,
             }, {
               type          : 'normal',
               uuid          : uuid.v4(),
-              panes         : [],
-              componentGroup: 'ユーザー',
-              component     : 'ユーザー一覧',
-            }, {
-              type          : 'normal',
-              uuid          : uuid.v4(),
-              panes         : [],
               componentGroup: 'smpl1',
               component     : 'サンプルペイン2',
-              size          : 30,
+              size          : 60,
+              payload       : null,
+              panes         : [],
             },
           ],
         }, {
           type          : 'normal',
           uuid          : uuid.v4(),
-          panes         : [],
-          componentGroup: 'smpl2',
-          component     : 'サンプルペイン3',
+          componentGroup: 'チャット',
+          component     : 'チャット入力欄',
           size          : 20,
+          payload       : null,
+          panes         : [],
         },
       ],
     }, {
       type          : 'normal',
       uuid          : uuid.v4(),
-      panes         : [],
       componentGroup: 'smpl2',
       component     : 'サンプルペイン4',
+      payload       : null,
+      panes         : [],
     },
   ],
 }
+
+export default object

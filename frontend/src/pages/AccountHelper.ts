@@ -21,7 +21,9 @@ export type RoomProps = {
   user_uuid?: string
   user_name?: string
   user_password?: string
-  open?: string
+  nav1?: string | 'room-info'
+  nav2?: Nav
+  rail?: string
 }
 
 export async function requestUserLoginWrap(args: Env & RoomProps & {
@@ -99,7 +101,7 @@ async function requestUserLogin(args: Env & RoomProps & {
                                            password: args.user_password,
                                          }),
   )
-  console.log(JSON.stringify(data, null, '  '))
+  //  console.log(JSON.stringify(data, null, '  '))
   if (data.verify !== 'success') {
     if (data.reason === 'expire_room_token') {
       toLobby(args, true).then()
@@ -117,7 +119,7 @@ async function requestUserCreate(args: Env & RoomProps & { subscription_uuid: st
       room_uuid: args.room_uuid,
     },
   }))
-  console.log(JSON.stringify(data, null, '  '))
+  //  console.log(JSON.stringify(data, null, '  '))
   if (data.verify !== 'success') {
     switch (data.reason) {
       case 'no_such_room':
@@ -144,7 +146,9 @@ const toRoomUserQuery = (args: Omit<RoomProps, 'room_uuid'>) => (
   {
     n   : args.user_name,
     p   : args.user_password,
-    open: args.open,
+    nav1: args.nav1,
+    nav2: args.nav2,
+    rail: args.rail,
   }
 )
 
@@ -163,11 +167,6 @@ export async function toRoom(args: RoomProps & { router: typeof Router }, hasQue
 }
 
 export async function toRoomUser(args: RoomProps & { router: typeof Router }, hasQuery: boolean) {
-  console.log(JSON.stringify({
-                               name  : 'room-user',
-                               params: pick(args, 'room_uuid', 'user_uuid'),
-                               query : hasQuery ? toRoomUserQuery(args) : undefined,
-                             }, null, '  '))
   return args.router.replace({
                                name  : 'room-user',
                                params: pick(args, 'room_uuid', 'user_uuid'),
@@ -182,7 +181,7 @@ export async function toPlay(args: RoomProps & { router: typeof Router }) {
                                                })
 }
 
-function getTokens(args: RoomProps) {
+export function getTokens(args: RoomProps) {
   const { room_token } = JSON.parse(localStorage.getItem(args.room_uuid) || '{}')
   const { user_token } = JSON.parse(localStorage.getItem(args.user_uuid || '') || '{}')
   return {
@@ -191,11 +190,15 @@ function getTokens(args: RoomProps) {
   }
 }
 
+export function getRoomBaseParams(args: RoomProps) {
+  return merge(pick(args, 'room_uuid', 'user_uuid'), getTokens(args))
+}
+
 export async function requestUserTokenCheck(args: {
   axios: any
   subscription_uuid: string
   room_uuid: string
-  user_uuid?: string
+  user_uuid?: string | undefined
 }) {
   const tokens = getTokens(args)
   if (!tokens.user_token) {
@@ -206,7 +209,7 @@ export async function requestUserTokenCheck(args: {
                                                pick(tokens, 'room_token'),
                                          ),
   )
-  console.log(JSON.stringify(data, null, '  '))
+  //  console.log(JSON.stringify(data, null, '  '))
   return data
 }
 
@@ -215,11 +218,10 @@ export async function requestTokenCheckWrap(args: Env & RoomProps & {
   room: Ref<Room | null>
   users: Ref<User[]>
   userLoggedInFlg: Ref<boolean>
-  drawerRail: Ref<boolean>
-  selectedUserUuid: Ref<string[]>
-  selectedNav: Ref<Nav[]>
+  selectedNav1: Ref<string[]>
+  selectedNav2: Ref<Nav[]>
 }): Promise<string | null> {
-  args.selectedNav.value.splice(0, args.selectedNav.value.length, 'init')
+  args.selectedNav2.value.splice(0, args.selectedNav2.value.length, 'init')
   const {
           room_token,
           user_token,
@@ -232,7 +234,7 @@ export async function requestTokenCheckWrap(args: Env & RoomProps & {
 
   if (!user_token) {
     const { data } = await args.axios.post(`/api/v1/rooms/${args.room_uuid}/token/${room_token}/check`)
-    console.log(JSON.stringify(data, null, '  '))
+    //    console.log(JSON.stringify(data, null, '  '))
 
     if (data.verify !== 'success') {
       toLobby(args, data.reason !== 'no_such_room').then()
@@ -243,14 +245,14 @@ export async function requestTokenCheckWrap(args: Env & RoomProps & {
     args.users.value.splice(0, args.users.value.length, ...data.users)
 
     toRoom(args, true).then()
-    switch (args.open) {
+    switch (args.nav2) {
       case 'profile':
       case 'notification':
       case 'room-basic':
-        args.selectedNav.value.splice(0, args.selectedNav.value.length, args.open)
+        args.selectedNav2.value.splice(0, args.selectedNav2.value.length, args.nav2)
         break
       default:
-        args.selectedNav.value.splice(0, args.selectedNav.value.length, 'entrance')
+        args.selectedNav2.value.splice(0, args.selectedNav2.value.length, 'entrance')
         break
     }
     return null
@@ -260,7 +262,7 @@ export async function requestTokenCheckWrap(args: Env & RoomProps & {
       room_token,
       subscription_uuid: args.subscription_uuid,
     })
-    console.log(JSON.stringify(data, null, '  '))
+    //    console.log(JSON.stringify(data, null, '  '))
 
     if (data.room && data.users) {
       args.room.value = data.room
@@ -269,28 +271,27 @@ export async function requestTokenCheckWrap(args: Env & RoomProps & {
 
     const isSuccess            = data.verify === 'success'
     args.userLoggedInFlg.value = isSuccess
-    args.drawerRail.value      = !isSuccess
     if (isSuccess) {
-      args.selectedUserUuid.value.splice(0, args.selectedUserUuid.value.length, args.user_uuid!)
+      args.selectedNav1.value.splice(0, args.selectedNav1.value.length, args.nav1 || args.user_uuid!)
       args.router.replace({
                             name  : 'room-user',
                             params: pick(args, 'room_uuid', 'user_uuid'),
-                            query : pick(args, 'open'),
+                            query : pick(args, 'nav1', 'nav2', 'rail'),
                           }).then()
-      switch (args.open) {
+      switch (args.nav2) {
         case 'profile':
         case 'notification':
         case 'room-basic':
-          args.selectedNav.value.splice(0, args.selectedNav.value.length, args.open)
+          args.selectedNav2.value.splice(0, args.selectedNav2.value.length, args.nav2)
           break
         default:
-          args.selectedNav.value.splice(0, args.selectedNav.value.length)
+          args.selectedNav2.value.splice(0, args.selectedNav2.value.length)
           break
       }
       return null
     }
-    args.selectedNav.value.splice(0, args.selectedNav.value.length, 'entrance')
-    args.selectedUserUuid.value.splice(0, args.selectedUserUuid.value.length)
+    args.selectedNav2.value.splice(0, args.selectedNav2.value.length, 'entrance')
+    args.selectedNav1.value.splice(0, args.selectedNav1.value.length)
     if (data.reason === 'expire_room_token' || data.reason === 'no_such_room') {
       toLobby(args, data.reason.startsWith('expire')).then()
     }
@@ -307,7 +308,7 @@ export async function roomPatch(args: Env & RoomProps, room: Room | null, update
   args.axios.patch(`/api/v1/rooms/${args.room_uuid}`, merge(pick(args, 'room_uuid', 'user_uuid'), getTokens(args), {
     api_v1_room: merge(pick(room, 'name'), updateUser),
   })).then((data: any) => {
-    console.log(JSON.stringify(data.data, null, '  '))
+    //    console.log(JSON.stringify(data.data, null, '  '))
     if (data.data.verify === 'success') {
       return
     }
@@ -332,7 +333,7 @@ export async function userPatch(args: Env & RoomProps, user: ComputedRef<User | 
     api_v1_user: merge(pick(user.value, 'name', 'user_type'), updateUser),
   })).then((data: any) => {
     if (data.data.verify !== 'success') {
-      console.log(JSON.stringify(data.data, null, '  '))
+      //      console.log(JSON.stringify(data.data, null, '  '))
       const reason = data.data.reason
       if (reason === 'expire_room_token' || reason === 'no_such_room') {
         return toLobby(args, reason === 'expire_room_token')
@@ -348,7 +349,7 @@ export async function userPatch(args: Env & RoomProps, user: ComputedRef<User | 
 export async function roomDelete(args: Env & RoomProps) {
   args.axios.delete(`/api/v1/rooms/${args.room_uuid}`, { data: merge(pick(args, 'user_uuid'), getTokens(args)) })
       .then((data: any) => {
-        console.log(JSON.stringify(data.data, null, '  '))
+        //        console.log(JSON.stringify(data.data, null, '  '))
         if (data.verify === 'success') {
           return
         }
@@ -360,7 +361,7 @@ export async function roomDelete(args: Env & RoomProps) {
 export async function userDelete(args: Env & RoomProps) {
   args.axios.delete(`/api/v1/users/${args.user_uuid}`, { data: merge(pick(args, 'room_uuid'), getTokens(args)) })
       .then((data: any) => {
-        console.log(JSON.stringify(data.data, null, '  '))
+        //        console.log(JSON.stringify(data.data, null, '  '))
         const reason = data.data.reason
         if (reason === 'expire_room_token' || reason === 'no_such_room') {
           return toLobby(args, reason === 'expire_room_token')
@@ -393,22 +394,19 @@ export function createRoomChannel(args: RoomProps & {
 }) {
   const roomChannelSubscriptionHandler = {
     received(data: any) {
-      console.log(JSON.stringify(data, null, '  '))
-      console.log(`[${data.table}]-[${data.type}]`)
+      //      console.log(JSON.stringify(data, null, '  '))
+      //      console.log(`[${data.table}]-[${data.type}]`)
       switch (`[${data.table}]-[${data.type}]`) {
         case '[api_v1_users]-[create-data]':
           args.users.value.push(data.data)
           userSort(args.users)
           break
         case '[api_v1_users]-[destroy-data]':
-          console.log('[api_v1_users]-[destroy-data]')
           const index = args.users.value.findIndex(r => r.uuid === data.uuid)
-          console.log(index)
           if (index < 0) {
             return
           }
           args.users.value.splice(index, 1)
-          console.log(data.uuid === args.user_uuid, data.uuid, args.user_uuid)
           if (data.uuid === args.user_uuid) {
             toRoom(args, false).then()
           }
@@ -425,7 +423,7 @@ export function createRoomChannel(args: RoomProps & {
           args.room.value = data.data
           break
         default:
-          console.log('ignore')
+          console.log(`ignore: [${data.table}]-[${data.type}]`)
           break
       }
     },
@@ -444,7 +442,7 @@ export function createUserChannel(args: RoomProps & {
 }) {
   const userChannelSubscriptionHandler = {
     received(data: any) {
-      console.log(JSON.stringify(data, null, '  '))
+      //      console.log(JSON.stringify(data, null, '  '))
       switch (data.type) {
         case 'notify_connection_info':
           if (data.value === 'invalid-room-token' || data.value === 'room-deleted') {
