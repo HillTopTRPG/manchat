@@ -92,10 +92,6 @@ watch(() => store.chats.value.length, (after, before) => {
   background: transparent !important;
 }
 
-.chat-overlay .v-overlay__content > * {
-  pointer-events: auto !important;
-}
-
 /*noinspection CssUnresolvedCustomProperty*/
 .chat-overlay .v-overlay__content > * {
   pointer-events: none;

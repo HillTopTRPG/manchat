@@ -53,7 +53,7 @@ const sendChat = (e: { target: HTMLTextAreaElement, shiftKey: boolean }) => {
 </script>
 
 <template>
-  <v-card class='w-100 h-100'>
+  <v-card class='chat-input-container w-100 h-100'>
     <v-textarea
       class='chat-input w-100 h-100'
       v-model='raw'
@@ -67,8 +67,9 @@ const sendChat = (e: { target: HTMLTextAreaElement, shiftKey: boolean }) => {
 
 <!--suppress HtmlUnknownAttribute -->
 <style deep lang='css'>
-.v-card {
+.v-card.chat-input-container {
   border-radius: 0;
+  background: transparent !important;
 }
 
 .chat-input .v-input__control textarea,
