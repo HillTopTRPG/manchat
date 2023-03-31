@@ -208,27 +208,39 @@ const onResizedPanes = (event: { size: number }[]) => event.forEach(({ size }, i
           >
             <template v-if="pane.type === 'horizontal' || pane.type === 'vertical'">
               <v-defaults-provider :defaults='{ VBtn: { size: "x-small" } }'>
-                <v-btn
-                  icon='mdi-view-split-vertical'
-                  :data-idx='idx'
-                  v-if="pane.type !== 'horizontal'"
-                  @click="pane.type = 'horizontal'"
-                  @mouseenter='showBorderChildren'
-                  @mouseleave='hideBorderChildren'
-                ></v-btn>
-                <v-btn
-                  icon='mdi-view-split-horizontal'
-                  :data-idx='idx'
-                  v-if="pane.type !== 'vertical'"
-                  @click="pane.type = 'vertical'"
-                  @mouseenter='showBorderChildren'
-                  @mouseleave='hideBorderChildren'
-                ></v-btn>
+                <v-tooltip>
+                  <template #activator='{ props }'>
+                    <v-btn
+                      icon='mdi-view-split-vertical'
+                      :data-idx='idx'
+                      v-bind='props'
+                      v-if="pane.type !== 'horizontal'"
+                      @click="pane.type = 'horizontal'"
+                      @mouseenter='showBorderChildren'
+                      @mouseleave='hideBorderChildren'
+                    ></v-btn>
+                    <v-btn
+                      icon='mdi-view-split-horizontal'
+                      :data-idx='idx'
+                      v-bind='props'
+                      v-if="pane.type !== 'vertical'"
+                      @click="pane.type = 'vertical'"
+                      @mouseenter='showBorderChildren'
+                      @mouseleave='hideBorderChildren'
+                    ></v-btn>
+                  </template>
+                  分割の向きの変更
+                </v-tooltip>
               </v-defaults-provider>
             </template>
             <v-menu location='center'>
               <template #activator='{ props: menu }'>
-                <v-btn size='x-small' color='primary' v-bind='menu' icon='mdi-plus' />
+                <v-tooltip>
+                  <template #activator='{ props }'>
+                    <v-btn size='x-small' color='primary' v-bind='{...menu, ...props}' icon='mdi-plus' />
+                  </template>
+                  ペイン追加
+                </v-tooltip>
               </template>
               <v-container class='text-center'>
                 <v-defaults-provider :defaults='{ VBtn: { rounded: 0, variant: "text" } }'>
@@ -303,7 +315,18 @@ const onResizedPanes = (event: { size: number }[]) => event.forEach(({ size }, i
               :close-on-content-click='false'
             >
               <template #activator='{ props: menu }'>
-                <v-btn size='x-small' color='secondary' v-bind='menu' icon='mdi-package-variant-closed' />
+                <v-tooltip>
+                  <template #activator='{ props }'>
+                    <v-btn
+                      size='x-small'
+                      color='secondary'
+                      v-bind='{ ...menu, ...props }'
+                      icon='mdi-package-variant-closed'
+                    />
+                  </template>
+                  表示内容の選択
+                </v-tooltip>
+
               </template>
               <v-list density='compact'>
                 <template v-for='g in componentMap' :key='g.group'>
@@ -334,14 +357,20 @@ const onResizedPanes = (event: { size: number }[]) => event.forEach(({ size }, i
             </v-menu>
             <template v-if='(cLayout.panes?.length || 0) > 1'>
               <v-spacer />
-              <v-btn
-                size='x-small'
-                icon='mdi-close'
-                :data-idx='idx'
-                @click='removePane'
-                @mouseenter='showBorderSelf'
-                @mouseleave='hideBorderSelf'
-              />
+              <v-tooltip>
+                <template #activator='{ props }'>
+                  <v-btn
+                    size='x-small'
+                    icon='mdi-close'
+                    :data-idx='idx'
+                    v-bind='props'
+                    @click='removePane'
+                    @mouseenter='showBorderSelf'
+                    @mouseleave='hideBorderSelf'
+                  />
+                </template>
+                このペインを削除
+              </v-tooltip>
             </template>
           </div>
         </v-sheet>

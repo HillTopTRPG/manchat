@@ -373,19 +373,44 @@ const rootClass = computed(() => {
         </v-breadcrumbs>
       </v-toolbar-title>
       <v-spacer v-if='collapse' />
-      <v-btn
-        variant='text'
-        :icon='collapse ? "mdi-arrow-expand-right" : "mdi-arrow-collapse-left"'
-        @click='collapse = !collapse'
-        v-if='userLoggedInFlg'
-      ></v-btn>
-      <v-btn
-        variant='text'
-        icon='mdi-pencil-ruler'
-        @click='showBar = !showBar'
-        v-if='nav2 !== "init" && nav2 !== "entrance" && !(drawerRail && collapse)'
-      ></v-btn>
-      <v-btn variant='text' icon='mdi-brightness-6' @click='toggleTheme' v-if='!(drawerRail && collapse)'></v-btn>
+      <v-tooltip v-if='userLoggedInFlg'>
+        <template #activator='{ props }'>
+          <v-btn
+            variant='text'
+            :icon='collapse ? "mdi-arrow-expand-right" : "mdi-arrow-collapse-left"'
+            @click='collapse = !collapse'
+            v-bind='props'
+          ></v-btn>
+        </template>
+        メニューバーを{{ collapse ? "広げる" : "閉じる" }}
+      </v-tooltip>
+      <v-tooltip>
+        <template #activator='{ props }'>
+          <v-btn
+            variant='text'
+            class='split-edit-btn'
+            style='box-sizing: border-box'
+            :class='{ active: showBar}'
+            v-bind='props'
+            icon='mdi-pencil-ruler'
+            @click='showBar = !showBar'
+            v-if='nav2 !== "init" && nav2 !== "entrance" && !(drawerRail && collapse)'
+          ></v-btn>
+        </template>
+        ペインの編集
+      </v-tooltip>
+      <v-tooltip>
+        <template #activator='{ props }'>
+          <v-btn
+            variant='text'
+            icon='mdi-brightness-6'
+            v-bind='props'
+            @click='toggleTheme'
+            v-if='!(drawerRail && collapse)'
+          ></v-btn>
+        </template>
+        テーマの切り替え
+      </v-tooltip>
     </v-app-bar>
 
     <v-navigation-drawer :rail='drawerRail || userLoggedInFlg' rail-width='70' :permanent='true'>
@@ -451,7 +476,7 @@ const rootClass = computed(() => {
             label='基本情報'
             :show-label='!drawerRail'
             value='room-basic'
-            append-icon='book-open-variant'
+            append-icon='cog'
             tooltip-text='部屋の基本情報を表示・編集します。'
           />
         </template>
@@ -621,5 +646,11 @@ const rootClass = computed(() => {
 
 .v-list-item:hover > .v-list-item__overlay {
   opacity: calc(0.08 * var(--v-theme-overlay-multiplier));
+}
+
+/*noinspection CssUnresolvedCustomProperty*/
+.split-edit-btn.active {
+  background-color: rgb(var(--v-theme-on-surface));
+  color: rgb(var(--v-theme-surface));
 }
 </style>

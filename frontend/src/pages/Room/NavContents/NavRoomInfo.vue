@@ -89,7 +89,48 @@ const deleteRoom = async () => {
 
 <template>
   <v-overlay class='nav-contents' :contained='true' :model-value='nav2 === "entrance" || nav2 === "room-basic"'>
-    <v-list class='ma-4' lines='two' bg-color='transparent'>
+    <v-list class='ma-4 mt-n1' lines='two' bg-color='transparent'>
+      <v-timeline direction='horizontal' side='start' align='start' line-inset='12' v-if='!user_uuid' class='my-10'>
+        <v-timeline-item icon='mdi-check-bold' icon-color='background' dot-color='green-lighten-2' :fill-dot='true'>
+          <h3 class='mb-2 mt-n1'>部屋に入る</h3>
+          <div>ようこそ<br>この部屋のルールや設定について確認しましょう</div>
+          <template v-slot:opposite>
+            <p class='text-body-2'>ルールや設定の変更はルームマスター
+              <v-icon icon='mdi-crown' class='text-body-2' />
+              の特権です
+            </p>
+          </template>
+        </v-timeline-item>
+
+        <v-timeline-item
+          icon='mdi-circle'
+          icon-color='background'
+          dot-color='green-lighten-2'
+          :fill-dot='true'
+        >
+          <div>
+            <h3 class='mb-2 mt-n1'>ユーザーログイン</h3>
+            <div>セッション中のあなたの分身を作成しましょう<br>既に作成してあれば、選んでください</div>
+          </div>
+          <template v-slot:opposite>
+            <p class='text-body-2'>最初の1人はルームマスター
+              <v-icon icon='mdi-crown' class='text-body-2' />
+              となります
+            </p>
+          </template>
+        </v-timeline-item>
+
+        <v-timeline-item dot-color='grey' :fill-dot='true'>
+          <div>
+            <h3 class='mb-2 mt-n1'>プレイ画面</h3>
+            <div>ユーザーログインが済めば、そこはみんなの空間です<br>楽しんで！</div>
+          </div>
+          <template v-slot:opposite>
+            <p class='text-body-2'>ルールや設定の変更はログイン後に行えます</p>
+          </template>
+        </v-timeline-item>
+      </v-timeline>
+
       <v-list-subheader>部屋情報</v-list-subheader>
 
       <template v-if='user?.user_type === "master"'>
