@@ -121,14 +121,13 @@ const unreadChatListLate = reactive<string[]>([])
 
 const list = ref()
 watch(() => chats.value.length, (after, before) => {
-  console.log(`${after}件`)
   if (before < after) {
     const elm = list.value.$el
     setTimeout(() => elm.scrollTo(0, elm.scrollHeight))
   }
 })
 watch(() => store.chats.value.length, (after, before) => {
-  if (before < after) {
+  if (before > 0 && before < after) {
     unreadChatList.splice(-1, 0, store.chats.value[store.chats.value.length - 1].uuid)
     unreadChatListLate.splice(-1, 0, store.chats.value[store.chats.value.length - 1].uuid)
   }

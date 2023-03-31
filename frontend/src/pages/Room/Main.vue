@@ -21,6 +21,7 @@ import { User } from '~/data/user'
 import { Room } from '~/data/room'
 import UserNavItem from '~/pages/Room/Components/UserNavItem.vue'
 import UserListItem from '~/pages/Room/Components/UserListItem.vue'
+import OverlayArea from '~/pages/Room/OverlayArea.vue'
 
 const sessionStore = inject(sessionKey) as SessionStore
 
@@ -556,10 +557,16 @@ const rootClass = computed(() => {
       </v-card-text>
     </v-card>
   </v-dialog>
-  <v-overlay class='chat-overlay' scroll-strategy='none' :model-value='true'>
-    <div>こんにちはーー！！！！</div>
-    <div>こんばんはーー！！！！</div>
-  </v-overlay>
+  <OverlayArea
+    v-if='user_uuid'
+    :room_uuid='room_uuid'
+    :user_uuid='user_uuid'
+    :nav1='nav1'
+    :nav2='nav2'
+    :users='users'
+    :room='room'
+    :showBar='showBar'
+  />
 </template>
 
 <!--suppress HtmlUnknownAttribute, CssUnusedSymbol, CssUnknownProperty -->
@@ -621,39 +628,6 @@ const rootClass = computed(() => {
 .v-tooltip .v-overlay__content * {
   background: transparent !important;
   color: inherit;
-}
-
-.chat-overlay,
-.chat-overlay * {
-  pointer-events: none;
-}
-
-/*noinspection CssUnresolvedCustomProperty*/
-.chat-overlay .v-overlay__content > * {
-  pointer-events: none;
-  animation: loop 10s -25s linear infinite;
-  position: absolute;
-  top: 20px;
-  font-size: 30px;
-  white-space: pre;
-  font-weight: bold;
-  color: rgb(var(--v-theme-on-surface-variant));
-  text-stroke: 1px rgb(var(--v-theme-surface-variant));
-  -webkit-text-stroke: 1px rgb(var(--v-theme-surface-variant));
-}
-
-.chat-overlay .v-overlay__scrim {
-  background: transparent;
-}
-
-@keyframes loop {
-  0% {
-    left: 100vw;
-  }
-  to {
-    left: 0;
-    transform: translateX(-100%);
-  }
 }
 
 .v-list-item:hover > .v-list-item__overlay {
