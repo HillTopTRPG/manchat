@@ -89,7 +89,7 @@ watch(() => store.chats.value.length, (after, before) => {
 .chat-overlay,
 .chat-overlay * {
   pointer-events: none;
-  background: transparent;
+  background: transparent !important;
 }
 
 .chat-overlay .v-overlay__content > * {

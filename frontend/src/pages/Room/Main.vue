@@ -21,7 +21,6 @@ import { User } from '~/data/user'
 import { Room } from '~/data/room'
 import UserNavItem from '~/pages/Room/Components/UserNavItem.vue'
 import UserListItem from '~/pages/Room/Components/UserListItem.vue'
-import OverlayArea from '~/pages/Room/OverlayArea.vue'
 
 const sessionStore = inject(sessionKey) as SessionStore
 
@@ -557,16 +556,6 @@ const rootClass = computed(() => {
       </v-card-text>
     </v-card>
   </v-dialog>
-  <OverlayArea
-    v-if='user_uuid'
-    :room_uuid='room_uuid'
-    :user_uuid='user_uuid'
-    :nav1='nav1'
-    :nav2='nav2'
-    :users='users'
-    :room='room'
-    :showBar='showBar'
-  />
 </template>
 
 <!--suppress HtmlUnknownAttribute, CssUnusedSymbol, CssUnknownProperty -->

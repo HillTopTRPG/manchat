@@ -5,6 +5,7 @@ import SplitPanesLayer from '~/components/SplitPanesLayer.vue'
 import { Room } from '~/data/room'
 import defaultLayout from './DefaultLayout'
 import provideAll from '~/data/Play'
+import ChatOverlay from '~/pages/Room/ChatOverlay.vue'
 
 const props = defineProps<{
   room_uuid: string
@@ -27,5 +28,6 @@ provideAll(props)
       :root-layout='defaultLayout'
       :show-bar='showBar'
     />
+    <ChatOverlay />
   </template>
 </template>
