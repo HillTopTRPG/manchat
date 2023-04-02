@@ -1,5 +1,5 @@
 <script setup lang='ts'>
-import { computed } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import Avatar from 'vue-boring-avatars';
 
 const props = defineProps<{
@@ -15,6 +15,14 @@ const props = defineProps<{
     updated_at: Date
   }
 }>()
+
+const avatar = ref<any>()
+
+onMounted(() => {
+  // 抑止できなかったtitle要素を削除（マウスオーバーでuuidが表示されてしまうのを防ぐ）
+  const svg = avatar.value.$el
+  svg.removeChild(svg.getElementsByTagName('title')[0])
+})
 
 const icon = computed(() => {
   switch (props.user?.user_type) {
@@ -38,7 +46,7 @@ const colors = ['#92a1c6', '#146a7c', '#f0ab3d', '#c271b4', '#c20d90']
     :icon='icon'
     color='white'
   >
-    <Avatar variant='beam' :size='40' :name='user.uuid' :colors='colors' />
+    <Avatar variant='beam' :size='40' :name='user.uuid' :colors='colors' ref='avatar' />
   </v-badge>
 </template>
 
