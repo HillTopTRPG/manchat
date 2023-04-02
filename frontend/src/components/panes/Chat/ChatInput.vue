@@ -19,6 +19,7 @@ import { Layout } from '~/components/panes'
 
 const props = defineProps<{
   layout: Layout
+  rootLayout: Layout
 }>()
 
 const store        = inject(collectionsKey) as CollectionsStore

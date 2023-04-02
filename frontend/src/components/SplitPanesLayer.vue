@@ -13,6 +13,11 @@ interface Props {
   componentTarget?: string
 }
 
+const emits = defineEmits<{
+  (e: 'change-component', componentGroup: string, component: string): void
+  (e: 'change-layout', newLayout: Layout): void
+}>()
+
 const props = withDefaults(defineProps<Props>(), {
   isNest         : false,
   showBar        : true,
@@ -371,47 +376,32 @@ const onResizedPanes = (event: { size: number }[]) => event.forEach(({ size }, i
         <SplitPanesLayer
           :key='pane.uuid'
           :layout='pane'
-          :root-layout='layout'
+          :root-layout='rootLayout'
           :is-nest='true'
           :show-bar='showBar'
           :component-target='pane.component'
+          @change-component='(componentGroup, component) => {cLayout.componentGroup = componentGroup; cLayout.component = component}'
+          @change-layout='newLayout => emits("change-layout", newLayout)'
         />
       </div>
     </pane>
   </splitpanes>
   <keep-alive v-else-if='cLayout.component'>
     <component
+      v-if='cLayout.componentGroup'
       :is='componentMap.find(p => p.group === cLayout.componentGroup)?.items[cLayout.component]'
       :layout='cLayout'
+      :root-layout='rootLayout'
+    />
+    <component
+      v-else
+      :is='componentMap.find(p => p.group === cLayout.componentGroup)?.items[cLayout.component]'
+      :layout='cLayout'
+      :root-layout='rootLayout'
+      @change-component='(componentGroup, component) => {cLayout.componentGroup = componentGroup; cLayout.component = component}'
+      @change-layout='newLayout => emits("change-layout", newLayout)'
     />
   </keep-alive>
-  <v-list v-else density='compact'>
-    <template
-      v-for='g in componentMap'
-      :key='g.group'
-    >
-      <v-list-group v-if='g.group'>
-        <template #activator='{ props }'>
-          <v-list-item v-bind='props' :title='g.group' />
-        </template>
-
-        <v-list-item
-          v-for='n in Object.keys(g.items)'
-          :title='n'
-          :value='n'
-          @click='cLayout.component = n; cLayout.componentGroup = g.group'
-        />
-      </v-list-group>
-      <template v-else>
-        <v-list-item
-          v-for='n in Object.keys(g.items)'
-          :title='n'
-          :value='n'
-          @click='cLayout.component = n; cLayout.componentGroup = g.group'
-        />
-      </template>
-    </template>
-  </v-list>
 </template>
 
 <!--suppress HtmlUnknownAttribute, CssUnusedSymbol -->
