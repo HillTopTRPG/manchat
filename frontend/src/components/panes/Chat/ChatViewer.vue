@@ -19,6 +19,7 @@ import ChatViewerItem from '~/components/panes/Chat/ChatViewerItem.vue'
 
 const props = defineProps<{
   layout: Layout
+  rootLayout: Layout
 }>()
 
 const store        = inject(roomCollectionsKey) as RoomCollectionStore

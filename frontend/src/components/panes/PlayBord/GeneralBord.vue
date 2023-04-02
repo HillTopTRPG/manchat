@@ -4,8 +4,8 @@ import { defineComponent } from '@vue/runtime-core'
 export default defineComponent({})
 //noinspection JSUnusedGlobalSymbols
 export const componentInfo = {
-  name : 'ChatInput',
-  label: 'チャット入力欄',
+  name : 'GeneralBord',
+  label: '汎用ボード（仮）',
 }
 </script>
 
@@ -54,16 +54,9 @@ const sendChat = (e: { target: HTMLTextAreaElement, shiftKey: boolean }) => {
 </script>
 
 <template>
-  <v-card class='chat-input-container w-100 h-100'>
-    <v-textarea
-      class='chat-input w-100 h-100'
-      v-model='raw'
-      @keydown.enter.prevent.stop='sendChat'
-      :hide-details='true'
-      label='チャット入力欄'
-      :no-resize='true'
-    ></v-textarea>
-  </v-card>
+  <div class='fill-height'>
+    <canvas width='300' height='200' class='bg-white'></canvas>
+  </div>
 </template>
 
 <!--suppress HtmlUnknownAttribute -->
