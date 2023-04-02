@@ -12,8 +12,7 @@ export const componentInfo = {
 <script setup lang='ts'>
 import { Layout } from '~/components/panes'
 import { componentMap } from '../index'
-import chatLayout from '~/pages/PaneLayoutTemplate/ChatLayout'
-import defaultLayout from '~/pages/PaneLayoutTemplate/DefaultLayout'
+import layouts from '~/pages/PaneLayoutTemplate'
 
 const props = defineProps<{
   layout: Layout
@@ -73,12 +72,9 @@ const emits = defineEmits<{
   <p class='mx-5 mt-5'>または...</p>
   <p class='mx-5 mt-5'>構成済みレイアウトのプリセットを選ぶ</p>
   <v-list density='compact' class='mx-5 mb-5' open-strategy='multiple'>
-    <v-list-item
-      @click='emits("change-layout", defaultLayout)'
-      v-if='!isEqualLayout(defaultLayout)'
-    >空のペインのみ
-    </v-list-item>
-    <v-list-item @click='emits("change-layout", chatLayout)' v-if='!isEqualLayout(chatLayout)'>チャット＋α</v-list-item>
+    <template v-for='l in layouts' :key='l.title'>
+      <v-list-item @click='emits("change-layout", l.layout)' v-if='!isEqualLayout(l.layout)'>{{ l.title }}</v-list-item>
+    </template>
   </v-list>
 </template>
 
