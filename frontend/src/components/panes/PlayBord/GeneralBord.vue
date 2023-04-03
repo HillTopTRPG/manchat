@@ -5,7 +5,7 @@ export default defineComponent({})
 //noinspection JSUnusedGlobalSymbols
 export const componentInfo = {
   name : 'GeneralBord',
-  label: '汎用ボード（仮）',
+  label: '汎用プレイボード（仮）',
 }
 </script>
 
@@ -246,7 +246,7 @@ const magnification = computed(() => (
     <v-app-bar prominent elevation='1' density='compact'>
       <v-app-bar-nav-icon variant='text' @click.stop='drawer = !drawer' @keydown.enter.stop></v-app-bar-nav-icon>
 
-      <v-toolbar-title>汎用プレイボード</v-toolbar-title>
+      <v-toolbar-title>汎用プレイボード（仮）</v-toolbar-title>
 
       <v-spacer></v-spacer>
 

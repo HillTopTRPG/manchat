@@ -8,9 +8,9 @@ export default [
     title : '空のペインのみ',
   }, {
     layout: ChatLayout,
-    title : 'チャット＋α',
+    title : 'チャット＋空のペイン',
   }, {
     layout: ChatGeneralBordLayout,
-    title : 'チャット＋汎用プレイボード',
+    title : 'チャット＋汎用プレイボード（仮）',
   },
 ]
