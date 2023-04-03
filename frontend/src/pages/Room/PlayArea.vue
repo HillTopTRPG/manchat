@@ -24,7 +24,10 @@ let layout = reactive<Layout>({ ...JSON.parse(JSON.stringify(defaultLayout)) })
 
 const changeLayout = (newLayout: Layout) => {
   // deep copy & change uuid
-  const useLayout: Layout = JSON.parse(JSON.stringify(newLayout).replace(/"uuid": ?".+?"/g, `"uuid":"${uuid.v4()}"`));
+  const useLayout: Layout = JSON.parse(JSON.stringify(newLayout).replace(
+    /"uuid": ?".+?"/g,
+    () => `"uuid":"${uuid.v4()}"`,
+  ));
   const keys              = Object.keys(useLayout) as (keyof typeof useLayout)[]
   keys.forEach(key => layout[key] = useLayout[key])
 }
