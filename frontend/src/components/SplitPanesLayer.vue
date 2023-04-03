@@ -167,6 +167,16 @@ const removePane = (event: { target: HTMLElement }) => {
 
 const onResizedPanes = (event: { size: number }[]) => event.forEach(({ size }, idx) => cLayout.value.panes[idx].size
   = size)
+
+const childLayer = ref<any>()
+const component  = ref<any>()
+
+defineExpose({
+               globalKeyDown: (event: KeyboardEvent) => {
+                 childLayer.value?.forEach((layer: any) => layer.globalKeyDown(event))
+                 component.value?.globalKeyDown?.call(null, event)
+               },
+             })
 </script>
 
 <template>
@@ -382,6 +392,7 @@ const onResizedPanes = (event: { size: number }[]) => event.forEach(({ size }, i
           :component-target='pane.component'
           @change-component='(componentGroup, component) => {cLayout.componentGroup = componentGroup; cLayout.component = component}'
           @change-layout='newLayout => emits("change-layout", newLayout)'
+          ref='childLayer'
         />
       </div>
     </pane>
@@ -392,6 +403,7 @@ const onResizedPanes = (event: { size: number }[]) => event.forEach(({ size }, i
       :is='componentMap.find(p => p.group === cLayout.componentGroup)?.items[cLayout.component]'
       :layout='cLayout'
       :root-layout='rootLayout'
+      ref='component'
     />
     <component
       v-else
@@ -400,6 +412,7 @@ const onResizedPanes = (event: { size: number }[]) => event.forEach(({ size }, i
       :root-layout='rootLayout'
       @change-component='(componentGroup, component) => {cLayout.componentGroup = componentGroup; cLayout.component = component}'
       @change-layout='newLayout => emits("change-layout", newLayout)'
+      ref='component'
     />
   </keep-alive>
 </template>

@@ -6,7 +6,7 @@ import { Room } from '~/data/room'
 import defaultLayout from '~/pages/PaneLayoutTemplate/DefaultLayout'
 import provideAll from '~/data/Play'
 import ChatOverlay from '~/pages/Room/ChatOverlay.vue'
-import { reactive } from 'vue'
+import { reactive, ref } from 'vue'
 import { Layout } from '~/components/panes'
 import { uuid } from 'vue-uuid'
 
@@ -30,6 +30,10 @@ const changeLayout = (newLayout: Layout) => {
 }
 
 provideAll(props)
+
+const splitPanesLayer = ref<typeof SplitPanesLayer>()
+
+defineExpose({ globalKeyDown: (event: KeyboardEvent) => splitPanesLayer.value?.globalKeyDown(event) })
 </script>
 
 <template>
@@ -40,6 +44,7 @@ provideAll(props)
       :root-layout='layout'
       :show-bar='showBar'
       @change-layout='changeLayout'
+      ref='splitPanesLayer'
     />
     <ChatOverlay />
   </template>

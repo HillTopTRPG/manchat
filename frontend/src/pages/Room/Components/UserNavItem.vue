@@ -13,7 +13,7 @@ const props = defineProps<{
 }>()
 
 const emits = defineEmits<{
-  (e: 'click-list-item'): void
+  (e: 'select'): void
 }>()
 
 const iconSize  = computed(() => props.bigIcon ? 'default' : 'small')
@@ -29,7 +29,8 @@ const iconClass = computed(() => props.bigIcon ? 'ma-2' : 'mr-2')
         color='primary'
         :value='value'
         v-bind='props'
-        @click='emits("click-list-item")'
+        @click='emits("select")'
+        @keydown.enter.stop='evt => evt.target.click()'
         :style='listItemStyle'
       >
         <template #append>

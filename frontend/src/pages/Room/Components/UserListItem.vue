@@ -9,7 +9,7 @@ defineProps<{
 }>()
 
 const emits = defineEmits<{
-  (e: 'click-list-item'): void
+  (e: 'select'): void
 }>()
 </script>
 
@@ -22,7 +22,8 @@ const emits = defineEmits<{
         active-color='primary'
         variant='elevated'
         v-bind='props'
-        @click='emits("click-list-item")'
+        @click='emits("select")'
+        @keydown.enter.stop='evt => evt.target.click()'
       >
         <template #prepend>
           <user-icon :user='user' />

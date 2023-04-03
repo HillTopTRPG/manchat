@@ -4,7 +4,7 @@ import { defineComponent } from '@vue/runtime-core'
 export default defineComponent({})
 //noinspection JSUnusedGlobalSymbols
 export const componentInfo = {
-  name : 'DefaultPane',
+  name: 'DefaultPane',
   label: '初期画面',
 }
 </script>
@@ -49,7 +49,7 @@ const emits = defineEmits<{
     >
       <v-list-group v-if='g.group'>
         <template #activator='{ props }'>
-          <v-list-item v-bind='props' :title='g.group' />
+          <v-list-item v-bind='props' :title='g.group' @keydown.enter.stop='evt => evt.target.click()' />
         </template>
 
         <v-list-item
@@ -57,6 +57,7 @@ const emits = defineEmits<{
           :title='n'
           :value='n'
           @click='emits("change-component", g.group, n)'
+          @keydown.enter.stop='evt => evt.target.click()'
         />
       </v-list-group>
       <template v-else>
@@ -65,6 +66,7 @@ const emits = defineEmits<{
           :title='n'
           :value='n'
           @click='emits("change-component", g.group, n)'
+          @keydown.enter.stop='evt => evt.target.click()'
         />
       </template>
     </template>
@@ -73,7 +75,12 @@ const emits = defineEmits<{
   <p class='mx-5 mt-5'>構成済みレイアウトのプリセットを選ぶ</p>
   <v-list density='compact' class='mx-5 mb-5' open-strategy='multiple'>
     <template v-for='l in layouts' :key='l.title'>
-      <v-list-item @click='emits("change-layout", l.layout)' v-if='!isEqualLayout(l.layout)'>{{ l.title }}</v-list-item>
+      <v-list-item
+        @click='emits("change-layout", l.layout)'
+        v-if='!isEqualLayout(l.layout)'
+        @keydown.enter.stop='evt => evt.target.click()'
+      >{{ l.title }}
+      </v-list-item>
     </template>
   </v-list>
 </template>

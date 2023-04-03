@@ -355,6 +355,12 @@ const rootClass = computed(() => {
   }
   return result
 })
+
+const contents = ref<typeof Contents>()
+
+document.addEventListener('keydown', (event: KeyboardEvent) => {
+  contents.value?.globalKeyDown(event)
+})
 </script>
 
 <template>
@@ -442,7 +448,7 @@ const rootClass = computed(() => {
           value='new-user'
           prepend-icon='login-variant'
           tooltip-text='新しいユーザーを作成します'
-          @click-list-item='showUserLogin()'
+          @select='showUserLogin()'
           :big-icon='true'
           v-if='!user_uuid'
         />
@@ -451,7 +457,7 @@ const rootClass = computed(() => {
           <user-list-item
             :user='user'
             :hide-title='drawerRail'
-            @click-list-item='!userLoggedInFlg && showUserLogin(user.uuid)'
+            @select='!userLoggedInFlg && showUserLogin(user.uuid)'
             v-if='!userLoggedInFlg || user.uuid !== user_uuid'
           />
         </template>
@@ -516,6 +522,7 @@ const rootClass = computed(() => {
           @requireUserLogin='showUserLogin'
           @logoutUser='logoutUser()'
           @close-overlay='updateNav2([], true)'
+          ref='contents'
         />
       </suspense>
     </v-main>
