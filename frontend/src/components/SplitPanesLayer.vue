@@ -31,11 +31,13 @@ const addChildPane = (idx: number, direction: string | undefined = '') => {
     return
   }
   const newObj = {
-    type   : 'normal',
-    uuid   : uuid.v4(),
-    panes  : [],
-    payload: null,
-    size   : 50,
+    type          : 'normal',
+    uuid          : uuid.v4(),
+    panes         : [],
+    componentGroup: '',
+    component     : '初期画面',
+    payload       : null,
+    size          : 50,
   }
   const oldObj = {
     type          : cLayout.value.panes[idx].type,
@@ -64,10 +66,12 @@ const addChildPane = (idx: number, direction: string | undefined = '') => {
 const addBrotherPane = (idx: number, direction: string | undefined = '', toParent: boolean) => {
   const addIdx         = ['right', 'down'].includes(direction) ? 1 : 0
   const addObj: Layout = {
-    type   : 'normal',
-    uuid   : uuid.v4(),
-    panes  : [],
-    payload: null,
+    type          : 'normal',
+    uuid          : uuid.v4(),
+    panes         : [],
+    componentGroup: '',
+    component     : '初期画面',
+    payload       : null,
   }
   if (toParent) {
     cLayout.value.panes.splice(idx + addIdx, 0, addObj)
@@ -167,6 +171,16 @@ const removePane = (event: { target: HTMLElement }) => {
 
 const onResizedPanes = (event: { size: number }[]) => event.forEach(({ size }, idx) => cLayout.value.panes[idx].size
   = size)
+
+const childLayer = ref<any>()
+const component  = ref<any>()
+
+defineExpose({
+               globalKeyDown: (event: KeyboardEvent) => {
+                 childLayer.value?.forEach((layer: any) => layer.globalKeyDown(event))
+                 component.value?.globalKeyDown?.call(null, event)
+               },
+             })
 </script>
 
 <template>
@@ -382,6 +396,7 @@ const onResizedPanes = (event: { size: number }[]) => event.forEach(({ size }, i
           :component-target='pane.component'
           @change-component='(componentGroup, component) => {cLayout.componentGroup = componentGroup; cLayout.component = component}'
           @change-layout='newLayout => emits("change-layout", newLayout)'
+          ref='childLayer'
         />
       </div>
     </pane>
@@ -392,6 +407,7 @@ const onResizedPanes = (event: { size: number }[]) => event.forEach(({ size }, i
       :is='componentMap.find(p => p.group === cLayout.componentGroup)?.items[cLayout.component]'
       :layout='cLayout'
       :root-layout='rootLayout'
+      ref='component'
     />
     <component
       v-else
@@ -400,6 +416,7 @@ const onResizedPanes = (event: { size: number }[]) => event.forEach(({ size }, i
       :root-layout='rootLayout'
       @change-component='(componentGroup, component) => {cLayout.componentGroup = componentGroup; cLayout.component = component}'
       @change-layout='newLayout => emits("change-layout", newLayout)'
+      ref='component'
     />
   </keep-alive>
 </template>

@@ -5,16 +5,12 @@ export default defineComponent({})
 //noinspection JSUnusedGlobalSymbols
 export const componentInfo = {
   name : 'GeneralBord',
-  label: '汎用ボード（仮）',
+  label: '汎用プレイボード（仮）',
 }
 </script>
 
 <script setup lang='ts'>
-import { inject, ref } from 'vue'
-import {
-  InjectionKeySymbol as collectionsKey, StoreType as CollectionsStore,
-} from '~/data/RoomCollections'
-import { InjectionKeySymbol as sessionKey, StoreType as SessionStore } from '~/data/session'
+import { computed, onMounted, ref, watch } from 'vue'
 import { Layout } from '~/components/panes'
 
 const props = defineProps<{
@@ -22,54 +18,506 @@ const props = defineProps<{
   rootLayout: Layout
 }>()
 
-const store        = inject(collectionsKey) as CollectionsStore
-const sessionStore = inject(sessionKey) as SessionStore
+class Location {
+  public x: number = 0
+  public y: number = 0
+}
 
-const axios: any = inject('axios')
+type MoveInfo = {
+  mode: 'none' | 'moving', mStart: Location, mNow: Location, cStart: Location, cNow: Location, mc: Location
+}
+const initMoveInfo: MoveInfo = {
+  mode  : 'none',
+  mStart: new Location(),
+  mNow  : new Location(),
+  cStart: new Location(),
+  cNow  : new Location(),
+  mc    : new Location(),
+}
 
-const raw      = ref('')
-const sendChat = (e: { target: HTMLTextAreaElement, shiftKey: boolean }) => {
-  console.log(e)
-  if (e.shiftKey) {
-    raw.value += '\n'
+const gridRow    = ref(10)
+const gridColumn = ref(15)
+
+watch([gridRow, gridColumn], () => setTimeout(paint))
+
+type CanvasInfo = { gridSize: number }
+const baseGridSize     = 50
+const gridChangeValue  = 5
+const canvasNum        = 19
+const currentCanvasIdx = ref(Math.floor(canvasNum / 2))
+
+const canvasInfoList: CanvasInfo[] = Array(canvasNum)
+  .fill(0)
+  .map((_, idx) => baseGridSize + idx * gridChangeValue - Math.floor(canvasNum / 2) * gridChangeValue)
+  .map(gridSize => (
+    { gridSize }
+  ))
+
+const viewHelp = ref(true)
+
+const canvas = ref<any>()
+const root   = ref<HTMLElement>()
+
+const positionMarkerDeg  = ref(0)
+const positionMarkerSize = ref(0)
+
+const moveInfo = ref<MoveInfo>(initMoveInfo)
+
+const hideMagnification     = ref(false)
+const showMagnificationTime = 2000
+
+const changeWheel = (wheelDiff: number) => {
+  const afterIndex = currentCanvasIdx.value + Math.sign(wheelDiff) * -1
+  if (afterIndex < 0 && wheelDiff > 0 || canvasNum <= afterIndex && wheelDiff < 0) {
+    return
+  }
+  const gridSize = canvasInfoList[afterIndex].gridSize
+  const ratio    = gridSize / canvasInfoList[currentCanvasIdx.value].gridSize
+
+  const rootRect   = root.value?.getBoundingClientRect()!
+  const diffMouseX = moveInfo.value.mNow.x - rootRect.x - rootRect.width / 2 - moveInfo.value.cNow.x
+  const diffMouseY = moveInfo.value.mNow.y - rootRect.y - rootRect.height / 2 - moveInfo.value.cNow.y
+
+  moveInfo.value.cNow.x -= diffMouseX * ratio - diffMouseX
+  moveInfo.value.cNow.y -= diffMouseY * ratio - diffMouseY
+  moveInfo.value.mc.x *= ratio
+  moveInfo.value.mc.y *= ratio
+
+  currentCanvasIdx.value = afterIndex
+  paint()
+
+  hideMagnification.value = false
+  setTimeout(() => {
+    hideMagnification.value = true
+  }, showMagnificationTime)
+}
+
+const onWheel = (event: WheelEvent) => {
+  moveInfo.value.mNow.x = event.clientX
+  moveInfo.value.mNow.y = event.clientY
+  changeWheel(event.deltaY)
+}
+
+watch(() => moveInfo.value.cNow, () => {
+  const gridSize    = canvasInfoList[currentCanvasIdx.value].gridSize
+  const minSideSize = gridSize * Math.min(gridRow.value, gridColumn.value)
+  const deg         = 180 / Math.PI
+
+  const correctionValue = 0.3
+
+  const distance           = Math.hypot(moveInfo.value.cNow.x, moveInfo.value.cNow.y)
+  const diagonal           = Math.hypot(minSideSize, minSideSize)
+  positionMarkerDeg.value  = Math.atan2(moveInfo.value.cNow.y, moveInfo.value.cNow.x) * deg
+  positionMarkerSize.value = Math.max(distance * correctionValue - diagonal / 2 * correctionValue, 0)
+}, { deep: true })
+
+const onStartMove = (event: MouseEvent) => {
+  moveInfo.value.mode     = 'moving'
+  moveInfo.value.mStart.x = event.clientX
+  moveInfo.value.mStart.y = event.clientY
+  moveInfo.value.cStart.x = moveInfo.value.cNow.x
+  moveInfo.value.cStart.y = moveInfo.value.cNow.y
+}
+
+const isMouseOnCanvas = (): boolean => {
+  if (moveInfo.value.mc.x < 0 || moveInfo.value.mc.y < 0) {
+    return false
+  }
+  const gridSize     = canvasInfoList[currentCanvasIdx.value].gridSize
+  const canvasWidth  = gridSize * gridColumn.value
+  const canvasHeight = gridSize * gridRow.value
+  return moveInfo.value.mc.x <= canvasWidth && moveInfo.value.mc.y <= canvasHeight;
+}
+
+const onMove = (event: MouseEvent) => {
+  moveInfo.value.mNow.x = event.clientX
+  moveInfo.value.mNow.y = event.clientY
+
+  const gridSize = canvasInfoList[currentCanvasIdx.value].gridSize
+
+  if (moveInfo.value.mode === 'moving') {
+    moveInfo.value.cNow.x = moveInfo.value.cStart.x + moveInfo.value.mNow.x - moveInfo.value.mStart.x
+    moveInfo.value.cNow.y = moveInfo.value.cStart.y + moveInfo.value.mNow.y - moveInfo.value.mStart.y
+  }
+
+  const rootRect = root.value?.getBoundingClientRect()!
+  const canvasX  = rootRect.x + rootRect.width / 2 + moveInfo.value.cNow.x - gridSize * gridColumn.value / 2
+  const canvasY  = rootRect.y + rootRect.height / 2 + moveInfo.value.cNow.y - gridSize * gridRow.value / 2
+
+  const beforeOnCanvas = isMouseOnCanvas()
+  moveInfo.value.mc.x  = moveInfo.value.mNow.x - canvasX
+  moveInfo.value.mc.y  = moveInfo.value.mNow.y - canvasY
+  const afterOnCanvas  = isMouseOnCanvas()
+
+  if (beforeOnCanvas || afterOnCanvas) {
+    paint()
+  }
+}
+
+const paint = () => {
+  const gridSize = canvasInfoList[currentCanvasIdx.value].gridSize
+  const context  = canvas.value[currentCanvasIdx.value].getContext('2d')
+  if (!context) {
     return
   }
 
-  const nav1         = sessionStore.nav1.value
-  const getTargetVal = (val: string | null) => nav1 === 'room-info' || nav1 === sessionStore.user_uuid.value
-                                               ? null
-                                               : store.users.value.some(u => u.uuid === nav1) ? val : null
+  const canvasWidth  = gridSize * gridColumn.value
+  const canvasHeight = gridSize * gridRow.value
+  const gridLocateX  = Math.floor(moveInfo.value.mc.x / gridSize) * gridSize
+  const gridLocateY  = Math.floor(moveInfo.value.mc.y / gridSize) * gridSize
 
-  store.sendChat({
-                   tab            : null,
-                   raw            : raw.value,
-                   owner_character: null,
-                   target_type    : getTargetVal('user'),
-                   target_uuid    : getTargetVal(nav1 || null),
-                   secret         : 0,
-                   axios,
-                 })
-  raw.value = ''
+  // 画面クリア
+  context.clearRect(0, 0, canvasWidth, canvasHeight)
+
+  // 罫線
+  context.strokeStyle = borderColor.value
+  Array(gridColumn.value + 1).fill(0).forEach((_, column) => {
+    const x = column * gridSize
+    context.beginPath()
+    context.moveTo(x, 0)
+    context.lineTo(x, canvasHeight)
+    context.stroke()
+  })
+  Array(gridRow.value + 1).fill(0).forEach((_, row) => {
+    const y = row * gridSize
+    context.beginPath()
+    context.moveTo(0, y)
+    context.lineTo(canvasWidth, y)
+    context.stroke()
+  })
+
+  if (isMouseOnCanvas()) {
+    // 現在のマス
+    context.fillStyle = '#ff0000'
+    context.fillRect(gridLocateX, gridLocateY, gridSize, gridSize)
+
+    // マウス位置
+    context.fillStyle = '#00ff00'
+    context.beginPath()
+    context.arc(moveInfo.value.mc.x, moveInfo.value.mc.y, 5, 0, 2 * Math.PI, false)
+    context.fill()
+  }
 }
+
+const moveCanvas = (direction: 'left' | 'right' | 'up' | 'down') => {
+  const distance = canvasInfoList[currentCanvasIdx.value].gridSize
+  switch (direction) {
+    case 'left':
+      moveInfo.value.cNow.x += distance
+      moveInfo.value.mc.x -= distance
+      break
+    case 'right':
+      moveInfo.value.cNow.x -= distance
+      moveInfo.value.mc.x += distance
+      break
+    case 'up':
+      moveInfo.value.cNow.y += distance
+      moveInfo.value.mc.y -= distance
+      break
+    default:
+      moveInfo.value.cNow.y -= distance
+      moveInfo.value.mc.y += distance
+  }
+  paint()
+}
+
+const drawer = ref(false)
+
+const onEndMove = () => {
+  moveInfo.value.mode = 'none'
+}
+
+defineExpose({
+               globalKeyDown: (event: KeyboardEvent) => {
+                 const key      = event.key
+                 const shiftKey = event.shiftKey
+                 if (key === 'a' || key === 'ArrowLeft') {
+                   moveCanvas('left')
+                   return
+                 }
+                 if (key === 'd' || key === 'ArrowRight') {
+                   moveCanvas('right')
+                   return
+                 }
+                 if (key === 'w' || key === 'ArrowUp' && !shiftKey) {
+                   moveCanvas('up')
+                   return
+                 }
+                 if (key === 's' || key === 'ArrowDown' && !shiftKey) {
+                   moveCanvas('down')
+                   return
+                 }
+                 if (key === 'W' || key === 'ArrowUp' && shiftKey) {
+                   changeWheel(-1)
+                   return
+                 }
+                 if (key === 'S' || key === 'ArrowDown' && shiftKey) {
+                   changeWheel(1)
+                   return
+                 }
+               },
+             })
+
+const gridColumnInput = ref<any>(null)
+const gridRowInput    = ref<any>(null)
+watch(drawer, () => {
+  if (drawer.value) {
+    setTimeout(() => {
+      const inputElm = gridColumnInput.value?.$el.getElementsByTagName('input')
+      inputElm[0]?.focus()
+    })
+  }
+})
+const closeDrawer = (event: KeyboardEvent) => {
+  const elm = event.target as HTMLElement
+  elm.blur()
+  drawer.value = false
+}
+
+const paneBgColor   = ref('#ffffff')
+const canvasBgColor = ref('#ffffff')
+const borderColor   = ref('#000000')
+
+const paneStrColor = computed(() => '#'.concat(Array(3).fill(0)
+                                                       .map((_, x) => paneBgColor.value.substring(x * 2 + 1, x * 2 + 3))
+                                                       .map(x => 255 - parseInt(x, 16))
+                                                       .map(x => x.toString(16).padStart(2, '0')).join('')))
+
+const navDrawerList = ref<any>(null)
+onMounted(() => {
+  paint()
+  setTimeout(() => hideMagnification.value = true, showMagnificationTime)
+
+  const navDrawerElm = navDrawerList.value.$el
+  Array.from(navDrawerElm.querySelectorAll('button')).forEach((btnElm: any) => btnElm.parentNode.removeChild(btnElm))
+  Array.from(navDrawerElm.querySelectorAll('.v-slider-thumb')).forEach((inputElm: any) => inputElm.tabindex = -1)
+  Array.from(navDrawerElm.querySelectorAll('input:not([tabindex="-1"])')).reduce((elm1: any, elm2: any, idx, ary) => {
+    // Enterで次の入力欄にフォーカスを移す
+    elm1?.addEventListener('keydown', (event: KeyboardEvent) => event.key === 'Enter' && elm2.focus())
+    elm2.addEventListener('keydown', (event: KeyboardEvent) => {
+      if (event.key !== 'Tab') {
+        event.stopPropagation()
+      }
+      if (event.key === 'Escape' || idx === ary.length - 1 && ['Tab', 'Enter'].includes(event.key)) {
+        drawer.value = false
+        if (event.key === 'Tab') {
+          event.preventDefault()
+        }
+      }
+    })
+    return elm2
+  }, null)
+})
 </script>
 
 <template>
-  <div class='fill-height'>
-    <canvas width='300' height='200' class='bg-white'></canvas>
-  </div>
+  <v-layout
+    class='general-bord'
+    :style='{ "--pane-bg-color": paneBgColor, "--pane-text-color": paneStrColor }'
+  >
+    <v-app-bar prominent elevation='1' density='compact'>
+      <v-app-bar-nav-icon variant='text' @click.stop='drawer = !drawer' @keydown.enter.stop></v-app-bar-nav-icon>
+
+      <v-toolbar-title>汎用プレイボード（仮）</v-toolbar-title>
+
+      <v-spacer></v-spacer>
+
+      <v-btn
+        variant='text'
+        icon='mdi-help'
+        class='menu-btn'
+        @click='viewHelp = !viewHelp'
+        :class='{ active: viewHelp}'
+        @keydown.enter.stop
+      ></v-btn>
+    </v-app-bar>
+
+    <v-navigation-drawer v-model='drawer' :temporary='true'>
+      <v-list density='compact' ref='navDrawerList'>
+        <v-list-subheader>ボードサイズ</v-list-subheader>
+        <v-list-item>
+          <v-text-field
+            label='マス数（横）'
+            type='number'
+            v-model='gridColumn'
+            @keydown.esc.stop='closeDrawer'
+            @keydown.stop
+            :hide-details='true'
+            :disabled='!drawer'
+            ref='gridColumnInput'
+          />
+        </v-list-item>
+        <v-list-item>
+          <v-text-field
+            label='マス数（縦）'
+            type='number'
+            v-model='gridRow'
+            @keydown.esc.stop='closeDrawer'
+            @keydown.stop
+            :hide-details='true'
+            :disabled='!drawer'
+            ref='gridRowInput'
+          />
+        </v-list-item>
+        <v-divider class='my-2' />
+        <v-list-subheader>カラー</v-list-subheader>
+        <v-list-item>
+          背景色（ペイン）
+          <v-color-picker
+            v-model='paneBgColor'
+            :hide-canvas='false'
+            :hide-inputs='false'
+            :show-swatches='false'
+            mode='hexa'
+            :disabled='!drawer'
+            ref='colorPicker1'
+          />
+        </v-list-item>
+        <v-list-item>
+          背景色（ボード）
+          <v-color-picker
+            v-model='canvasBgColor'
+            :hide-canvas='false'
+            :hide-inputs='false'
+            :show-swatches='false'
+            mode='hexa'
+            :disabled='!drawer'
+            ref='colorPicker2'
+          />
+        </v-list-item>
+        <v-list-item>
+          罫線（ボード）
+          <v-color-picker
+            v-model='borderColor'
+            :hide-canvas='false'
+            :hide-inputs='false'
+            :show-swatches='false'
+            mode='hexa'
+            :disabled='!drawer'
+            ref='colorPicker3'
+          />
+        </v-list-item>
+      </v-list>
+    </v-navigation-drawer>
+
+    <div class='position-absolute ma-2' style='left: 0; top: 48px;' v-if='viewHelp'>
+      [w][a][s][d] or 十字キー：視点移動<br>
+      [W] or [Shift + ↑]：拡大<br>
+      [S] or [Shift + ↓]：縮小
+    </div>
+
+    <div class='position-absolute magnification ma-2' style='right: 0; top: 48px;' :class='{hideMagnification}'>
+      グリッドサイズ: {{ canvasInfoList[currentCanvasIdx].gridSize }}
+    </div>
+
+    <div
+      class='general-bord-container fill-height d-flex w-100'
+      @wheel='onWheel'
+      :style='{
+        "--move-x": `${moveInfo.cNow.x}px`,
+        "--move-y": `${moveInfo.cNow.y}px`,
+        "--position-marker-deg": `${positionMarkerDeg}deg`,
+        "--position-marker-size": `${positionMarkerSize}px`,
+        "--canvas-bg-color": canvasBgColor,
+        "--canvas-border-color": borderColor,
+        "--grid-size": canvasInfoList[currentCanvasIdx].gridSize,
+        "--grid-row": gridRow,
+        "--grid-column": gridColumn,
+        "--mouse-on-canvas-x": moveInfo.mc.x,
+        "--mouse-on-canvas-y": moveInfo.mc.y,
+      }'
+      @mousedown='onStartMove'
+      @mouseleave='onEndMove()'
+      @mouseup='onEndMove()'
+      @mousemove='onMove'
+      ref='root'
+    >
+      <v-icon icon='mdi-pan-right' class='center-direct'></v-icon>
+
+      <div class='canvas-background'>
+        <template v-for='(ci, idx) in canvasInfoList' :key='idx'>
+          <canvas
+            v-show='idx === currentCanvasIdx'
+            :width='ci.gridSize * gridColumn'
+            :height='ci.gridSize * gridRow'
+            :style='{"--grid-size": ci.gridSize}'
+            ref='canvas'
+          ></canvas>
+        </template>
+      </div>
+    </div>
+  </v-layout>
 </template>
 
 <!--suppress HtmlUnknownAttribute -->
-<style deep lang='css'>
-.v-card.chat-input-container {
-  border-radius: 0;
-  background: transparent !important;
+<style scoped lang='css'>
+/*noinspection CssUnresolvedCustomProperty*/
+.general-bord {
+  background-color: var(--pane-bg-color);
+  color: var(--pane-text-color);
 }
 
-.chat-input .v-input__control textarea,
-.chat-input .v-input__control {
-  height: 100%;
-  width: 100%;
+.general-bord-container {
+  position: relative;
+  overflow: hidden;
+}
+
+/*noinspection CssUnresolvedCustomProperty*/
+.general-bord-container .canvas-background {
   position: absolute;
+  left: 50%;
+  top: 50%;
+  box-sizing: content-box;
+  width: calc(var(--grid-size) * var(--grid-column) * 1px);
+  height: calc(var(--grid-size) * var(--grid-row) * 1px);
+  transform: translate(calc(-50% + var(--move-x)), calc(-50% + var(--move-y)));
+}
+
+/*noinspection CssUnresolvedCustomProperty*/
+.general-bord-container .canvas-background canvas {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  background-color: var(--canvas-bg-color);
+}
+
+/*noinspection CssUnresolvedCustomProperty*/
+.general-bord-container .canvas-background::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+}
+
+/*noinspection CssUnresolvedCustomProperty*/
+.center-direct {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  font-size: var(--position-marker-size);
+  transform: translate(-50%, -50%) rotate(var(--position-marker-deg));
+}
+
+/*noinspection CssUnresolvedCustomProperty*/
+.menu-btn.active {
+  background-color: rgb(var(--v-theme-on-surface));
+  color: rgb(var(--v-theme-surface));
+}
+
+.magnification.hideMagnification {
+  animation: fadein-keyframes 1s ease 0s 1 forwards;
+}
+
+@keyframes fadein-keyframes {
+  0% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+  }
 }
 </style>

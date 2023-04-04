@@ -6,7 +6,7 @@ import { Room } from '~/data/room'
 import defaultLayout from '~/pages/PaneLayoutTemplate/DefaultLayout'
 import provideAll from '~/data/Play'
 import ChatOverlay from '~/pages/Room/ChatOverlay.vue'
-import { reactive } from 'vue'
+import { reactive, ref } from 'vue'
 import { Layout } from '~/components/panes'
 import { uuid } from 'vue-uuid'
 
@@ -24,12 +24,19 @@ let layout = reactive<Layout>({ ...JSON.parse(JSON.stringify(defaultLayout)) })
 
 const changeLayout = (newLayout: Layout) => {
   // deep copy & change uuid
-  const useLayout: Layout = JSON.parse(JSON.stringify(newLayout).replace(/"uuid": ?".+?"/g, `"uuid":"${uuid.v4()}"`));
+  const useLayout: Layout = JSON.parse(JSON.stringify(newLayout).replace(
+    /"uuid": ?".+?"/g,
+    () => `"uuid":"${uuid.v4()}"`,
+  ));
   const keys              = Object.keys(useLayout) as (keyof typeof useLayout)[]
   keys.forEach(key => layout[key] = useLayout[key])
 }
 
 provideAll(props)
+
+const splitPanesLayer = ref<typeof SplitPanesLayer>()
+
+defineExpose({ globalKeyDown: (event: KeyboardEvent) => splitPanesLayer.value?.globalKeyDown(event) })
 </script>
 
 <template>
@@ -40,6 +47,7 @@ provideAll(props)
       :root-layout='layout'
       :show-bar='showBar'
       @change-layout='changeLayout'
+      ref='splitPanesLayer'
     />
     <ChatOverlay />
   </template>

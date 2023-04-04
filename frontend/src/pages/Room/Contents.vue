@@ -6,6 +6,7 @@ import NavProfile from '~/pages/Room/NavContents/NavProfile.vue'
 import NavNotification from '~/pages/Room/NavContents/NavNotification.vue'
 import { Room } from '~/data/room'
 import PlayArea from '~/pages/Room/PlayArea.vue'
+import { ref } from 'vue'
 
 const props = defineProps<{
   room_uuid: string
@@ -21,6 +22,9 @@ const emits = defineEmits<{
   (e: 'logoutUser'): void
   (e: 'close-overlay'): void
 }>()
+
+const playArea = ref<typeof PlayArea>()
+defineExpose({ globalKeyDown: (event: KeyboardEvent) => playArea.value?.globalKeyDown(event) })
 </script>
 
 <template>
@@ -29,7 +33,7 @@ const emits = defineEmits<{
     <nav-profile v-bind='$props' @require-user-login='emits("requireUserLogin")' @close='emits("close-overlay")' />
     <nav-notification v-bind='$props' @close='emits("close-overlay")' />
 
-    <play-area v-bind='props' v-if='props.user_uuid' />
+    <play-area v-bind='props' v-if='props.user_uuid' ref='playArea' />
   </template>
 </template>
 

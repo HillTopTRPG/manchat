@@ -29,10 +29,12 @@ const axios: any = inject('axios')
 
 const raw      = ref('')
 const sendChat = (e: { target: HTMLTextAreaElement, shiftKey: boolean }) => {
-  console.log(e)
   if (e.shiftKey) {
     raw.value += '\n'
     return
+  }
+  if (!raw.value) {
+    return e.target.blur()
   }
 
   const nav1         = sessionStore.nav1.value
@@ -51,6 +53,12 @@ const sendChat = (e: { target: HTMLTextAreaElement, shiftKey: boolean }) => {
                  })
   raw.value = ''
 }
+
+const textarea      = ref<any>()
+const focusTextArea = () => textarea.value.$el.getElementsByTagName('textarea')[0]?.focus()
+defineExpose({
+               globalKeyDown: (event: KeyboardEvent) => event.key === 'Enter' && setTimeout(focusTextArea),
+             })
 </script>
 
 <template>
@@ -59,9 +67,12 @@ const sendChat = (e: { target: HTMLTextAreaElement, shiftKey: boolean }) => {
       class='chat-input w-100 h-100'
       v-model='raw'
       @keydown.enter.prevent.stop='sendChat'
+      @keydown.stop
+      @keydown.esc.stop='evt => evt.target.blur()'
       :hide-details='true'
       label='チャット入力欄'
       :no-resize='true'
+      ref='textarea'
     ></v-textarea>
   </v-card>
 </template>
