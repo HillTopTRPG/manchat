@@ -10,7 +10,7 @@ export const componentInfo = {
 </script>
 
 <script setup lang='ts'>
-import { computed, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { Layout } from '~/components/panes'
 
 const props = defineProps<{
@@ -41,7 +41,7 @@ const initMoveInfo: MoveInfo = {
   },
 }
 
-const gridSize   = ref(20)
+const gridSize   = ref(50)
 const gridRow    = ref(10)
 const gridColumn = ref(15)
 
@@ -239,10 +239,46 @@ const closeDrawer   = (event: KeyboardEvent) => {
 const magnification = computed(() => (
   1 - moveInfo.value.moveZ / 1000
 ).toFixed(1))
+
+const paneBgColor   = ref('#ffffff')
+const canvasBgColor = ref('#ffffff')
+const borderColor   = ref('#000000')
+
+const paneStrColor = computed(() => '#'.concat(Array(3)
+                                                 .fill(0)
+                                                 .map((_, x) => paneBgColor.value.substring(x * 2 + 1, x * 2 + 3))
+                                                 .map(x => 255 - parseInt(x, 16))
+                                                 .map(x => x.toString(16).padStart(2, '0')).join('')))
+
+const navDrawerList = ref<any>(null)
+onMounted(() => {
+  const navDrawerElm = navDrawerList.value.$el
+  Array.from(navDrawerElm.querySelectorAll('button')).forEach((btnElm: any) => btnElm.parentNode.removeChild(btnElm))
+  Array.from(navDrawerElm.querySelectorAll('.v-slider-thumb')).forEach((inputElm: any) => inputElm.tabindex = -1)
+  Array.from(navDrawerElm.querySelectorAll('input:not([tabindex="-1"])')).reduce((elm1: any, elm2: any, idx, ary) => {
+    // Enterで次の入力欄にフォーカスを移す
+    elm1?.addEventListener('keydown', (event: KeyboardEvent) => event.key === 'Enter' && elm2.focus())
+    elm2.addEventListener('keydown', (event: KeyboardEvent) => {
+      if (event.key !== 'Tab') {
+        event.stopPropagation()
+      }
+      if (event.key === 'Escape' || idx === ary.length - 1 && ['Tab', 'Enter'].includes(event.key)) {
+        drawer.value = false
+        if (event.key === 'Tab') {
+          event.preventDefault()
+        }
+      }
+    })
+    return elm2
+  }, null)
+})
 </script>
 
 <template>
-  <v-layout>
+  <v-layout
+    class='general-bord'
+    :style='{ "--pane-bg-color": paneBgColor, "--pane-text-color": paneStrColor }'
+  >
     <v-app-bar prominent elevation='1' density='compact'>
       <v-app-bar-nav-icon variant='text' @click.stop='drawer = !drawer' @keydown.enter.stop></v-app-bar-nav-icon>
 
@@ -261,7 +297,7 @@ const magnification = computed(() => (
     </v-app-bar>
 
     <v-navigation-drawer v-model='drawer' :temporary='true'>
-      <v-list density='compact'>
+      <v-list density='compact' ref='navDrawerList'>
         <v-list-subheader>ボードサイズ</v-list-subheader>
         <v-list-item>
           <v-text-field
@@ -270,48 +306,89 @@ const magnification = computed(() => (
             v-model='gridSize'
             suffix='px'
             @keydown.esc.stop='closeDrawer'
-            @keydown.enter.stop='gridColumnInput.focus()'
             @keydown.stop
+            :hide-details='true'
             :disabled='!drawer'
             ref='gridSizeInput'
           />
+        </v-list-item>
+        <v-list-item>
           <v-text-field
             label='マス数（横）'
             type='number'
             v-model='gridColumn'
             @keydown.esc.stop='closeDrawer'
-            @keydown.enter.stop='gridRowInput.focus()'
             @keydown.stop
+            :hide-details='true'
             :disabled='!drawer'
             ref='gridColumnInput'
           />
+        </v-list-item>
+        <v-list-item>
           <v-text-field
             label='マス数（縦）'
             type='number'
             v-model='gridRow'
             @keydown.esc.stop='closeDrawer'
-            @keydown.enter.stop='closeDrawer'
             @keydown.stop
+            :hide-details='true'
             :disabled='!drawer'
             ref='gridRowInput'
           />
         </v-list-item>
         <v-divider class='my-2' />
+        <v-list-subheader>カラー</v-list-subheader>
+        <v-list-item>
+          背景色（ペイン）
+          <v-color-picker
+            v-model='paneBgColor'
+            :hide-canvas='false'
+            :hide-inputs='false'
+            :show-swatches='false'
+            mode='hexa'
+            :disabled='!drawer'
+            ref='colorPicker1'
+          />
+        </v-list-item>
+        <v-list-item>
+          背景色（ボード）
+          <v-color-picker
+            v-model='canvasBgColor'
+            :hide-canvas='false'
+            :hide-inputs='false'
+            :show-swatches='false'
+            mode='hexa'
+            :disabled='!drawer'
+            ref='colorPicker2'
+          />
+        </v-list-item>
+        <v-list-item>
+          罫線（ボード）
+          <v-color-picker
+            v-model='borderColor'
+            :hide-canvas='false'
+            :hide-inputs='false'
+            :show-swatches='false'
+            mode='hexa'
+            :disabled='!drawer'
+            ref='colorPicker3'
+          />
+        </v-list-item>
       </v-list>
     </v-navigation-drawer>
 
-    <div class='position-absolute' style='left: 0; top: 48px;' v-if='viewHelp'>
+    <div class='position-absolute ma-2' style='left: 0; top: 48px;' v-if='viewHelp'>
       [w][a][s][d] or 十字キー：カメラ移動<br>
       [W] or [Shift + ↑]：拡大<br>
       [S] or [Shift + ↓]：縮小
     </div>
 
-    <div class='position-absolute magnification' style='right: 0; top: 48px;' :class='{hideMagnification}'>
+    <div class='position-absolute magnification ma-2' style='right: 0; top: 48px;' :class='{hideMagnification}'>
       倍率: {{ magnification }}
     </div>
 
     <div
-      class='general-bord fill-height d-flex'
+      class='general-bord-container fill-height d-flex w-100'
       @wheel='onWheel'
       :style='{
         "--move-x": `${moveInfo.cNow.x}px`,
@@ -319,8 +396,11 @@ const magnification = computed(() => (
         "--move-z": `${-moveInfo.moveZ}px`,
         "--position-marker-deg": `${positionMarkerDeg}deg`,
         "--position-marker-size": `${positionMarkerSize}px`,
+        "--canvas-bg-color": canvasBgColor,
+        "--canvas-border-color": borderColor,
         "--grid-size": gridSize,
-        width: "100%"
+        "--grid-row": gridRow,
+        "--grid-column": gridColumn,
       }'
       @mousedown='onStartMove'
       @mouseleave='onEndMove()'
@@ -329,44 +409,75 @@ const magnification = computed(() => (
       ref='root'
     >
       <v-icon icon='mdi-pan-right' class='center-direct'></v-icon>
-      <canvas
-        :width='gridSize * gridColumn'
-        :height='gridSize * gridRow'
-        class='bg-white'
-        ref='canvas'
-      ></canvas>
+
+      <div class='canvas-background'>
+        <canvas
+          :width='gridSize * gridColumn'
+          :height='gridSize * gridRow'
+          ref='canvas'
+        ></canvas>
+      </div>
     </div>
   </v-layout>
 </template>
 
 <!--suppress HtmlUnknownAttribute -->
 <style scoped lang='css'>
+/*noinspection CssUnresolvedCustomProperty*/
 .general-bord {
+  background-color: var(--pane-bg-color);
+  color: var(--pane-text-color);
+}
+
+.general-bord-container {
   perspective: 1000px;
   position: relative;
   overflow: hidden;
 }
 
 /*noinspection CssUnresolvedCustomProperty*/
-.general-bord canvas {
+.general-bord-container .canvas-background {
   position: absolute;
   left: 50%;
   top: 50%;
+  width: calc(var(--grid-size) * var(--grid-column) * 1px);
+  height: calc(var(--grid-size) * var(--grid-row) * 1px);
+  border-top: 1px solid var(--canvas-border-color);
+  border-right: 1px solid var(--canvas-border-color);
   transform: translate3d(calc(-50% + var(--move-x)), calc(-50% + var(--move-y)), var(--move-z));
+}
+
+/*noinspection CssUnresolvedCustomProperty*/
+.general-bord-container .canvas-background canvas {
+  width: 100%;
+  height: 100%;
+  background-position: 50% 50%;
+  background-size: calc(var(--grid-sze) * 1px) calc(var(--grid-sze) * 1px);
+  background-color: var(--canvas-bg-color);
   background-image: repeating-linear-gradient(
     90deg,
-    #000000,
-    #000000 1px,
+    var(--canvas-border-color),
+    var(--canvas-border-color) 1px,
     transparent 1px,
     transparent calc(var(--grid-size) * 1px)
   ),
   repeating-linear-gradient(
     0deg,
-    #000000,
-    #000000 1px,
-    #ffffff 1px,
-    #ffffff calc(var(--grid-size) * 1px)
+    var(--canvas-border-color),
+    var(--canvas-border-color) 1px,
+    transparent 1px,
+    transparent calc(var(--grid-size) * 1px)
   );
+}
+
+/*noinspection CssUnresolvedCustomProperty*/
+.general-bord-container .canvas-background::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
 }
 
 /*noinspection CssUnresolvedCustomProperty*/
