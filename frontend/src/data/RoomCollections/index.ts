@@ -1,7 +1,9 @@
 import { computed, inject, InjectionKey, reactive } from 'vue'
 import { Chat, createChatFunctions } from '~/data/RoomCollections/Chat'
 import { ChangeLog, createChangeLogFunctions } from '~/data/RoomCollections/ChangeLog'
+import { createMapMaskFunctions, MapMask } from '~/data/RoomCollections/MapMask'
 import { User } from '~/data/user'
+import { createPlayBoardFunctions, PlayBoard } from '~/data/RoomCollections/PlayBoard'
 
 const changeDate = <T extends {
   created_at: Date
@@ -21,11 +23,15 @@ export default function RoomCollectionStore(payload: {
     users: User[]
     chats: Chat[]
     changeLogs: ChangeLog[]
+    mapMasks: MapMask[]
+    playBoards: PlayBoard[]
   }>({
        ready     : false,
        users     : [],
        chats     : [],
        changeLogs: [],
+       mapMasks  : [],
+       playBoards: [],
      })
 
   const axios: any            = inject('axios')
@@ -38,6 +44,8 @@ export default function RoomCollectionStore(payload: {
       state.users.splice(0, state.users.length, ...data.users.map((d: any) => changeDate(d)))
       state.chats.splice(0, state.chats.length, ...data.chats.map((d: any) => changeDate(d)))
       state.changeLogs.splice(0, state.changeLogs.length, ...data.change_logs)
+      state.mapMasks.splice(0, state.mapMasks.length, ...data.map_masks.map((d: any) => changeDate(d)))
+      state.playBoards.splice(0, state.playBoards.length, ...data.play_boards.map((d: any) => changeDate(d)))
     } catch (err) {
       console.log(JSON.stringify(err, null, '  '))
     }
@@ -62,6 +70,12 @@ export default function RoomCollectionStore(payload: {
         case 'api_v1_change_logs':
           basicDataHandler(data, state.changeLogs)
           break
+        case 'api_v1_map_masks':
+          basicDataHandler(data, state.mapMasks)
+          break
+        case 'api_v1_play_boards':
+          basicDataHandler(data, state.playBoards)
+          break
         default:
           console.log(`ignore: [${data.table}]-[${data.type}]`)
       }
@@ -76,8 +90,10 @@ export default function RoomCollectionStore(payload: {
     ready     : computed(() => state.ready),
     users     : computed(() => state.users),
     chats     : computed(() => state.chats),
+    mapMasks  : computed(() => state.mapMasks),
+    playBoards: computed(() => state.playBoards),
     changeLogs: computed(() => state.changeLogs), ...createChatFunctions(state, payload), ...createChangeLogFunctions(
-      state),
+      state), ...createMapMaskFunctions(state, payload), ...createPlayBoardFunctions(state, payload),
   }
 }
 

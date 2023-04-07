@@ -3,10 +3,10 @@ import samplePanes from './sample'
 import samplePanes2 from './sample2'
 import userPanes from './user'
 import chatPanes from './Chat'
-import playBordPanes from './PlayBord'
+import playBoardPanes from './PlayBoard'
 
 const panes = [
-  ...noGroupPanes, ...samplePanes, ...samplePanes2, ...userPanes, ...chatPanes, ...noGroupPanes, ...playBordPanes,
+  ...noGroupPanes, ...samplePanes, ...samplePanes2, ...userPanes, ...chatPanes, ...noGroupPanes, ...playBoardPanes,
 ]
 
 export interface Layout {

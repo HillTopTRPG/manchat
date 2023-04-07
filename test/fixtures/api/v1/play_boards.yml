@@ -1,0 +1,21 @@
+# Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
+
+one:
+  uuid: MyString
+  room_uuid: MyString
+  type: general
+  width: 1
+  height: 1
+  screen_color: MyString
+  bg_color: MyString
+  border_color: MyString
+
+two:
+  uuid: MyString
+  room_uuid: MyString
+  type: general
+  width: 1
+  height: 1
+  screen_color: MyString
+  bg_color: MyString
+  border_color: MyString

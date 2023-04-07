@@ -19,6 +19,7 @@ module Api
             data: to_response
           }
         )
+        Api::V1::PlayBoard.create(room_uuid: uuid, name: 'no_title', board_type: 'normal', width: 15, height: 10, screen_color: '#ffffffff', bg_color: '#ffffffff', border_color: '#000000ff')
       }
       after_update lambda {
         ActionCable.server.broadcast(
