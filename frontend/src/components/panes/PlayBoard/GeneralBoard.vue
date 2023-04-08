@@ -23,14 +23,14 @@ export class Location {
 }
 
 export type MoveInfo = {
-  mode: string, subMode: string, mStart: Location, mNow: Location, cStart: Location, cNow: Location, mc: Location, mcStart: Location, mGrid: Location, mGridStart: Location, cursor: string, toolType: 'grid' | 'line' | 'shape'
+  mode: string, subMode: '' | 'moving', mStart: Location, mNow: Location, cStart: Location, cNow: Location, mc: Location, mcStart: Location, mGrid: Location, mGridStart: Location, cursor: string, toolType: 'grid' | 'line' | 'shape'
 }
 </script>
 
 <script setup lang='ts'>
 import { computed, inject, onMounted, ref, watch } from 'vue'
 import { Layout } from '~/components/panes'
-import { MapMaskAddIn } from '~/components/panes/PlayBoard/add-in/ map-mask/MapMaskAddIn'
+import { AddIn } from '~/components/panes/PlayBoard/add-in'
 import {
   InjectionKeySymbol as roomCollectionsKey, StoreType as RoomCollectionStore,
 } from '~/data/RoomCollections'
@@ -38,6 +38,17 @@ import axios from 'axios'
 import { merge } from 'lodash'
 
 const store = inject(roomCollectionsKey) as RoomCollectionStore
+const addIn = new AddIn()
+
+watch(store.mapMasks, () => {
+  addIn.onUpdateCollection(store, 'map-mask')
+  paint()
+}, { deep: true })
+
+watch(store.mapLines, () => {
+  addIn.onUpdateCollection(store, 'map-line')
+  paint()
+}, { deep: true })
 
 const props = defineProps<{
   layout: Layout
@@ -98,10 +109,6 @@ const moveInfo = ref<MoveInfo>(initMoveInfo)
 
 const hideMagnification     = ref(false)
 const showMagnificationTime = 2000
-
-watch(store.mapMasks, () => {
-  paint()
-}, { deep: true })
 
 const changeWheel = (wheelDiff: number) => {
   const afterIndex = currentCanvasIdx.value + Math.sign(wheelDiff) * -1
@@ -164,7 +171,7 @@ const mapMaskColorSwatches = computed(() => store.mapMasks.value
                                                  .map(mm => mm.bg_color.toUpperCase())
                                                  .filter((c, idx, self) => self.indexOf(c) === idx)
                                                  .map(c => [c]))
-const mapMaskColor         = ref(mapMaskColorSwatches.value.length
+const addInColor           = ref(mapMaskColorSwatches.value.length
                                  ? mapMaskColorSwatches.value.slice(-1)[0][0]
                                  : '#ff00ff'.toUpperCase())
 watch(mapMaskColorDialog, () => {
@@ -172,8 +179,6 @@ watch(mapMaskColorDialog, () => {
     moveInfo.value.mode = 'add-in:add'
   }
 })
-
-const mapMaskAddIn = new MapMaskAddIn()
 
 const onStartMove = (event: MouseEvent) => {
   const gridSize = canvasInfoList[currentCanvasIdx.value].gridSize
@@ -186,7 +191,7 @@ const onStartMove = (event: MouseEvent) => {
   moveInfo.value.mcStart.y    = moveInfo.value.mc.y
   moveInfo.value.mGridStart.x = moveInfo.value.mGrid.x
   moveInfo.value.mGridStart.y = moveInfo.value.mGrid.y
-  mapMaskAddIn.onStartMove(currentBoardUuid.value, moveInfo.value, mapMaskColor.value, gridSize)
+  addIn.onStartMove(currentBoardUuid.value, moveInfo.value, addInColor.value, gridSize, store)
   moveInfo.value.subMode = 'moving'
 }
 
@@ -213,17 +218,16 @@ const onMove = (event: MouseEvent) => {
   moveInfo.value.mGrid.x = Math.floor(moveInfo.value.mc.x / gridSize)
   moveInfo.value.mGrid.y = Math.floor(moveInfo.value.mc.y / gridSize)
 
-  mapMaskAddIn.onMove(currentBoardUuid.value, moveInfo.value, mapMaskColor.value, gridSize)
+  addIn.onMove(currentBoardUuid.value, moveInfo.value, addInColor.value, gridSize, store)
 
   if (beforeOnCanvas || afterOnCanvas) {
     paint()
   }
 }
 
-const onEndMove = (isMouseUp: boolean) => {
-  const gridSize         = canvasInfoList[currentCanvasIdx.value].gridSize
+const onEndMove = () => {
   moveInfo.value.subMode = ''
-  mapMaskAddIn.onEndMove(isMouseUp, moveInfo.value, gridSize)
+  addIn.onEndMove(moveInfo.value, store)
 }
 
 const paint = () => {
@@ -257,7 +261,7 @@ const paint = () => {
     context.stroke()
   })
 
-  mapMaskAddIn.paint(context, gridSize, moveInfo.value, currentBoardUuid.value)
+  addIn.paint(context, gridSize, moveInfo.value, currentBoardUuid.value, store)
 }
 
 const moveCanvas = (direction: 'left' | 'right' | 'up' | 'down') => {
@@ -282,7 +286,7 @@ const moveCanvas = (direction: 'left' | 'right' | 'up' | 'down') => {
 
   moveInfo.value.mGrid.x = Math.floor(moveInfo.value.mc.x / gridSize)
   moveInfo.value.mGrid.y = Math.floor(moveInfo.value.mc.y / gridSize)
-  mapMaskAddIn.onMove(currentBoardUuid.value, moveInfo.value, mapMaskColor.value, gridSize)
+  addIn.onMove(currentBoardUuid.value, moveInfo.value, addInColor.value, gridSize, store)
   paint()
 }
 
@@ -470,12 +474,12 @@ const toolTypeSelect    = ref(false)
         </v-btn-toggle>
       </v-tooltip>
 
-      <v-btn :color='mapMaskColor' icon='mdi-circle' @click='mapMaskColorDialog = true' />
+      <v-btn :color='addInColor' icon='mdi-circle' @click='mapMaskColorDialog = true' />
       <v-dialog v-model='mapMaskColorDialog' width='auto'>
         <v-card>
           <v-card-text>
             <v-color-picker
-              v-model='mapMaskColor'
+              v-model='addInColor'
               :hide-canvas='false'
               :hide-inputs='false'
               :show-swatches='true'
@@ -498,7 +502,7 @@ const toolTypeSelect    = ref(false)
                 value='add-in:add'
                 icon='mdi-pencil'
                 v-bind='props'
-                :color='mapMaskColor'
+                :color='addInColor'
                 @keydown.enter.stop
               />
             </template>
@@ -624,9 +628,9 @@ const toolTypeSelect    = ref(false)
         "--cursor": moveInfo.cursor,
       }'
       @mousedown='onStartMove'
-      @mouseleave='onEndMove(false)'
-      @mouseup='onEndMove(true)'
       @mousemove='onMove'
+      @mouseup='onEndMove'
+      @mouseleave='onEndMove'
       ref='root'
     >
       <v-icon icon='mdi-pan-right' class='center-direct'></v-icon>
