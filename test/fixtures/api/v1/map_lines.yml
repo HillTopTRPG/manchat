@@ -1,0 +1,21 @@
+# Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
+
+one:
+  uuid: MyString
+  room_uuid: MyString
+  play_board_uuid: MyString
+  x1: 1
+  y1: 1
+  x2: 1
+  y2: 1
+  color: MyString
+
+two:
+  uuid: MyString
+  room_uuid: MyString
+  play_board_uuid: MyString
+  x1: 1
+  y1: 1
+  x2: 1
+  y2: 1
+  color: MyString

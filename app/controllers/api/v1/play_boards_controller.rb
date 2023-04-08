@@ -1,6 +1,6 @@
 module Api
   module V1
-    class PlayBoardController < AbstractRoomCollectionsController
+    class PlayBoardsController < AbstractRoomCollectionsController
       def model
         Api::V1::PlayBoard
       end

@@ -4,6 +4,7 @@ import { ChangeLog, createChangeLogFunctions } from '~/data/RoomCollections/Chan
 import { createMapMaskFunctions, MapMask } from '~/data/RoomCollections/MapMask'
 import { User } from '~/data/user'
 import { createPlayBoardFunctions, PlayBoard } from '~/data/RoomCollections/PlayBoard'
+import { createMapLineFunctions, MapLine } from '~/data/RoomCollections/MapLine'
 
 const changeDate = <T extends {
   created_at: Date
@@ -25,6 +26,7 @@ export default function RoomCollectionStore(payload: {
     changeLogs: ChangeLog[]
     mapMasks: MapMask[]
     playBoards: PlayBoard[]
+    mapLines: MapLine[]
   }>({
        ready     : false,
        users     : [],
@@ -32,6 +34,7 @@ export default function RoomCollectionStore(payload: {
        changeLogs: [],
        mapMasks  : [],
        playBoards: [],
+       mapLines  : [],
      })
 
   const axios: any            = inject('axios')
@@ -46,6 +49,7 @@ export default function RoomCollectionStore(payload: {
       state.changeLogs.splice(0, state.changeLogs.length, ...data.change_logs)
       state.mapMasks.splice(0, state.mapMasks.length, ...data.map_masks.map((d: any) => changeDate(d)))
       state.playBoards.splice(0, state.playBoards.length, ...data.play_boards.map((d: any) => changeDate(d)))
+      state.mapLines.splice(0, state.mapLines.length, ...data.map_lines.map((d: any) => changeDate(d)))
     } catch (err) {
       console.log(JSON.stringify(err, null, '  '))
     }
@@ -58,8 +62,6 @@ export default function RoomCollectionStore(payload: {
 
   const roomChannelSubscriptionHandler = {
     received(data: any) {
-      //      console.log(JSON.stringify(data, null, '  '))
-      //      console.log(`[${data.table}]-[${data.type}]`)
       switch (data.table) {
         case 'api_v1_users':
           basicDataHandler(data, state.users)
@@ -76,6 +78,9 @@ export default function RoomCollectionStore(payload: {
         case 'api_v1_play_boards':
           basicDataHandler(data, state.playBoards)
           break
+        case 'api_v1_map_lines':
+          basicDataHandler(data, state.mapLines)
+          break
         default:
           console.log(`ignore: [${data.table}]-[${data.type}]`)
       }
@@ -86,14 +91,20 @@ export default function RoomCollectionStore(payload: {
                                room_uuid: payload.room_uuid,
                              }, roomChannelSubscriptionHandler)
 
+  const chatFunctions      = createChatFunctions(payload)
+  const changeLogFunctions = createChangeLogFunctions()
+  const mapMaskFunctions   = createMapMaskFunctions(payload)
+  const playBoardFunctions = createPlayBoardFunctions(payload)
+  const mapLineFunctions   = createMapLineFunctions(payload)
   return {
+    ...chatFunctions, ...changeLogFunctions, ...mapMaskFunctions, ...playBoardFunctions, ...mapLineFunctions,
     ready     : computed(() => state.ready),
     users     : computed(() => state.users),
     chats     : computed(() => state.chats),
     mapMasks  : computed(() => state.mapMasks),
+    mapLines  : computed(() => state.mapLines),
     playBoards: computed(() => state.playBoards),
-    changeLogs: computed(() => state.changeLogs), ...createChatFunctions(state, payload), ...createChangeLogFunctions(
-      state), ...createMapMaskFunctions(state, payload), ...createPlayBoardFunctions(state, payload),
+    changeLogs: computed(() => state.changeLogs),
   }
 }
 

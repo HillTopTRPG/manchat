@@ -20,9 +20,9 @@ export const sendParams = [
   'name', 'board_type', 'width', 'height', 'screen_color', 'bg_color', 'border_color',
 ] as const
 
-export function createPlayBoardFunctions(state: { playBoards: PlayBoard[] }, args: RoomProps) {
+export function createPlayBoardFunctions(args: RoomProps) {
   const addPlayBoard    = async (payload: Pick<PlayBoard, typeof sendParams[number]> & { axios: any }) => {
-    const { data } = await payload.axios.post(`/api/v1/play_board`, merge(getRoomBaseParams(args), {
+    const { data } = await payload.axios.post(`/api/v1/play_boards`, merge(getRoomBaseParams(args), {
       api_v1_play_board: pick(payload, ...sendParams),
     }))
     if (data.verify !== 'success') {
@@ -30,12 +30,12 @@ export function createPlayBoardFunctions(state: { playBoards: PlayBoard[] }, arg
     }
   }
   const deletePlayBoard = async (payload: { axios: any, play_board_uuid: string }) => {
-    await payload.axios.delete(`/api/v1/play_board/${payload.play_board_uuid}`, {
+    await payload.axios.delete(`/api/v1/play_boards/${payload.play_board_uuid}`, {
       data: getRoomBaseParams(args),
     })
   }
   const updatePlayBoard = async (payload: Pick<PlayBoard, typeof sendParams[number]> & { axios: any, play_board_uuid: string }) => {
-    await payload.axios.patch(`/api/v1/play_board/${payload.play_board_uuid}`, merge(getRoomBaseParams(args), {
+    await payload.axios.patch(`/api/v1/play_boards/${payload.play_board_uuid}`, merge(getRoomBaseParams(args), {
       api_v1_play_board: pick(payload, ...sendParams),
     }))
   }

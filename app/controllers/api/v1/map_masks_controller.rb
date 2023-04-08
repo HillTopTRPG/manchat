@@ -1,11 +1,11 @@
 module Api
   module V1
-    class MapMaskController < AbstractRoomCollectionsController
+    class MapMasksController < AbstractRoomCollectionsController
       def model
         Api::V1::MapMask
       end
 
-      # POST /api/v1/chats
+      # POST /api/v1/map_masks
       def make_create_data
         data = super
         data.owner_user = params[:user_uuid]

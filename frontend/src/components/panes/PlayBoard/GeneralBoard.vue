@@ -7,6 +7,24 @@ export const componentInfo = {
   name : 'GeneralBoard',
   label: '汎用プレイボード（仮）',
 }
+
+export class Location {
+  public x: number
+  public y: number
+
+  constructor(x: number = 0, y: number = 0) {
+    this.x = x
+    this.y = y
+  }
+
+  public toString() {
+    return `{x: ${this.x}, y: ${this.y}}`
+  }
+}
+
+export type MoveInfo = {
+  mode: string, subMode: string, mStart: Location, mNow: Location, cStart: Location, cNow: Location, mc: Location, mcStart: Location, mGrid: Location, mGridStart: Location, cursor: string, toolType: 'grid' | 'line' | 'shape'
+}
 </script>
 
 <script setup lang='ts'>
@@ -26,14 +44,6 @@ const props = defineProps<{
   rootLayout: Layout
 }>()
 
-class Location {
-  public x: number = 0
-  public y: number = 0
-}
-
-type MoveInfo = {
-  mode: string, subMode: string, mStart: Location, mNow: Location, cStart: Location, cNow: Location, mc: Location, mcStart: Location, mGrid: Location, mGridStart: Location
-}
 const initMoveInfo: MoveInfo = {
   mode      : '',
   subMode   : '',
@@ -45,6 +55,8 @@ const initMoveInfo: MoveInfo = {
   mcStart   : new Location(),
   mGrid     : new Location(),
   mGridStart: new Location(),
+  cursor    : 'default',
+  toolType  : 'grid',
 }
 
 const currentBoardUuid = ref<string>(store.playBoards.value[0].uuid)
@@ -157,13 +169,15 @@ const mapMaskColor         = ref(mapMaskColorSwatches.value.length
                                  : '#ff00ff'.toUpperCase())
 watch(mapMaskColorDialog, () => {
   if (!mapMaskColorDialog.value) {
-    moveInfo.value.mode = 'add-in:map-mask:add'
+    moveInfo.value.mode = 'add-in:add'
   }
 })
 
-const mapMaskAddIn = new MapMaskAddIn(moveInfo, currentBoardUuid, mapMaskColor)
+const mapMaskAddIn = new MapMaskAddIn()
 
 const onStartMove = (event: MouseEvent) => {
+  const gridSize = canvasInfoList[currentCanvasIdx.value].gridSize
+
   moveInfo.value.mStart.x     = event.clientX
   moveInfo.value.mStart.y     = event.clientY
   moveInfo.value.cStart.x     = moveInfo.value.cNow.x
@@ -172,7 +186,7 @@ const onStartMove = (event: MouseEvent) => {
   moveInfo.value.mcStart.y    = moveInfo.value.mc.y
   moveInfo.value.mGridStart.x = moveInfo.value.mGrid.x
   moveInfo.value.mGridStart.y = moveInfo.value.mGrid.y
-  mapMaskAddIn.onStartMove()
+  mapMaskAddIn.onStartMove(currentBoardUuid.value, moveInfo.value, mapMaskColor.value, gridSize)
   moveInfo.value.subMode = 'moving'
 }
 
@@ -199,7 +213,7 @@ const onMove = (event: MouseEvent) => {
   moveInfo.value.mGrid.x = Math.floor(moveInfo.value.mc.x / gridSize)
   moveInfo.value.mGrid.y = Math.floor(moveInfo.value.mc.y / gridSize)
 
-  mapMaskAddIn.onMove()
+  mapMaskAddIn.onMove(currentBoardUuid.value, moveInfo.value, mapMaskColor.value, gridSize)
 
   if (beforeOnCanvas || afterOnCanvas) {
     paint()
@@ -207,8 +221,9 @@ const onMove = (event: MouseEvent) => {
 }
 
 const onEndMove = (isMouseUp: boolean) => {
+  const gridSize         = canvasInfoList[currentCanvasIdx.value].gridSize
   moveInfo.value.subMode = ''
-  mapMaskAddIn.onEndMove(isMouseUp)
+  mapMaskAddIn.onEndMove(isMouseUp, moveInfo.value, gridSize)
 }
 
 const paint = () => {
@@ -226,6 +241,7 @@ const paint = () => {
 
   // 罫線
   context.strokeStyle = borderColor.value
+  context.lineWidth   = 1
   Array(gridColumn.value + 1).fill(0).forEach((_, column) => {
     const x = column * gridSize
     context.beginPath()
@@ -241,48 +257,32 @@ const paint = () => {
     context.stroke()
   })
 
-  mapMaskAddIn.paint(context, gridSize)
-
-  if (isMouseOnCanvas()) {
-    // 現在のマス
-    context.strokeStyle = '#ff0000'
-    context.lineWidth   = 3
-    context.beginPath()
-    context.rect(moveInfo.value.mGrid.x * gridSize, moveInfo.value.mGrid.y * gridSize, gridSize, gridSize)
-    context.stroke()
-    context.lineWidth = 1
-
-    // マウス位置
-    context.fillStyle = '#00ff00'
-    context.beginPath()
-    context.arc(moveInfo.value.mc.x, moveInfo.value.mc.y, 5, 0, 2 * Math.PI, false)
-    context.fill()
-  }
+  mapMaskAddIn.paint(context, gridSize, moveInfo.value, currentBoardUuid.value)
 }
 
 const moveCanvas = (direction: 'left' | 'right' | 'up' | 'down') => {
-  const distance = canvasInfoList[currentCanvasIdx.value].gridSize
+  const gridSize = canvasInfoList[currentCanvasIdx.value].gridSize
   switch (direction) {
     case 'left':
-      moveInfo.value.cNow.x += distance
-      moveInfo.value.mc.x -= distance
+      moveInfo.value.cNow.x += gridSize
+      moveInfo.value.mc.x -= gridSize
       break
     case 'right':
-      moveInfo.value.cNow.x -= distance
-      moveInfo.value.mc.x += distance
+      moveInfo.value.cNow.x -= gridSize
+      moveInfo.value.mc.x += gridSize
       break
     case 'up':
-      moveInfo.value.cNow.y += distance
-      moveInfo.value.mc.y -= distance
+      moveInfo.value.cNow.y += gridSize
+      moveInfo.value.mc.y -= gridSize
       break
     default:
-      moveInfo.value.cNow.y -= distance
-      moveInfo.value.mc.y += distance
+      moveInfo.value.cNow.y -= gridSize
+      moveInfo.value.mc.y += gridSize
   }
 
-  moveInfo.value.mGrid.x = Math.floor(moveInfo.value.mc.x / distance)
-  moveInfo.value.mGrid.y = Math.floor(moveInfo.value.mc.y / distance)
-  mapMaskAddIn.onMove()
+  moveInfo.value.mGrid.x = Math.floor(moveInfo.value.mc.x / gridSize)
+  moveInfo.value.mGrid.y = Math.floor(moveInfo.value.mc.y / gridSize)
+  mapMaskAddIn.onMove(currentBoardUuid.value, moveInfo.value, mapMaskColor.value, gridSize)
   paint()
 }
 
@@ -355,7 +355,6 @@ onMounted(() => {
     Array.from(navDrawerElm.querySelectorAll('.v-slider-thumb')).forEach((inputElm: any) => inputElm.tabindex = -1)
     Array.from(navDrawerElm.querySelectorAll('input:not([tabindex="-1"])')).reduce((elm1: any, elm2: any, idx, ary) => {
       // Enterで次の入力欄にフォーカスを移す
-      console.log(elm1)
       elm1?.addEventListener('keydown', (event: KeyboardEvent) => event.key === 'Enter' && elm2.focus())
       elm2.addEventListener('keydown', (event: KeyboardEvent) => {
         if (event.key !== 'Tab') {
@@ -373,19 +372,20 @@ onMounted(() => {
   })
 })
 
-const addPlayBoard          = () => {
+const addPlayBoard = () => {
   store.addPlayBoard({
                        axios,
                        board_type  : 'normal',
                        name        : createBoardName.value,
                        width       : createBoardWidth.value,
                        height      : createBoardHeight.value,
-                       border_color: '#000000ff',
+                       screen_color: '#ffffe0ff',
                        bg_color    : '#ffffffff',
-                       screen_color: '#ffffffff',
+                       border_color: '#00000033',
                      })
   createPlayBoardDialog.value = false
 }
+
 const createPlayBoardDialog = ref(false)
 watch(createPlayBoardDialog, () => {
   if (!createPlayBoardDialog.value) {
@@ -397,6 +397,7 @@ watch(createPlayBoardDialog, () => {
 const createBoardName   = ref('no_title')
 const createBoardWidth  = ref(15)
 const createBoardHeight = ref(10)
+const toolTypeSelect    = ref(false)
 </script>
 
 <template>
@@ -445,6 +446,29 @@ const createBoardHeight = ref(10)
       </v-dialog>
 
       <v-spacer></v-spacer>
+      <v-tooltip
+        class='tooltip-form'
+        :open-on-hover='false'
+        :open-on-click='true'
+        :close-on-back='true'
+        :close-on-content-click='true'
+        :offset='0'
+        location='bottom'
+      >
+        <template #activator='{ props }'>
+          <v-btn
+            :icon='moveInfo.toolType === "grid" ? "mdi-rectangle" : moveInfo.toolType === "line" ? "mdi-vector-line" : "mdi-vector-polygon"'
+            v-bind='props'
+            @click='toolTypeSelect = !toolTypeSelect'
+            @keydown.enter.stop
+          />
+        </template>
+        <v-btn-toggle v-model='moveInfo.toolType' :borderless='false'>
+          <v-btn value='grid' icon='mdi-rectangle' @keydown.enter.stop @click='toolTypeSelect = false'></v-btn>
+          <v-btn value='line' icon='mdi-vector-line' @keydown.enter.stop @click='toolTypeSelect = false'></v-btn>
+          <v-btn value='shape' icon='mdi-vector-polygon' @keydown.enter.stop @click='toolTypeSelect = false'></v-btn>
+        </v-btn-toggle>
+      </v-tooltip>
 
       <v-btn :color='mapMaskColor' icon='mdi-circle' @click='mapMaskColorDialog = true' />
       <v-dialog v-model='mapMaskColorDialog' width='auto'>
@@ -467,40 +491,40 @@ const createBoardHeight = ref(10)
       </v-dialog>
 
       <v-btn-toggle v-model='moveInfo.mode' :borderless='true'>
-        <v-defaults-provider :defaults='{VBtn: {variant: "text"}, VTooltip: { "open-on-click": false, "open-on-hover": false, location: "bottom", offset: "0" } }'>
-          <v-tooltip class='mode-tooltip' :model-value='moveInfo.mode==="add-in:map-mask:add"'>
+        <v-defaults-provider :defaults='{VBtn: {variant: "text"}, VTooltip: { "open-on-click": false, "open-on-hover": false, location: "bottom" } }'>
+          <v-tooltip class='mode-tooltip' :model-value='moveInfo.mode === "add-in:add"' :offset='0'>
             <template #activator='{ props }'>
               <v-btn
-                value='add-in:map-mask:add'
+                value='add-in:add'
                 icon='mdi-pencil'
                 v-bind='props'
                 :color='mapMaskColor'
                 @keydown.enter.stop
               />
             </template>
-            <p>追加モード</p>
+            <p>書き込みツール</p>
           </v-tooltip>
-          <v-tooltip class='mode-tooltip' :model-value='moveInfo.mode==="add-in:map-mask:move"'>
+          <v-tooltip class='mode-tooltip' :model-value='moveInfo.mode === "add-in:move"' :offset='0'>
             <template #activator='{ props }'>
               <v-btn
-                value='add-in:map-mask:move'
+                value='add-in:move'
                 icon='mdi-cursor-move'
                 v-bind='props'
                 @keydown.enter.stop
               />
             </template>
-            <p>移動モード</p>
+            <p>移動ツール</p>
           </v-tooltip>
-          <v-tooltip class='mode-tooltip' :model-value='moveInfo.mode==="add-in:map-mask:delete"'>
+          <v-tooltip class='mode-tooltip' :model-value='moveInfo.mode === "add-in:delete"' :offset='0'>
             <template #activator='{ props }'>
               <v-btn
-                value='add-in:map-mask:delete'
+                value='add-in:delete'
                 icon='mdi-eraser'
                 v-bind='props'
                 @keydown.enter.stop
               />
             </template>
-            <p>削除モード</p>
+            <p>消しゴムツール</p>
           </v-tooltip>
         </v-defaults-provider>
       </v-btn-toggle>
@@ -597,6 +621,7 @@ const createBoardHeight = ref(10)
         "--grid-column": gridColumn,
         "--mouse-on-canvas-x": moveInfo.mc.x,
         "--mouse-on-canvas-y": moveInfo.mc.y,
+        "--cursor": moveInfo.cursor,
       }'
       @mousedown='onStartMove'
       @mouseleave='onEndMove(false)'
@@ -629,9 +654,11 @@ const createBoardHeight = ref(10)
   color: var(--pane-text-color);
 }
 
+/*noinspection CssUnresolvedCustomProperty*/
 .general-bord-container {
   position: relative;
   overflow: hidden;
+  cursor: var(--cursor);
 }
 
 /*noinspection CssUnresolvedCustomProperty*/
@@ -696,10 +723,11 @@ const createBoardHeight = ref(10)
 
 <!--suppress HtmlUnknownAttribute -->
 <style deep>
-.v-tooltip.color-picker-tooltip .v-overlay__content {
+.v-tooltip.tooltip-form .v-overlay__content {
   pointer-events: auto;
 }
 
+.v-tooltip.tooltip-form .v-overlay__content,
 .v-tooltip.mode-tooltip .v-overlay__content {
   background-color: rgb(var(--v-theme-surface));
   color: rgb(var(--v-theme-on-surface));

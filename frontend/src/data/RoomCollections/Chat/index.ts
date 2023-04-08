@@ -22,7 +22,7 @@ const sendChatParams = [
   'tab', 'raw', 'owner_character', 'target_type', 'target_uuid', 'secret',
 ] as const
 
-export function createChatFunctions(state: { chats: Chat[] }, args: RoomProps) {
+export function createChatFunctions(args: RoomProps) {
   const sendChat   = async (payload: Pick<Chat, typeof sendChatParams[number]> & { axios: any }) => {
     const { data } = await payload.axios.post(`/api/v1/chats`, merge(getRoomBaseParams(args), {
       api_v1_chat: pick(payload, ...sendChatParams),
