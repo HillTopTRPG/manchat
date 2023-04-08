@@ -5,6 +5,8 @@ module Api
     class SynchronizeRecord < ApplicationRecord
       self.abstract_class = true
 
+      scope :for_client, ->(params) { where(room_uuid: params[:room_uuid]).order(:created_at) }
+
       after_create lambda {
         ActionCable.server.broadcast(
           "room_#{room_uuid}",

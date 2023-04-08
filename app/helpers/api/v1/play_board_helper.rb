@@ -1,2 +1,8 @@
-module Api::V1::PlayBoardHelper
+# frozen_string_literal: true
+
+module Api
+  module V1
+    module PlayBoardHelper
+    end
+  end
 end
