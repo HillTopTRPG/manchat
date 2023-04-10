@@ -23,7 +23,7 @@ Rails.application.routes.draw do
         get n, to: "#{n}#index", as: n
         post n, to: "#{n}#create"
         patch "#{n}/:uuid", to: "#{n}#update"
-        delete "#{n}/:uuid", to: "#{n}#destroy"
+        delete "#{n}", to: "#{n}#destroy"
       end
 
       %w[change_logs].each do |n|

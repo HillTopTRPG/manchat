@@ -3,9 +3,10 @@
 ## 開発中コマンドメモ
 
 * Docker起動
-   1. `docker compose up -d` 起動(最低限これだけ)
-   2. `docker compose ps` コンテナ―状況確認
-   3. `docker compose logs rails -f` railsのログを確認
+   1. `docker compose run rails bundle exec rake application:initialize` 初期セットアップ
+   2. `docker compose up -d` 起動
+   3. `docker compose ps` コンテナ―状況確認
+   4. `docker compose logs rails -f` railsのログを確認
 * Docker初期化
    1. `docker compose down` コンテナー停止＆削除
    2. `docker rmi $(docker images -q)` イメージ全削除
@@ -13,7 +14,7 @@
    4. `docker system df` Dockerが使っているストレージ容量確認
 * rails操作
    * `docker compose exec rails bash` railsコンテナに入る
-   * `docker compose run rails bundle install` 未起動のコンテナに直接コマンド叩く
+   * `docker compose run rails ~~~~` 未起動のコンテナに直接コマンド叩く
 * railsデバッグ
    1. railsソースに`binding.pry`を書く
    2. `docker compose restart rails`
@@ -29,7 +30,7 @@
    4. Vue 3 + Vuetify 3 (build only)
       * Build Tool: [Vite](https://ja.vitejs.dev/guide/)
 
-## 環境構築（ローカルで動かしてみる）
+## 環境構築（ローカルで動かす例）
 
 1. `Rancher Desktop 1.4.1`をインストールする
 
@@ -77,14 +78,26 @@
    2. `git clone このリポジトリをcloneするための指定`
 
       * もし`git`コマンドが使えない場合はgitをインストールして5からやり直す
+      * 例）`git clone https://github.com/HillTopTRPG/trpg-session-tools.git`
 
-7. コマンドライン上で6-2の`git clone`によって作成されたフォルダに移動する
+7. コマンドライン上で6-ⅱの`git clone`によって作成されたフォルダに移動する
 
    * `cd cloneで作成されたフォルダのパス`
+   * 例）`cd trpg-session-tools`
 
-8. とにかく起動(docker-compose.ymlの記載に沿ってdockerが各環境を構築して起動する)
-
-   * `docker compose up`
+8. docker操作
+   * `docker compose run rails bundle exec rake application:initialize`
+      * サーバーの初回セットアップを行う
+   * `docker compose up -d`
+      * 起動 (`docker-compose.yml`の記載に沿って各環境が作られる)
+      * このコマンドは環境構築が終わった後に起動する際にも使う
+      * 初回はDocker Imageの作成 → Docker Containerの作成という流れなので5~6分ほどかかる
+   * `docker compose ps`
+      * Docker Containerの状態を確認する
+      * 5つのContainerの `STATUS` が全て `running` になっていればOK
+   * `docker compose logs -f rails`
+      * railsコンテナ―のログを確認する
+      * `Startup complete!!` と表示されたらOK
 
 9. ブラウザからアクセス！
 

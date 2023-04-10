@@ -108,21 +108,48 @@ export default function RoomCollectionStore(payload: {
   }
 }
 
-export function basicDataHandler<T extends { uuid: string, updated_at: Date, created_at: Date }>(data: { type: string, uuid: string, data: T },
+export function basicDataHandler<T extends { uuid: string, updated_at: Date, created_at: Date }>(data: { type: string, uuid?: string, uuids?: string[], data?: T, dataList?: T[] },
                                                                                                  list: T[],
 ) {
   switch (data.type) {
     case 'create-data':
-      list.push(changeDate(data.data))
+      if (data.data) {
+        list.push(changeDate(data.data))
+      }
+      if (data.dataList) {
+        list.push(...data.dataList.map(changeDate))
+      }
       return true
     case 'destroy-data':
-      const index = list.findIndex(r => r.uuid === data.uuid)
-      if (index >= 0) {
-        list.splice(index, 1)
+      if (data.uuid) {
+        const idx = list.findIndex(r => r.uuid === data.uuid)
+        if (idx > -1) {
+          list.splice(idx, 1)
+        }
+      }
+      if (data.uuids) {
+        list
+          .map((r, idx) => data.uuids!.includes(r.uuid) ? idx : null)
+          .filter((idx): idx is number => idx !== null)
+          .reverse()
+          .forEach(idx => list.splice(idx, 1))
       }
       return true
     case 'update-data':
-      list.splice(list.findIndex(r => r.uuid === data.data.uuid), 1, changeDate(data.data))
+      if (data.data) {
+        const idx = list.findIndex(r => r.uuid === data.data!.uuid)
+        if (idx > -1) {
+          list.splice(idx, 1, changeDate(data.data))
+        }
+      }
+      if (data.dataList) {
+        data.dataList.forEach(d => {
+          const idx = list.findIndex(r => r.uuid === d.uuid)
+          if (idx > -1) {
+            list.splice(idx, 1, changeDate(d))
+          }
+        })
+      }
       return true
   }
 }

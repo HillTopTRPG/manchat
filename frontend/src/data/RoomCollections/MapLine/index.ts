@@ -21,15 +21,15 @@ export const sendParams = [
 export function createMapLineFunctions(args: RoomProps) {
   const addMapLine    = async (payload: Pick<MapLine, typeof sendParams[number]> & { axios: any }) => {
     const { data } = await payload.axios.post(`/api/v1/map_lines`, merge(getRoomBaseParams(args), {
-      api_v1_map_line: pick(payload, ...sendParams),
+      record: pick(payload, ...sendParams),
     }))
     if (data.verify !== 'success') {
       console.log(JSON.stringify(data, null, '  '))
     }
   }
   const deleteMapLine = async (payload: { axios: any, map_line_uuid: string }) => {
-    await payload.axios.delete(`/api/v1/map_lines/${payload.map_line_uuid}`, {
-      data: getRoomBaseParams(args),
+    await payload.axios.delete('/api/v1/map_lines', {
+      data: merge(getRoomBaseParams(args), { uuids: [payload.map_line_uuid] }),
     })
   }
   const updateMapLine = async (payload: Pick<MapLine, typeof sendParams[number]> & { axios: any, map_line_uuid: string }) => {

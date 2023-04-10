@@ -40,16 +40,6 @@ import { merge } from 'lodash'
 const store = inject(roomCollectionsKey) as RoomCollectionStore
 const addIn = new AddIn()
 
-watch(store.mapMasks, () => {
-  addIn.onUpdateCollection(store, 'map-mask')
-  paint()
-}, { deep: true })
-
-watch(store.mapLines, () => {
-  addIn.onUpdateCollection(store, 'map-line')
-  paint()
-}, { deep: true })
-
 const props = defineProps<{
   layout: Layout
   rootLayout: Layout
@@ -263,6 +253,16 @@ const paint = () => {
 
   addIn.paint(context, gridSize, moveInfo.value, currentBoardUuid.value, store)
 }
+
+watch(store.mapMasks, () => {
+  addIn.onUpdateCollection(store, 'map-mask')
+  paint()
+}, { deep: true })
+
+watch(store.mapLines, () => {
+  addIn.onUpdateCollection(store, 'map-line')
+  paint()
+}, { deep: true })
 
 const moveCanvas = (direction: 'left' | 'right' | 'up' | 'down') => {
   const gridSize = canvasInfoList[currentCanvasIdx.value].gridSize

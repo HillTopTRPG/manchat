@@ -20,7 +20,7 @@ module Api
           }
         )
         Api::V1::PlayBoard.create(room_uuid: uuid, name: 'no_title', board_type: 'normal', width: 15, height: 10,
-                                  screen_color: '#ffffffff', bg_color: '#ffffffff', border_color: '#000000ff')
+          screen_color: '#ffffffff', bg_color: '#ffffffff', border_color: '#000000ff')
       }
       after_update lambda {
         ActionCable.server.broadcast(
@@ -37,6 +37,12 @@ module Api
         ActionCable.server.broadcast("room_#{uuid}", { type: 'destroy-data', table: self.class.table_name })
         Api::V1::Token.where(room_uuid: uuid).delete_all
         Api::V1::User.where(room_uuid: uuid).delete_all
+        Api::V1::UsersChannelSubscriber.where(room_uuid: uuid).delete_all
+        Api::V1::ChangeLog.where(room_uuid: uuid).delete_all
+        Api::V1::Chat.where(room_uuid: uuid).delete_all
+        Api::V1::MapMask.where(room_uuid: uuid).delete_all
+        Api::V1::PlayBoard.where(room_uuid: uuid).delete_all
+        Api::V1::MapLine.where(room_uuid: uuid).delete_all
       }
 
       def to_response

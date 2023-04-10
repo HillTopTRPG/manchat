@@ -23,15 +23,15 @@ export const sendParams = [
 export function createPlayBoardFunctions(args: RoomProps) {
   const addPlayBoard    = async (payload: Pick<PlayBoard, typeof sendParams[number]> & { axios: any }) => {
     const { data } = await payload.axios.post(`/api/v1/play_boards`, merge(getRoomBaseParams(args), {
-      api_v1_play_board: pick(payload, ...sendParams),
+      record: pick(payload, ...sendParams),
     }))
     if (data.verify !== 'success') {
       console.log(JSON.stringify(data, null, '  '))
     }
   }
   const deletePlayBoard = async (payload: { axios: any, play_board_uuid: string }) => {
-    await payload.axios.delete(`/api/v1/play_boards/${payload.play_board_uuid}`, {
-      data: getRoomBaseParams(args),
+    await payload.axios.delete('/api/v1/play_boards', {
+      data: merge(getRoomBaseParams(args), { uuids: [payload.play_board_uuid] }),
     })
   }
   const updatePlayBoard = async (payload: Pick<PlayBoard, typeof sendParams[number]> & { axios: any, play_board_uuid: string }) => {

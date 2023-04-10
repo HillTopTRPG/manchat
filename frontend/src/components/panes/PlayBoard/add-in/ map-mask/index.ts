@@ -18,7 +18,9 @@ const isEqlMask    = (p1: MaskParams, p2: MaskParams) => !maskParams.some(key =>
 
 export default class {
   private holdWriteMapMasks: MaskParams[] = []
+  private createMapMasks: MaskParams[]    = []
   private holdDeleteMapMasks: MaskLoc[]   = []
+  private deleteUuids: string[]           = []
 
   public onUpdateMapMasks(store: RoomCollectionStore) {
     this.holdWriteMapMasks
@@ -56,12 +58,10 @@ export default class {
 
     // 新規追加
     this.holdWriteMapMasks.push(payload)
-    return store.addMapMask(merge({
-                                    axios,
-                                  }, payload))
+    this.createMapMasks.push(payload)
   }
 
-  private async deleteMapMask(payload: MaskLoc, store: RoomCollectionStore) {
+  private deleteMapMask(payload: MaskLoc, store: RoomCollectionStore) {
     const useIsEqlLoc = isEqlMaskLoc.bind(null, payload)
     if (this.holdDeleteMapMasks.some(useIsEqlLoc)) {
       return
@@ -72,13 +72,8 @@ export default class {
       return
     }
 
-    return Promise.all(deleteList.map(mm => {
-      this.holdDeleteMapMasks.push(payload)
-      return store.deleteMapMask({
-                                   axios,
-                                   map_mask_uuid: mm.uuid,
-                                 })
-    }))
+    this.holdDeleteMapMasks.push(payload)
+    this.deleteUuids.push(...deleteList.map(mm => mm.uuid))
   }
 
   private executeMapMaskDrag(
@@ -103,7 +98,7 @@ export default class {
         this.writeMapMask(mapMaskBase, store).then()
         break
       case 'add-in:delete':
-        this.deleteMapMask(pick(mapMaskBase, ...maskLocParams), store).then()
+        this.deleteMapMask(pick(mapMaskBase, ...maskLocParams), store)
         break
       default:
     }
@@ -114,6 +109,24 @@ export default class {
   public onMove = this.executeMapMaskDrag
 
   public onEndMove(moveInfo: MoveInfo, store: RoomCollectionStore) {
+    if (moveInfo.mode === 'add-in:add') {
+      if (this.createMapMasks.length) {
+        store.addMapMasks({
+                            axios,
+                            list: this.createMapMasks,
+                          }).then()
+        this.createMapMasks.splice(0, this.createMapMasks.length)
+      }
+    }
+    if (moveInfo.mode === 'add-in:delete') {
+      if (this.deleteUuids.length) {
+        store.deleteMapMask({
+                              axios,
+                              uuids: this.deleteUuids,
+                            }).then()
+        this.deleteUuids.splice(0, this.deleteUuids.length)
+      }
+    }
     if (moveInfo.mode === 'add-in:move') {
       const matchList = store.mapMasks.value.filter(mm => matchLocation(moveInfo.mGridStart, mm))
       if (matchList.length) {

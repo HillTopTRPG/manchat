@@ -25,15 +25,15 @@ const sendChatParams = [
 export function createChatFunctions(args: RoomProps) {
   const sendChat   = async (payload: Pick<Chat, typeof sendChatParams[number]> & { axios: any }) => {
     const { data } = await payload.axios.post(`/api/v1/chats`, merge(getRoomBaseParams(args), {
-      api_v1_chat: pick(payload, ...sendChatParams),
+      record: pick(payload, ...sendChatParams),
     }))
     if (data.verify !== 'success') {
       console.log(JSON.stringify(data, null, '  '))
     }
   }
   const deleteChat = async (payload: { axios: any, chat_uuid: string }) => {
-    await payload.axios.delete(`/api/v1/chats/${payload.chat_uuid}`, {
-      data: getRoomBaseParams(args),
+    await payload.axios.delete('/api/v1/chats', {
+      data: merge(getRoomBaseParams(args), { uuids: [payload.chat_uuid] }),
     })
   }
   return {

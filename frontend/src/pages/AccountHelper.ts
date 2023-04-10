@@ -394,8 +394,6 @@ export function createRoomChannel(args: RoomProps & {
 }) {
   const roomChannelSubscriptionHandler = {
     received(data: any) {
-      //      console.log(JSON.stringify(data, null, '  '))
-      //      console.log(`[${data.table}]-[${data.type}]`)
       switch (`[${data.table}]-[${data.type}]`) {
         case '[api_v1_users]-[create-data]':
           args.users.value.push(data.data)
@@ -416,7 +414,12 @@ export function createRoomChannel(args: RoomProps & {
           toLobby(args, false).then()
           break
         case '[api_v1_users]-[update-data]':
-          args.users.value.splice(args.users.value.findIndex(r => r.uuid === data.data.uuid), 1, data.data)
+          data.dataList.forEach((d: any) => {
+            const idx = args.users.value.findIndex(r => r.uuid === d.uuid)
+            if (idx > -1) {
+              args.users.value.splice(idx, 1, d)
+            }
+          })
           userSort(args.users)
           break
         case '[api_v1_rooms]-[update-data]':

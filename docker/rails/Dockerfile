@@ -1,4 +1,4 @@
-FROM --platform=linux/x86_64 ruby:3.0
+FROM --platform=linux/x86_64 ruby:3.0.6
 
 ENV BUNDLER_VERSION 2.3.18
 
@@ -36,12 +36,8 @@ ADD ./wait-for-it.sh /app/wait-for-it.sh
 RUN chmod -R 777 /app
 
 ENTRYPOINT [ \
-  "prehook", "ruby -v", "--", \
   "prehook", "bundle install -j4", "--", \
-  "prehook", "bundle exec rails db:create", "--", \
-  "prehook", "bundle exec rails db:migrate", "--", \
   "prehook", "cron", "--", \
-  "prehook", "bundle exec rake app:update:bin", "--", \
   "prehook", "bundle exec whenever --update-crontab", "--", \
-  "prehook", "bundle exec rake 'database:initialize'", "--" \
+  "prehook", "ruby -e 'puts %(Startup complete!!)'", "--" \
 ]
