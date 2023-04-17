@@ -62,19 +62,27 @@ function drawHexs(context: CanvasRenderingContext2D,
 
 function mergeImageData(img1: ImageData, img2: ImageData, merged: ImageData) {
   for (let i = 0; i < merged.data.length; i += 4) {
-    const r1    = img1.data[i]
-    const rd    = img2.data[i] - r1
-    const g1    = img1.data[i + 1]
-    const gd    = img2.data[i + 1] - g1
-    const b1    = img1.data[i + 2]
-    const bd    = img2.data[i + 2] - b1
+    let r1   = img1.data[i]
+    let g1   = img1.data[i + 1]
+    let b1   = img1.data[i + 2]
+    const a1 = img1.data[i + 3]
+
+    const sum1 = r1 + g1 + b1 + a1
+    if (sum1 === 0) {
+      r1 = g1 = b1 = 255
+    }
+
+    const rd = img2.data[i] - r1
+    const gd = img2.data[i + 1] - g1
+    const bd = img2.data[i + 2] - b1
+
     const a2    = img2.data[i + 3]
     const ratio = a2 / 255
 
     merged.data[i]     = r1 + rd * ratio
     merged.data[i + 1] = g1 + gd * ratio
     merged.data[i + 2] = b1 + bd * ratio
-    merged.data[i + 3] = Math.max(img1.data[i + 3], a2)
+    merged.data[i + 3] = Math.max(a1, a2)
   }
 }
 
