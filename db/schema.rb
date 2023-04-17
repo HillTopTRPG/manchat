@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2023_04_08_025006) do
+ActiveRecord::Schema[7.0].define(version: 2023_04_16_090719) do
   create_table "api_v1_change_logs", primary_key: "uuid", id: :string, charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
     t.string "room_uuid", null: false
     t.string "table", null: false
@@ -76,6 +76,7 @@ ActiveRecord::Schema[7.0].define(version: 2023_04_08_025006) do
     t.string "screen_color", null: false
     t.string "bg_color", null: false
     t.string "border_color", null: false
+    t.json "tiles"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["room_uuid"], name: "index_api_v1_play_boards_on_room_uuid"

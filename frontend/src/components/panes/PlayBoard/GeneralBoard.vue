@@ -60,11 +60,33 @@ const initMoveInfo: MoveInfo = {
   toolType  : 'grid',
 }
 
-const currentBoardUuid = ref<string>(store.playBoards.value[0].uuid)
+const currentBoardUuid = ref<string>(store.playBoards.value[0]?.uuid || '')
 const gridRow          = computed(() => store.playBoards.value.find(pb => pb.uuid === currentBoardUuid.value)?.height ||
                                         0)
 const gridColumn       = computed(() => store.playBoards.value.find(pb => pb.uuid === currentBoardUuid.value)?.width ||
                                         0)
+const boardType        = computed(() => store.playBoards.value.find(pb => pb.uuid ===
+                                                                          currentBoardUuid.value)?.board_type ||
+                                        'normal')
+const sqrt3            = Math.sqrt(3)
+const getCanvasWidth   = (gridSize: number) => {
+  switch (boardType.value) {
+    case 'hex-vertical':
+      const a = gridColumn.value * 3 + 1
+      return a * gridSize / 2 / sqrt3 + 2
+    default:
+      return gridColumn.value * gridSize + 2
+  }
+}
+const getCanvasHeight  = (gridSize: number) => {
+  switch (boardType.value) {
+    case 'hex-horizontal':
+      const a = gridRow.value * 3 + 1
+      return a * gridSize / 2 / sqrt3 + 2
+    default:
+      return gridRow.value * gridSize + 2
+  }
+}
 const paneBgColor      = computed(() => store.playBoards.value.find(pb => pb.uuid ===
                                                                           currentBoardUuid.value)?.screen_color || '')
 const canvasBgColor    = computed(() => store.playBoards.value.find(pb => pb.uuid ===
@@ -226,31 +248,7 @@ const paint = () => {
     return
   }
 
-  const gridSize     = canvasInfoList[currentCanvasIdx.value].gridSize
-  const canvasWidth  = gridSize * gridColumn.value
-  const canvasHeight = gridSize * gridRow.value
-
-  // 画面クリア
-  context.clearRect(0, 0, canvasWidth, canvasHeight)
-
-  // 罫線
-  context.strokeStyle = borderColor.value
-  context.lineWidth   = 1
-  Array(gridColumn.value + 1).fill(0).forEach((_, column) => {
-    const x = column * gridSize
-    context.beginPath()
-    context.moveTo(x, 0)
-    context.lineTo(x, canvasHeight)
-    context.stroke()
-  })
-  Array(gridRow.value + 1).fill(0).forEach((_, row) => {
-    const y = row * gridSize
-    context.beginPath()
-    context.moveTo(0, y)
-    context.lineTo(canvasWidth, y)
-    context.stroke()
-  })
-
+  const gridSize = canvasInfoList[currentCanvasIdx.value].gridSize
   addIn.paint(context, gridSize, moveInfo.value, currentBoardUuid.value, store)
 }
 
@@ -386,6 +384,7 @@ const addPlayBoard = () => {
                        screen_color: '#ffffe0ff',
                        bg_color    : '#ffffffff',
                        border_color: '#00000033',
+                       tiles       : [],
                      })
   createPlayBoardDialog.value = false
 }
@@ -402,6 +401,19 @@ const createBoardName   = ref('no_title')
 const createBoardWidth  = ref(15)
 const createBoardHeight = ref(10)
 const toolTypeSelect    = ref(false)
+
+const boardTypeSelection = [
+  {
+    name : 'スクエア',
+    value: 'normal',
+  }, {
+    name : 'ヘックス（縦）',
+    value: 'hex-vertical',
+  }, {
+    name : 'ヘックス（横）',
+    value: 'hex-horizontal',
+  },
+]
 </script>
 
 <template>
@@ -563,6 +575,23 @@ const toolTypeSelect    = ref(false)
             />
           </v-list-item>
           <v-list-item>
+            <v-select
+              label='グリッドタイプ'
+              v-model='store.playBoards.value.find(pb => pb.uuid === currentBoardUuid).board_type'
+              @keydown.esc.stop='closeDrawer'
+              @keydown.stop
+              :items='boardTypeSelection'
+              item-title='name'
+              item-value='value'
+              variant='solo'
+              :single-line='true'
+              density='comfortable'
+              :hide-details='true'
+              ref='boardTypeInput'
+            >
+            </v-select>
+          </v-list-item>
+          <v-list-item>
             <v-text-field
               label='マス数（横）'
               type='number'
@@ -639,8 +668,8 @@ const toolTypeSelect    = ref(false)
         <template v-for='(ci, idx) in canvasInfoList' :key='idx'>
           <canvas
             v-show='idx === currentCanvasIdx'
-            :width='ci.gridSize * gridColumn'
-            :height='ci.gridSize * gridRow'
+            :width='getCanvasWidth(ci.gridSize)'
+            :height='getCanvasHeight(ci.gridSize)'
             :style='{"--grid-size": ci.gridSize}'
             ref='canvas'
           ></canvas>

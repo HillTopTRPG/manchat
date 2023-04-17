@@ -57,6 +57,26 @@ services:
   redis:
     <<: *logging-configuration
     image: redis:3.2
+  minio:
+    image: minio/minio:latest
+    environment:
+      MINIO_ROOT_USER: minio_123
+      MINIO_ROOT_PASSWORD: pass_123
+    ports:
+      - '9000:9000'
+      - '9001:9001'
+    entrypoint: bash
+    command: -c "
+      mkdir -p /data/.minio.sys/buckets;
+      cp -r /policies/* /data/.minio.sys/;
+      cp -r /export/* /data/;
+      /opt/bin/minio server /export --address :9000 --console-address :9001;
+      "
+    volumes:
+      - ./minio/data:/data
+      - ./minio/export:/export
+      - ./minio/config:/root/.minio
+      - ./minio/policies:/policies
 
 volumes:
   mysql-data:

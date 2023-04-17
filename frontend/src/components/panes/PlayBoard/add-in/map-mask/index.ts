@@ -166,7 +166,7 @@ export default class {
 
       const p           = getXY(mm)
       context.fillStyle = movingUuid === mm.uuid ? getAlphaColor(mm.bg_color) : mm.bg_color
-      context.fillRect(p.x, p.y, gridSize, gridSize)
+      context.fillRect(p.x, p.y, gridSize + 1, gridSize + 1)
     }
 
     store.mapMasks.value.forEach(paintMapMask.bind(this, true, mm => {

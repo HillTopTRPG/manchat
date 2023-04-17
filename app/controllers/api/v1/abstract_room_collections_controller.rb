@@ -55,9 +55,10 @@ module Api
       def update
         return if (data = get_data(params)).nil?
 
-        # render json: data.update(params.require(:record).permit(*params_for_update)) ? { verify: 'success' } : api_v1_user.errors.to_h
-        p api_v1_user.errors
-        render json: data.update(params_for_update) ? { verify: 'success' } : api_v1_user.errors.to_h
+        data.update!(params.require(:record).permit(*params_for_update))
+        render json: { verify: 'success' }
+      rescue ActiveRecord::RecordInvalid => e
+        render json: { verify: "error", reason: e.record.errors.to_hash }
       end
 
       # DELETE /api/v1/~~~/:uuid
@@ -81,8 +82,8 @@ module Api
             end
           end
           render json: { verify: 'success' }
-        rescue => err
-          render json: err
+        rescue ActiveRecord::RecordInvalid => e
+          render json: { verify: "error", reason: e.record.errors.to_hash }
         end
       end
 

@@ -1,6 +1,11 @@
 import { getRoomBaseParams, RoomProps } from '~/pages/AccountHelper'
 import { merge, pick } from 'lodash'
 
+export type Tile = {
+  kind: string
+  effect: string
+}
+
 export type PlayBoard = {
   uuid: string
   room_uuid: string
@@ -12,12 +17,13 @@ export type PlayBoard = {
   screen_color: string
   bg_color: string
   border_color: string
+  tiles: Tile[][]
   created_at: Date
   updated_at: Date
 }
 
 export const sendParams = [
-  'name', 'board_type', 'width', 'height', 'screen_color', 'bg_color', 'border_color',
+  'name', 'board_type', 'width', 'height', 'screen_color', 'bg_color', 'border_color', 'tiles',
 ] as const
 
 export function createPlayBoardFunctions(args: RoomProps) {
@@ -36,7 +42,7 @@ export function createPlayBoardFunctions(args: RoomProps) {
   }
   const updatePlayBoard = async (payload: Pick<PlayBoard, typeof sendParams[number]> & { axios: any, play_board_uuid: string }) => {
     await payload.axios.patch(`/api/v1/play_boards/${payload.play_board_uuid}`, merge(getRoomBaseParams(args), {
-      api_v1_play_board: pick(payload, ...sendParams),
+      record: pick(payload, ...sendParams),
     }))
   }
   return {

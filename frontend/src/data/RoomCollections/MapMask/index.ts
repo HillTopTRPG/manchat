@@ -49,7 +49,7 @@ export function createMapMaskFunctions(args: RoomProps) {
   }
   const updateMapMask = async (payload: Pick<MapMask, typeof sendParams[number]> & { axios: any, map_mask_uuid: string }) => {
     await payload.axios.patch(`/api/v1/map_masks/${payload.map_mask_uuid}`, merge(getRoomBaseParams(args), {
-      api_v1_map_mask: pick(payload, ...sendParams),
+      record: pick(payload, ...sendParams),
     }))
   }
   return {
