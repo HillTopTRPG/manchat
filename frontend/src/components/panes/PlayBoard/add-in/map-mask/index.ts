@@ -3,6 +3,7 @@ import { MapMask, sendParams as maskParams } from '~/data/RoomCollections/MapMas
 import { merge, pick } from 'lodash'
 import axios from 'axios'
 import { StoreType as RoomCollectionStore } from '~/data/RoomCollections'
+import { changeColor, fillRectImageData } from '~/components/panes/PlayBoard/add-in/coordinate'
 
 const getAlphaColor = (c: string) => c
   .replace(/^(#.{6})$/, '$1FF')
@@ -142,11 +143,12 @@ export default class {
   }
 
   public paint(
-    context: CanvasRenderingContext2D,
+    imageData: ImageData,
     gridSize: number,
     moveInfo: MoveInfo,
     play_board_uuid: string,
     store: RoomCollectionStore,
+    canvasWidth: number,
   ) {
     let movingUuid: string | null = null
     if (moveInfo.mode === 'add-in:move' && moveInfo.toolType === 'grid' && moveInfo.subMode === 'moving') {
@@ -164,9 +166,9 @@ export default class {
         return
       }
 
-      const p           = getXY(mm)
-      context.fillStyle = movingUuid === mm.uuid ? getAlphaColor(mm.bg_color) : mm.bg_color
-      context.fillRect(p.x, p.y, gridSize + 1, gridSize + 1)
+      const p    = getXY(mm)
+      const cStr = movingUuid === mm.uuid ? getAlphaColor(mm.bg_color) : mm.bg_color
+      fillRectImageData(imageData, changeColor(cStr), canvasWidth, p.x, p.y, p.x + gridSize + 1, p.y + gridSize + 1)
     }
 
     store.mapMasks.value.forEach(paintMapMask.bind(this, true, mm => {
@@ -184,12 +186,15 @@ export default class {
 
     if (moveInfo.toolType === 'grid') {
       // 現在のマス
-      context.strokeStyle = '#ff0000'
-      context.lineWidth   = 3
-      context.beginPath()
-      context.rect(moveInfo.mGrid.x * gridSize, moveInfo.mGrid.y * gridSize, gridSize, gridSize)
-      context.stroke()
-      context.lineWidth = 1
+      const color = changeColor('#ff0000')
+      const minX  = moveInfo.mGrid.x * gridSize
+      const minY  = moveInfo.mGrid.y * gridSize
+      const maxX  = minX + gridSize
+      const maxY  = minY + gridSize
+      fillRectImageData(imageData, color, canvasWidth, minX + 1, minY - 1, maxX + 1, minY + 1)
+      fillRectImageData(imageData, color, canvasWidth, maxX - 1, minY + 1, maxX + 1, maxY + 1)
+      fillRectImageData(imageData, color, canvasWidth, minX - 1, maxY - 1, maxX - 1, maxY + 1)
+      fillRectImageData(imageData, color, canvasWidth, minX - 1, minY - 1, minX + 1, maxY - 1)
     }
   }
 }

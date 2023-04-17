@@ -1,6 +1,7 @@
 import { Location, MoveInfo } from '~/components/panes/PlayBoard/GeneralBoard.vue'
 import { StoreType as RoomCollectionStore } from '~/data/RoomCollections'
 import { LineLoc, LineParams } from '~/components/panes/PlayBoard/add-in/map-line/index'
+import { drawLineImageData } from '~/components/panes/PlayBoard/add-in/coordinate'
 
 function getCellPoints(p1: Location, gridSize: number) {
   const p2 = new Location(p1.x + gridSize / 2, p1.y)
@@ -89,6 +90,23 @@ export function drawMapLine(context: CanvasRenderingContext2D, gridSize: number,
   )
 }
 
+export function drawMapLineImageData(imgData: ImageData,
+                                     gridSize: number,
+                                     isFocus: boolean,
+                                     canvasWidth: number,
+                                     line: LineParams,
+) {
+  drawLineImageData(imgData,
+                    Math.round(line.x1 * gridSize),
+                    Math.round(line.y1 * gridSize),
+                    Math.round(line.x2 * gridSize),
+                    Math.round(line.y2 * gridSize),
+                    isFocus ? 5 : 3,
+                    line.color,
+                    canvasWidth,
+  )
+}
+
 export function getNearestMapLineUuid(play_board_uuid: string,
                                       moveInfo: MoveInfo,
                                       gridSize: number,
@@ -117,87 +135,4 @@ export function paintNearestMousePoint(context: CanvasRenderingContext2D, moveIn
   context.beginPath()
   context.arc(p.x * gridSize, p.y * gridSize, 5, 0, 2 * Math.PI, false)
   context.fill()
-}
-
-/**
- *
- * @param {number} startX
- * @param {number} startY
- * @param {ImageData} imgData
- * @param {number[]} penColor [r:0~255, g:0-255, b:0~255, a:0~255]
- * @param {number} canvasWidth
- * @param {number} canvasHeight
- */
-export function fillColor(startX: number,
-                          startY: number,
-                          imgData: ImageData,
-                          penColor: number[],
-                          canvasWidth: number,
-                          canvasHeight: number,
-) {
-  const toImageDataPixelPos = (x: number, y: number) => (
-                                                          canvasWidth * y + x
-                                                        ) * 4
-
-  const loop4 = Array(4).fill(0).map((_, idx) => idx)
-
-  const startPixelPos = toImageDataPixelPos(startX, startY)
-
-  const baseColor = [...imgData.data.slice(startPixelPos, startPixelPos + 4)]
-
-  //  Array(200).fill(0).forEach((_, idx) => {
-  //    const d       = imgData.data
-  //    const baseIdx = idx * 4 + cWidth * idx * 4
-  //    const s       = `(${d[baseIdx]}, ${d[baseIdx + 1]}, ${d[baseIdx + 2]}, ${d[baseIdx + 3]})`
-  //    console.log(s)
-  //  })
-
-  const isMatchColor = (x: number, y: number, color: number[]) => {
-    const pp = toImageDataPixelPos(x, y)
-    return !loop4.some(idx => imgData.data[pp + idx] !== color[idx])
-  }
-
-  if (isMatchColor(startX, startY, penColor)) {
-    return
-  }
-
-  const buffer: number[] = [startX, startY]
-
-  const scanLine = (leftX: number, rightX: number, y: number) => {
-    while (leftX <= rightX) {
-      while (leftX <= rightX && !isMatchColor(leftX, y, baseColor)) {
-        leftX++
-      }
-      if (rightX < leftX) {
-        break
-      }
-      while (leftX <= rightX && isMatchColor(leftX, y, baseColor)) {
-        leftX++
-      }
-      buffer.push(leftX - 1, y)
-    }
-  }
-
-  while (buffer.length > 0) {
-    const y    = buffer.pop()!
-    let leftX  = buffer.pop()!
-    let rightX = leftX
-    if (isMatchColor(leftX, y, penColor)) {
-      continue
-    }
-
-    while (0 < leftX && isMatchColor(leftX - 1, y, baseColor)) {
-      leftX--
-    }
-    while (rightX < canvasWidth - 1 && isMatchColor(rightX + 1, y, baseColor)) {
-      rightX++
-    }
-
-    for (let x = leftX; x <= rightX; x++) {
-      const pp = toImageDataPixelPos(x, y)
-      loop4.forEach(idx => imgData.data[pp + idx] = penColor[idx])
-    }
-    y + 1 < canvasHeight && scanLine(leftX, rightX, y + 1)
-    y - 1 >= 0 && scanLine(leftX, rightX, y - 1)
-  }
 }

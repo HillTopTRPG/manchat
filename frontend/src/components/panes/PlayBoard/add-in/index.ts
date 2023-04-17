@@ -2,6 +2,7 @@ import { StoreType as RoomCollectionStore } from '~/data/RoomCollections'
 import { MoveInfo } from '~/components/panes/PlayBoard/GeneralBoard.vue'
 import MapMaskAddIn from '~/components/panes/PlayBoard/add-in/map-mask'
 import MapLineAddIn from '~/components/panes/PlayBoard/add-in/map-line'
+import { changeColor, fillRectImageData } from '~/components/panes/PlayBoard/add-in/coordinate'
 
 function drawHexs(context: CanvasRenderingContext2D,
                   boardType: string,
@@ -179,33 +180,32 @@ export class AddIn {
     const col31 = gridColumn * 3 + 1
     const row31 = gridRow * 3 + 1
 
-    const canvasWidth  = boardType === 'hex-vertical' ? col31 * gridSize / 2 / sqrt3 + 2 : gridColumn * gridSize + 2
-    const canvasHeight = boardType === 'hex-horizontal' ? row31 * gridSize / 2 / sqrt3 + 2 : gridRow * gridSize + 2
+    const canvasWidth  = boardType === 'hex-vertical' ? col31 * gridSize / 2 / sqrt3 + 2 : gridColumn * gridSize + 1
+    const canvasHeight = boardType === 'hex-horizontal' ? row31 * gridSize / 2 / sqrt3 + 2 : gridRow * gridSize + 1
 
     context.clearRect(0, 0, canvasWidth, canvasHeight)
 
     if (boardType === 'normal') {
-      const imageData1  = this.mapLineAddIn.paint(context,
-                                                  gridSize,
-                                                  moveInfo,
-                                                  play_board_uuid,
-                                                  store,
-                                                  canvasWidth,
-                                                  canvasHeight,
-      )
+      const imageData1 = context.createImageData(canvasWidth, canvasHeight)
+      this.mapLineAddIn.paint(imageData1, gridSize, moveInfo, play_board_uuid, store, canvasWidth, canvasHeight)
+
+      const imageData2 = context.createImageData(canvasWidth, canvasHeight)
+
       // 罫線
-      context.fillStyle = store.playBoards.value.find(pb => pb.uuid === play_board_uuid)?.border_color || '#000000'
+      const cStr  = store.playBoards.value.find(pb => pb.uuid === play_board_uuid)?.border_color || '#000000'
+      const color = changeColor(cStr)
       Array(gridColumn + 1).fill(0).forEach((_, column) => {
-        context.fillRect(column * gridSize, 0, 1, canvasHeight)
+        const x = column * gridSize
+        fillRectImageData(imageData2, color, canvasWidth, x, 0, x, canvasHeight)
       })
       Array(gridRow + 1).fill(0).forEach((_, row) => {
-        context.fillRect(0, row * gridSize, canvasWidth, 1)
+        const y = row * gridSize
+        fillRectImageData(imageData2, color, canvasWidth, 0, y, canvasWidth, y)
       })
 
-      context.font = '20px serif'
-      this.mapMaskAddIn.paint(context, gridSize, moveInfo, play_board_uuid, store)
-      const imageData2 = context.getImageData(0, 0, canvasWidth, canvasHeight)
-      const merged     = context.createImageData(canvasWidth, canvasHeight)
+      this.mapMaskAddIn.paint(imageData2, gridSize, moveInfo, play_board_uuid, store, canvasWidth)
+
+      const merged = context.createImageData(canvasWidth, canvasHeight)
       mergeImageData(imageData2, imageData1, merged)
       context.putImageData(merged, 0, 0)
     } else {

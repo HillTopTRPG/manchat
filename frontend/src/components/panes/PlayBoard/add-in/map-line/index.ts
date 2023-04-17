@@ -4,8 +4,9 @@ import { merge } from 'lodash'
 import axios from 'axios'
 import { StoreType as RoomCollectionStore } from '~/data/RoomCollections'
 import {
-  drawMapLine, fillColor, getNearestMapLineUuid, getNearPoint, paintNearestMousePoint,
+  drawMapLineImageData, getNearestMapLineUuid, getNearPoint,
 } from '~/components/panes/PlayBoard/add-in/map-line/coordinate'
+import { fillColor, fillRectImageData } from '~/components/panes/PlayBoard/add-in/coordinate'
 
 const lineLocParams = ['x1', 'y1', 'x2', 'y2', 'play_board_uuid'] as const
 export type LineParams = Pick<MapLine, typeof lineParams[number]>
@@ -88,20 +89,20 @@ export default class {
   }
 
   public paint(
-    context: CanvasRenderingContext2D,
+    imageData: ImageData,
     gridSize: number,
     moveInfo: MoveInfo,
     play_board_uuid: string,
     store: RoomCollectionStore,
     canvasWidth: number,
     canvasHeight: number,
-  ): ImageData {
+  ): void {
     const filterFunc = (ml: LineParams & { uuid?: string }) => ml.play_board_uuid ===
                                                                play_board_uuid &&
                                                                ml.uuid !==
                                                                this.mouseNearMapLineUuid
 
-    const useDrawMapLine = drawMapLine.bind(null, context, gridSize, false)
+    const useDrawMapLine = drawMapLineImageData.bind(null, imageData, gridSize, false, canvasWidth)
 
     // 全部描く
     store.mapLines.value.filter(filterFunc).forEach(useDrawMapLine)
@@ -111,27 +112,27 @@ export default class {
     if (this.mouseNearMapLineUuid) {
       const focusLine = store.mapLines.value.find(ml => ml.uuid === this.mouseNearMapLineUuid)
       if (focusLine) {
-        drawMapLine(context, gridSize, true, focusLine)
+        drawMapLineImageData(imageData, gridSize, true, canvasWidth, focusLine)
       }
     }
 
     // 描いてる途中の線を描く
     if (this.drawingMapLineInfo) {
-      drawMapLine(context, gridSize, false, this.drawingMapLineInfo)
+      drawMapLineImageData(imageData, gridSize, false, canvasWidth, this.drawingMapLineInfo)
     }
 
     // マウスカーソルの点を描く
     if (moveInfo.toolType !== 'grid' && moveInfo.mode === 'add-in:add') {
-      paintNearestMousePoint(context, moveInfo, gridSize)
+      const p  = getNearPoint(moveInfo, gridSize)
+      const px = p.x * gridSize
+      const py = p.y * gridSize
+      const s  = 3
+      fillRectImageData(imageData, [255, 0, 0, 255], canvasWidth, px - s, py - s, px + s, py + s)
     }
-
-    const imageData = context.getImageData(0, 0, canvasWidth, canvasHeight)
 
     // 塗りつぶし表現を描く
     if (this.fillPoint) {
       fillColor(this.fillPoint.x, this.fillPoint.y, imageData, [255, 255, 0, 200], canvasWidth, canvasHeight)
     }
-
-    return imageData
   }
 }

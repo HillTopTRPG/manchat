@@ -73,18 +73,18 @@ const getCanvasWidth   = (gridSize: number) => {
   switch (boardType.value) {
     case 'hex-vertical':
       const a = gridColumn.value * 3 + 1
-      return a * gridSize / 2 / sqrt3 + 2
+      return a * gridSize / 2 / sqrt3 + 1
     default:
-      return gridColumn.value * gridSize + 2
+      return gridColumn.value * gridSize + 1
   }
 }
 const getCanvasHeight  = (gridSize: number) => {
   switch (boardType.value) {
     case 'hex-horizontal':
       const a = gridRow.value * 3 + 1
-      return a * gridSize / 2 / sqrt3 + 2
+      return a * gridSize / 2 / sqrt3 + 1
     default:
-      return gridRow.value * gridSize + 2
+      return gridRow.value * gridSize + 1
   }
 }
 const paneBgColor      = computed(() => store.playBoards.value.find(pb => pb.uuid ===
