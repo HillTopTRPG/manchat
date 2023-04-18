@@ -1,12 +1,12 @@
 import { MapLine, sendParams as lineParams } from '~/data/RoomCollections/MapLine'
-import { Location, MoveInfo } from '~/components/panes/PlayBoard/GeneralBoard.vue'
+import { MoveInfo } from '~/components/panes/PlayBoard/GeneralBoard.vue'
 import { merge } from 'lodash'
 import axios from 'axios'
 import { StoreType as RoomCollectionStore } from '~/data/RoomCollections'
 import {
   drawMapLineImageData, getNearestMapLineUuid, getNearPoint,
 } from '~/components/panes/PlayBoard/add-in/map-line/coordinate'
-import { fillColor, fillRectImageData } from '~/components/panes/PlayBoard/add-in/coordinate'
+import { fillRectImageData } from '~/components/panes/PlayBoard/add-in/coordinate'
 
 const lineLocParams = ['x1', 'y1', 'x2', 'y2', 'play_board_uuid'] as const
 export type LineParams = Pick<MapLine, typeof lineParams[number]>
@@ -18,8 +18,6 @@ export default class {
   private holdWriteMapLines: LineParams[]       = []
   private mouseNearMapLineUuid: string | null   = null
   private drawingMapLineInfo: LineParams | null = null
-  private fillPoint: Location | null            = null
-  private fillColor: string                     = '#ff0000'
 
   public onUpdateMapLines(store: RoomCollectionStore) {
     this.holdWriteMapLines
@@ -62,43 +60,34 @@ export default class {
     }
   }
 
-  public addFillPoint(moveInfo: MoveInfo, store: RoomCollectionStore) {
-    if (this.fillPoint) {
-      this.fillPoint = null
-    } else {
-      this.fillPoint = new Location(Math.floor(moveInfo.mc.x), Math.floor(moveInfo.mc.y))
-      this.fillColor = '#00ff00ff'
-    }
-  }
-
   public onEndMove(moveInfo: MoveInfo, store: RoomCollectionStore) {
     if (moveInfo.mode === 'add-in:add') {
-      if (this.drawingMapLineInfo) {
-        if (this.drawingMapLineInfo.x1 !==
-            this.drawingMapLineInfo.x2 ||
-            this.drawingMapLineInfo.y1 !==
-            this.drawingMapLineInfo.y2) {
-          this.holdWriteMapLines.push(this.drawingMapLineInfo)
+      const dmlInfo = this.drawingMapLineInfo
+      if (dmlInfo) {
+        if (dmlInfo.x1 !== dmlInfo.x2 || dmlInfo.y1 !== dmlInfo.y2) {
+          this.holdWriteMapLines.push(dmlInfo)
           store.addMapLine(merge({
                                    axios,
-                                 }, this.drawingMapLineInfo)).then()
+                                 }, dmlInfo)).then()
         }
         this.drawingMapLineInfo = null
       }
     }
   }
 
-  public paint(
-    imageData: ImageData,
-    gridSize: number,
-    moveInfo: MoveInfo,
-    play_board_uuid: string,
-    store: RoomCollectionStore,
-    canvasWidth: number,
-    canvasHeight: number,
-  ): void {
+  public paint({
+                 imageData,
+                 gridSize,
+                 moveInfo,
+                 playBoardUuid,
+                 store,
+                 canvasWidth,
+                 color,
+               }: {
+    imageData: ImageData, gridSize: number, moveInfo: MoveInfo, playBoardUuid: string, store: RoomCollectionStore, canvasWidth: number, color: number[],
+  }) {
     const filterFunc = (ml: LineParams & { uuid?: string }) => ml.play_board_uuid ===
-                                                               play_board_uuid &&
+                                                               playBoardUuid &&
                                                                ml.uuid !==
                                                                this.mouseNearMapLineUuid
 
@@ -122,17 +111,12 @@ export default class {
     }
 
     // マウスカーソルの点を描く
-    if (moveInfo.toolType !== 'grid' && moveInfo.mode === 'add-in:add') {
+    if (moveInfo.toolType === 'line' && moveInfo.mode === 'add-in:add') {
       const p  = getNearPoint(moveInfo, gridSize)
       const px = p.x * gridSize
       const py = p.y * gridSize
       const s  = 3
-      fillRectImageData(imageData, [255, 0, 0, 255], canvasWidth, px - s, py - s, px + s, py + s)
-    }
-
-    // 塗りつぶし表現を描く
-    if (this.fillPoint) {
-      fillColor(this.fillPoint.x, this.fillPoint.y, imageData, [255, 255, 0, 200], canvasWidth, canvasHeight)
+      fillRectImageData(imageData, canvasWidth, color, px - s, py - s, s * 2, s * 2)
     }
   }
 }

@@ -249,7 +249,7 @@ const paint = () => {
   }
 
   const gridSize = canvasInfoList[currentCanvasIdx.value].gridSize
-  addIn.paint(context, gridSize, moveInfo.value, currentBoardUuid.value, store)
+  addIn.paint(context, gridSize, moveInfo.value, currentBoardUuid.value, store, addInColor.value)
 }
 
 watch(store.mapMasks, () => {

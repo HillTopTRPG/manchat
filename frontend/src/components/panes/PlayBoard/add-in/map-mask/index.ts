@@ -77,19 +77,18 @@ export default class {
     this.deleteUuids.push(...deleteList.map(mm => mm.uuid))
   }
 
-  private executeMapMaskDrag(
-    moveInfo: MoveInfo,
-    play_board_uuid: string,
-    color: string,
-    store: RoomCollectionStore,
-    targetSubMode: '' | 'moving',
+  private executeMapMaskDrag(moveInfo: MoveInfo,
+                             playBoardUuid: string,
+                             color: string,
+                             store: RoomCollectionStore,
+                             targetSubMode: '' | 'moving',
   ) {
     if (moveInfo.subMode !== targetSubMode) {
       return
     }
 
-    const gridColumn = store.playBoards.value.find(pb => pb.uuid === play_board_uuid)?.width || 0
-    const gridRow    = store.playBoards.value.find(pb => pb.uuid === play_board_uuid)?.height || 0
+    const gridColumn = store.playBoards.value.find(pb => pb.uuid === playBoardUuid)?.width || 0
+    const gridRow    = store.playBoards.value.find(pb => pb.uuid === playBoardUuid)?.height || 0
     const mGridX     = moveInfo.mGrid.x
     const mGridY     = moveInfo.mGrid.y
 
@@ -98,7 +97,7 @@ export default class {
     }
 
     const mapMaskBase = {
-      play_board_uuid: play_board_uuid,
+      play_board_uuid: playBoardUuid,
       grid_x         : moveInfo.mGrid.x,
       grid_y         : moveInfo.mGrid.y,
       bg_color       : color,
@@ -151,49 +150,53 @@ export default class {
     }
   }
 
-  public paint(
-    imageData: ImageData,
-    gridSize: number,
-    moveInfo: MoveInfo,
-    play_board_uuid: string,
-    store: RoomCollectionStore,
-    canvasWidth: number,
-    columns: number,
-    rows: number,
-  ) {
-    let movingUuid: string | null = null
+  public paint({
+                 imageData,
+                 gridSize,
+                 moveInfo,
+                 playBoardUuid,
+                 store,
+                 canvasWidth,
+                 columns,
+                 rows,
+               }: {
+    imageData: ImageData, gridSize: number, moveInfo: MoveInfo, playBoardUuid: string, store: RoomCollectionStore, canvasWidth: number, columns: number, rows: number,
+  }) {
+    let movingMapMask: MapMask | null = null
     if (moveInfo.mode === 'add-in:move' && moveInfo.toolType === 'grid' && moveInfo.subMode === 'moving') {
-      movingUuid = [...store.mapMasks.value]
-                     .reverse()
-                     .find(matchLocation.bind(null, moveInfo.mGridStart))?.uuid || null
+      movingMapMask = [...store.mapMasks.value]
+                        .reverse()
+                        .find(matchLocation.bind(null, moveInfo.mGridStart)) || null
     }
 
-    const paintMapMask = (
-      isStored: boolean,
-      getXY: (mm: MaskParams & { uuid?: string }) => Location,
-      mm: MaskParams & { uuid?: string },
+    const paintMapMask = (getXY: (mm: MaskParams & { uuid?: string }) => Location,
+                          mm: MaskParams & { uuid?: string },
     ) => {
-      if (play_board_uuid !== mm.play_board_uuid || this.holdDeleteMapMasks.some(dmm => isEqlMaskLoc(dmm, mm))) {
+      if (playBoardUuid !== mm.play_board_uuid || this.holdDeleteMapMasks.some(dmm => isEqlMaskLoc(dmm, mm))) {
         return
       }
 
       const p    = getXY(mm)
-      const cStr = movingUuid === mm.uuid ? getAlphaColor(mm.bg_color) : mm.bg_color
-      fillRectImageData(imageData, changeColor(cStr), canvasWidth, p.x, p.y, p.x + gridSize, p.y + gridSize)
+      const cStr = movingMapMask?.uuid === mm.uuid ? getAlphaColor(mm.bg_color) : mm.bg_color
+      fillRectImageData(imageData, canvasWidth, changeColor(cStr), p.x, p.y, gridSize + 1, gridSize + 1)
     }
 
-    store.mapMasks.value.forEach(paintMapMask.bind(this, true, mm => {
-      return {
-        x: movingUuid === mm.uuid ? moveInfo.mc.x - moveInfo.mcStart.x % gridSize : mm.grid_x * gridSize,
-        y: movingUuid === mm.uuid ? moveInfo.mc.y - moveInfo.mcStart.y % gridSize : mm.grid_y * gridSize,
+    const getBasicXY = (mm: MaskParams) => new Location(mm.grid_x * gridSize, mm.grid_y * gridSize)
+
+    const mcs                = moveInfo.mcStart
+    const movingMapMaskPoint = new Location(moveInfo.mc.x - mcs.x % gridSize, moveInfo.mc.y - mcs.y % gridSize)
+
+    store.mapMasks.value.forEach(mm => {
+      if (movingMapMask?.uuid !== mm.uuid) {
+        paintMapMask(getBasicXY, mm)
       }
-    }))
-    this.holdWriteMapMasks.forEach(paintMapMask.bind(this, false, mm => {
-      return {
-        x: mm.grid_x * gridSize,
-        y: mm.grid_y * gridSize,
-      }
-    }))
+    })
+
+    this.holdWriteMapMasks.forEach(mm => paintMapMask(getBasicXY, mm))
+
+    if (movingMapMask) {
+      paintMapMask(() => movingMapMaskPoint, movingMapMask)
+    }
 
     if (moveInfo.toolType === 'grid') {
       const mGridX = moveInfo.mGrid.x
@@ -202,15 +205,14 @@ export default class {
         return
       }
       // 現在のマス
-      const color = changeColor('#ff0000')
-      const minX  = moveInfo.mGrid.x * gridSize
-      const minY  = moveInfo.mGrid.y * gridSize
-      const maxX  = minX + gridSize
-      const maxY  = minY + gridSize
-      fillRectImageData(imageData, color, canvasWidth, minX + 2, minY, maxX, minY + 1) // Top
-      fillRectImageData(imageData, color, canvasWidth, maxX - 1, minY + 2, maxX, maxY) // Right
-      fillRectImageData(imageData, color, canvasWidth, minX, maxY - 1, maxX - 2, maxY) // Bottom
-      fillRectImageData(imageData, color, canvasWidth, minX, minY, minX + 1, maxY - 2) // Left
+      const minX = moveInfo.mGrid.x * gridSize
+      const minY = moveInfo.mGrid.y * gridSize
+
+      const drawCurrentGrid = fillRectImageData.bind(null, imageData, canvasWidth, changeColor('#ff0000'))
+      drawCurrentGrid(minX, minY, gridSize + 1, 2) // Top
+      drawCurrentGrid(minX, minY + gridSize + 1, gridSize + 1, -2) // Bottom
+      drawCurrentGrid(minX + gridSize + 1, minY + 2, -2, gridSize - 3) // Right
+      drawCurrentGrid(minX, minY + 2, 2, gridSize - 3) // Left
     }
   }
 }

@@ -3,13 +3,14 @@ import { MoveInfo } from '~/components/panes/PlayBoard/GeneralBoard.vue'
 import MapMaskAddIn from '~/components/panes/PlayBoard/add-in/map-mask'
 import MapLineAddIn from '~/components/panes/PlayBoard/add-in/map-line'
 import { changeColor, fillRectImageData } from '~/components/panes/PlayBoard/add-in/coordinate'
+import BucketFillAddIn from '~/components/panes/PlayBoard/add-in/bucket-fill'
 
 function drawHexs(context: CanvasRenderingContext2D,
                   boardType: string,
                   cols: number,
                   rows: number,
                   size: number,
-                  images: HTMLImageElement[],
+                  images: ImageBitmap[],
 ) {
   const mapSinCos = boardType === 'hex-vertical' ? [Math.cos, Math.sin] : [Math.sin, Math.cos]
   const mapRowCol = boardType === 'hex-vertical' ? (hexSize: number, sqrt3: number, row: number, col: number) => {
@@ -60,50 +61,62 @@ function drawHexs(context: CanvasRenderingContext2D,
   }))
 }
 
+export function mergeColorImageData(img1: Uint8ClampedArray | number[],
+                                    img1Pos: number,
+                                    img2: Uint8ClampedArray | number[],
+                                    img2Pos: number,
+                                    merged: Uint8ClampedArray | number[],
+                                    mPos: number,
+) {
+  let r1   = img1[img1Pos]
+  let g1   = img1[img1Pos + 1]
+  let b1   = img1[img1Pos + 2]
+  const a1 = img1[img1Pos + 3]
+
+  const sum1 = r1 + g1 + b1 + a1
+  if (sum1 === 0) {
+    r1 = g1 = b1 = 255
+  }
+
+  const rd = img2[img2Pos] - r1
+  const gd = img2[img2Pos + 1] - g1
+  const bd = img2[img2Pos + 2] - b1
+
+  const a2    = img2[img2Pos + 3]
+  const ratio = a2 / 255
+
+  merged[mPos]     = r1 + rd * ratio
+  merged[mPos + 1] = g1 + gd * ratio
+  merged[mPos + 2] = b1 + bd * ratio
+  merged[mPos + 3] = Math.max(a1, a2)
+}
+
 function mergeImageData(img1: ImageData, img2: ImageData, merged: ImageData) {
   for (let i = 0; i < merged.data.length; i += 4) {
-    let r1   = img1.data[i]
-    let g1   = img1.data[i + 1]
-    let b1   = img1.data[i + 2]
-    const a1 = img1.data[i + 3]
-
-    const sum1 = r1 + g1 + b1 + a1
-    if (sum1 === 0) {
-      r1 = g1 = b1 = 255
-    }
-
-    const rd = img2.data[i] - r1
-    const gd = img2.data[i + 1] - g1
-    const bd = img2.data[i + 2] - b1
-
-    const a2    = img2.data[i + 3]
-    const ratio = a2 / 255
-
-    merged.data[i]     = r1 + rd * ratio
-    merged.data[i + 1] = g1 + gd * ratio
-    merged.data[i + 2] = b1 + bd * ratio
-    merged.data[i + 3] = Math.max(a1, a2)
+    mergeColorImageData(img1.data, i, img2.data, i, merged.data, i)
   }
 }
 
 export class AddIn {
   private readonly mapLineAddIn: MapLineAddIn
   private readonly mapMaskAddIn: MapMaskAddIn
-  private images: HTMLImageElement[] = []
+  private readonly bucketFillAddIn: BucketFillAddIn
+  private images: ImageBitmap[] = []
 
   public constructor() {
-    this.mapMaskAddIn = new MapMaskAddIn()
-    this.mapLineAddIn = new MapLineAddIn()
+    this.mapMaskAddIn    = new MapMaskAddIn()
+    this.mapLineAddIn    = new MapLineAddIn()
+    this.bucketFillAddIn = new BucketFillAddIn()
 
     function getImageUrl(url: string) {
       return `${location.protocol}//${location.hostname}:9000/manchat/${url}`
     }
 
-    async function loadImage(src: string): Promise<HTMLImageElement> {
-      return new Promise<HTMLImageElement>((resolve, reject) => {
+    async function loadImage(src: string): Promise<ImageBitmap> {
+      return new Promise<ImageBitmap>((resolve, reject) => {
         const img: HTMLImageElement = new Image()
 
-        img.onload  = () => resolve(img)
+        img.onload  = () => createImageBitmap(img).then(ib => resolve(ib)).catch(reject)
         img.onerror = reject
         img.src     = src
       })
@@ -167,9 +180,6 @@ export class AddIn {
       case 'line':
         this.mapLineAddIn.onEndMove(moveInfo, store)
         break
-      case 'shape':
-        this.mapLineAddIn.addFillPoint(moveInfo, store)
-        break
       default:
     }
   }
@@ -177,48 +187,60 @@ export class AddIn {
   public paint(context: CanvasRenderingContext2D,
                gridSize: number,
                moveInfo: MoveInfo,
-               play_board_uuid: string,
+               playBoardUuid: string,
                store: RoomCollectionStore,
+               color: string,
   ) {
-    const gridColumn = store.playBoards.value.find(pb => pb.uuid === play_board_uuid)?.width || 0
-    const gridRow    = store.playBoards.value.find(pb => pb.uuid === play_board_uuid)?.height || 0
-    const boardType  = store.playBoards.value.find(pb => pb.uuid === play_board_uuid)?.board_type || 'normal'
+    const columns   = store.playBoards.value.find(pb => pb.uuid === playBoardUuid)?.width || 0
+    const rows      = store.playBoards.value.find(pb => pb.uuid === playBoardUuid)?.height || 0
+    const boardType = store.playBoards.value.find(pb => pb.uuid === playBoardUuid)?.board_type || 'normal'
 
     const sqrt3 = Math.sqrt(3)
-    const col31 = gridColumn * 3 + 1
-    const row31 = gridRow * 3 + 1
+    const col31 = columns * 3 + 1
+    const row31 = rows * 3 + 1
 
-    const canvasWidth  = boardType === 'hex-vertical' ? col31 * gridSize / 2 / sqrt3 + 2 : gridColumn * gridSize + 1
-    const canvasHeight = boardType === 'hex-horizontal' ? row31 * gridSize / 2 / sqrt3 + 2 : gridRow * gridSize + 1
+    const canvasWidth  = boardType === 'hex-vertical' ? col31 * gridSize / 2 / sqrt3 + 2 : columns * gridSize + 1
+    const canvasHeight = boardType === 'hex-horizontal' ? row31 * gridSize / 2 / sqrt3 + 2 : rows * gridSize + 1
+
+    // 描画処理
+    const createPayload = (imageData: ImageData) => (
+      {
+        imageData,
+        gridSize,
+        moveInfo,
+        playBoardUuid,
+        store,
+        canvasWidth,
+        canvasHeight,
+        columns,
+        rows,
+        color: changeColor(color),
+      }
+    )
 
     context.clearRect(0, 0, canvasWidth, canvasHeight)
 
     if (boardType === 'normal') {
-      const imageData1 = context.createImageData(canvasWidth, canvasHeight)
-      this.mapLineAddIn.paint(imageData1, gridSize, moveInfo, play_board_uuid, store, canvasWidth, canvasHeight)
-
-      const imageData2 = context.createImageData(canvasWidth, canvasHeight)
+      const imgData1      = context.createImageData(canvasWidth, canvasHeight)
+      const imgData2      = context.createImageData(imgData1)
+      const mergedImgData = context.createImageData(imgData1)
 
       // 罫線
-      const cStr  = store.playBoards.value.find(pb => pb.uuid === play_board_uuid)?.border_color || '#000000'
-      const color = changeColor(cStr)
-      Array(gridColumn + 1).fill(0).forEach((_, column) => {
-        const x = column * gridSize
-        fillRectImageData(imageData2, color, canvasWidth, x, 0, x, canvasHeight)
-      })
-      Array(gridRow + 1).fill(0).forEach((_, row) => {
-        const y = row * gridSize
-        fillRectImageData(imageData2, color, canvasWidth, 0, y, canvasWidth, y)
-      })
+      const cStr       = store.playBoards.value.find(pb => pb.uuid === playBoardUuid)?.border_color || '#000000'
+      const drawBorder = fillRectImageData.bind(null, imgData1, canvasWidth, changeColor(cStr))
+      Array(columns + 1).fill(0).forEach((_, column) => drawBorder(column * gridSize, 0, 1, canvasHeight))
+      Array(rows + 1).fill(0).forEach((_, row) => drawBorder(0, row * gridSize, canvasWidth, 1))
 
-      this.mapMaskAddIn.paint(imageData2, gridSize, moveInfo, play_board_uuid, store, canvasWidth, gridColumn, gridRow)
+      this.mapMaskAddIn.paint(createPayload(imgData1))
+      this.mapLineAddIn.paint(createPayload(imgData2))
+      this.bucketFillAddIn.paint(createPayload(imgData2))
 
-      const merged = context.createImageData(canvasWidth, canvasHeight)
-      mergeImageData(imageData2, imageData1, merged)
-      context.putImageData(merged, 0, 0)
+      mergeImageData(imgData1, imgData2, mergedImgData)
+
+      context.putImageData(mergedImgData, 0, 0)
     } else {
       if (boardType.startsWith('hex-')) {
-        drawHexs(context, boardType, gridColumn, gridRow, gridSize, this.images)
+        drawHexs(context, boardType, columns, rows, gridSize, this.images)
       }
     }
   }

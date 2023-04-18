@@ -1,3 +1,5 @@
+import { mergeColorImageData } from '~/components/panes/PlayBoard/add-in/index'
+
 const loop4 = Array(4).fill(0).map((_, idx) => idx)
 
 export function toImageDataPixelPos(x: number, y: number, canvasWidth: number) {
@@ -6,18 +8,22 @@ export function toImageDataPixelPos(x: number, y: number, canvasWidth: number) {
 }
 
 export function fillRectImageData(imgData: ImageData,
-                                  color: number[],
                                   canvasWidth: number,
-                                  minX: number,
-                                  minY: number,
-                                  maxX: number,
-                                  maxY: number,
+                                  color: number[],
+                                  x: number,
+                                  y: number,
+                                  width: number,
+                                  height: number,
 ) {
-  for (let x = minX; x <= maxX; x++) {
-    for (let y = minY; y <= maxY; y++) {
-      const pos = toImageDataPixelPos(x, y, canvasWidth)
+  const minX = Math.min(x, x + width)
+  const minY = Math.min(y, y + height)
+  const maxX = Math.max(x, x + width)
+  const maxY = Math.max(y, y + height)
+  for (let ux = minX; ux < maxX; ux++) {
+    for (let uy = minY; uy < maxY; uy++) {
+      const pos = toImageDataPixelPos(ux, uy, canvasWidth)
       if (pos < imgData.data.length) {
-        loop4.forEach(idx => imgData.data[pos + idx] = color[idx])
+        mergeColorImageData(imgData.data, pos, color, 0, imgData.data, pos)
       }
     }
   }
@@ -46,15 +52,11 @@ export function drawLineImageData(imgData: ImageData,
   const sy = y0 < y1 ? 1 : -1
   let err  = dx - dy
 
-  const color: number[] = changeColor(colorStr)
-
-  const flWidth12 = Math.floor((
-                                 width - 1
-                               ) / 2)
+  const drawLine  = fillRectImageData.bind(null, imgData, canvasWidth, changeColor(colorStr))
+  const flWidth12 = Math.floor(width / 2 - 0.5)
 
   if (x0 === x1) {
-    const minX = x0 - flWidth12
-    fillRectImageData(imgData, color, canvasWidth, minX, Math.min(y0, y1), minX + width, Math.max(y0, y1))
+    drawLine(x0 - flWidth12, y0, width, y1 - y0)
     return
   }
 
@@ -64,11 +66,9 @@ export function drawLineImageData(imgData: ImageData,
 
   while (sx < 0 && x0 > x1 || sx > 0 && x0 < x1 || sy < 0 && y0 > y1 || sy < 0 && y0 < y1) {
     if (qFlg) {
-      const minY = y0 - flWidth12
-      fillRectImageData(imgData, color, canvasWidth, x0, minY, x0 + 1, minY + width)
+      drawLine(x0, y0 - flWidth12, 1, width)
     } else {
-      const minX = x0 - flWidth12
-      fillRectImageData(imgData, color, canvasWidth, minX, y0, minX + width, y0 + 1)
+      drawLine(x0 - flWidth12, y0, width, 1)
     }
     const e2 = err * 2
     if (e2 > -dy) {
@@ -111,7 +111,7 @@ export function fillColor(startX: number,
 
   const isMatchColor = (x: number, y: number, color: number[]) => {
     const pp = toImageDataPixelPos(x, y, canvasWidth)
-    return !loop4.some(idx => imgData.data[pp + idx] !== color[idx])
+    return loop4.every(idx => imgData.data[pp + idx] === color[idx])
   }
 
   if (isMatchColor(startX, startY, penColor)) {

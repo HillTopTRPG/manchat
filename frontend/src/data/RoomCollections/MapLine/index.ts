@@ -34,7 +34,7 @@ export function createMapLineFunctions(args: RoomProps) {
   }
   const updateMapLine = async (payload: Pick<MapLine, typeof sendParams[number]> & { axios: any, map_line_uuid: string }) => {
     await payload.axios.patch(`/api/v1/map_lines/${payload.map_line_uuid}`, merge(getRoomBaseParams(args), {
-      api_v1_map_line: pick(payload, ...sendParams),
+      record: pick(payload, ...sendParams),
     }))
   }
   return {
