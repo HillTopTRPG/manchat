@@ -211,7 +211,7 @@ export class AddIn {
         fillRectImageData(imageData2, color, canvasWidth, 0, y, canvasWidth, y)
       })
 
-      this.mapMaskAddIn.paint(imageData2, gridSize, moveInfo, play_board_uuid, store, canvasWidth)
+      this.mapMaskAddIn.paint(imageData2, gridSize, moveInfo, play_board_uuid, store, canvasWidth, gridColumn, gridRow)
 
       const merged = context.createImageData(canvasWidth, canvasHeight)
       mergeImageData(imageData2, imageData1, merged)

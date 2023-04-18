@@ -88,6 +88,15 @@ export default class {
       return
     }
 
+    const gridColumn = store.playBoards.value.find(pb => pb.uuid === play_board_uuid)?.width || 0
+    const gridRow    = store.playBoards.value.find(pb => pb.uuid === play_board_uuid)?.height || 0
+    const mGridX     = moveInfo.mGrid.x
+    const mGridY     = moveInfo.mGrid.y
+
+    if (mGridX < 0 || gridColumn <= mGridX || mGridY < 0 || gridRow <= mGridY) {
+      return
+    }
+
     const mapMaskBase = {
       play_board_uuid: play_board_uuid,
       grid_x         : moveInfo.mGrid.x,
@@ -149,6 +158,8 @@ export default class {
     play_board_uuid: string,
     store: RoomCollectionStore,
     canvasWidth: number,
+    columns: number,
+    rows: number,
   ) {
     let movingUuid: string | null = null
     if (moveInfo.mode === 'add-in:move' && moveInfo.toolType === 'grid' && moveInfo.subMode === 'moving') {
@@ -185,16 +196,21 @@ export default class {
     }))
 
     if (moveInfo.toolType === 'grid') {
+      const mGridX = moveInfo.mGrid.x
+      const mGridY = moveInfo.mGrid.y
+      if (mGridX < 0 || columns <= mGridX || mGridY < 0 || rows <= mGridY) {
+        return
+      }
       // 現在のマス
       const color = changeColor('#ff0000')
       const minX  = moveInfo.mGrid.x * gridSize
       const minY  = moveInfo.mGrid.y * gridSize
       const maxX  = minX + gridSize
       const maxY  = minY + gridSize
-      fillRectImageData(imageData, color, canvasWidth, minX + 1, minY - 1, maxX + 1, minY + 1)
-      fillRectImageData(imageData, color, canvasWidth, maxX - 1, minY + 1, maxX + 1, maxY + 1)
-      fillRectImageData(imageData, color, canvasWidth, minX - 1, maxY - 1, maxX - 1, maxY + 1)
-      fillRectImageData(imageData, color, canvasWidth, minX - 1, minY - 1, minX + 1, maxY - 1)
+      fillRectImageData(imageData, color, canvasWidth, minX + 2, minY, maxX, minY + 1) // Top
+      fillRectImageData(imageData, color, canvasWidth, maxX - 1, minY + 2, maxX, maxY) // Right
+      fillRectImageData(imageData, color, canvasWidth, minX, maxY - 1, maxX - 2, maxY) // Bottom
+      fillRectImageData(imageData, color, canvasWidth, minX, minY, minX + 1, maxY - 2) // Left
     }
   }
 }
