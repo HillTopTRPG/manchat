@@ -65,18 +65,23 @@ services:
     ports:
       - '9000:9000'
       - '9001:9001'
-    entrypoint: bash
-    command: -c "
-      mkdir -p /data/.minio.sys/buckets;
-      cp -r /policies/* /data/.minio.sys/;
-      cp -r /export/* /data/;
-      /opt/bin/minio server /export --address :9000 --console-address :9001;
-      "
+    command: minio server /export --address :9000 --console-address :9001;
     volumes:
       - ./minio/data:/data
       - ./minio/export:/export
       - ./minio/config:/root/.minio
       - ./minio/policies:/policies
+  minio-mc:
+    image: minio/mc
+    depends_on:
+      - minio
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set my-minio http://minio:9000 minio_123 pass_123;
+      mc mb my-minio/manchat;
+      mc anonymous set download my-minio/manchat;
+      exit 0;
+      "
 
 volumes:
   mysql-data:
