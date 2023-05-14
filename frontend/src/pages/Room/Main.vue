@@ -360,6 +360,9 @@ const contents = ref<typeof Contents>()
 
 document.addEventListener('keydown', (event: KeyboardEvent) => {
   contents.value?.globalKeyDown(event)
+  if (event.key === 'x') {
+    console.log(document.activeElement)
+  }
 })
 </script>
 
@@ -379,7 +382,7 @@ document.addEventListener('keydown', (event: KeyboardEvent) => {
         </v-breadcrumbs>
       </v-toolbar-title>
       <v-spacer v-if='collapse' />
-      <v-tooltip v-if='userLoggedInFlg'>
+      <v-tooltip class='room-main' v-if='userLoggedInFlg'>
         <template #activator='{ props }'>
           <v-btn
             variant='text'
@@ -390,7 +393,7 @@ document.addEventListener('keydown', (event: KeyboardEvent) => {
         </template>
         メニューバーを{{ collapse ? "広げる" : "閉じる" }}
       </v-tooltip>
-      <v-tooltip>
+      <v-tooltip class='room-main'>
         <template #activator='{ props }'>
           <v-btn
             variant='text'
@@ -405,7 +408,7 @@ document.addEventListener('keydown', (event: KeyboardEvent) => {
         </template>
         ペインの編集
       </v-tooltip>
-      <v-tooltip>
+      <v-tooltip class='room-main'>
         <template #activator='{ props }'>
           <v-btn
             variant='text'
@@ -637,16 +640,16 @@ document.addEventListener('keydown', (event: KeyboardEvent) => {
 }
 
 /*noinspection CssUnresolvedCustomProperty*/
-.v-tooltip .v-overlay__content {
+.v-tooltip.room-main .v-overlay__content {
   background: rgba(var(--v-theme-surface-variant), 0.9);
   color: rgb(var(--v-theme-on-surface-variant));
 }
 
-.v-tooltip .v-overlay__content > .v-card > * {
+.v-tooltip.room-main .v-overlay__content > .v-card > * {
   padding: 0;
 }
 
-.v-tooltip .v-overlay__content * {
+.v-tooltip.room-main .v-overlay__content * {
   background: transparent !important;
   color: inherit;
 }

@@ -14,10 +14,8 @@ module Api
       end
 
       def self.make_system_message(room_uuid, raw)
-        chat = new(room_uuid: room_uuid, tab: "system", raw: raw, secret: 0)
-        unless chat.save
-          puts chat.errors.full_messages
-        end
+        chat = new(room_uuid: room_uuid, tab: 'system', raw: raw, secret: 0)
+        puts chat.errors.full_messages unless chat.save
       end
     end
   end

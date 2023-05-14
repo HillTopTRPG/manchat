@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2022_09_21_050001) do
+ActiveRecord::Schema[7.0].define(version: 2023_04_16_090719) do
   create_table "api_v1_change_logs", primary_key: "uuid", id: :string, charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
     t.string "room_uuid", null: false
     t.string "table", null: false
@@ -37,6 +37,49 @@ ActiveRecord::Schema[7.0].define(version: 2022_09_21_050001) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["room_uuid"], name: "index_api_v1_chats_on_room_uuid"
+  end
+
+  create_table "api_v1_map_lines", primary_key: "uuid", id: :string, charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
+    t.string "room_uuid", null: false
+    t.string "play_board_uuid", null: false
+    t.string "owner_user"
+    t.float "x1", null: false
+    t.float "y1", null: false
+    t.float "x2", null: false
+    t.float "y2", null: false
+    t.string "color", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["play_board_uuid"], name: "index_api_v1_map_lines_on_play_board_uuid"
+    t.index ["room_uuid"], name: "index_api_v1_map_lines_on_room_uuid"
+  end
+
+  create_table "api_v1_map_masks", primary_key: "uuid", id: :string, charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
+    t.string "room_uuid", null: false
+    t.string "play_board_uuid", null: false
+    t.string "owner_user"
+    t.integer "grid_x", null: false
+    t.integer "grid_y", null: false
+    t.string "bg_color", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["play_board_uuid"], name: "index_api_v1_map_masks_on_play_board_uuid"
+    t.index ["room_uuid"], name: "index_api_v1_map_masks_on_room_uuid"
+  end
+
+  create_table "api_v1_play_boards", primary_key: "uuid", id: :string, charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
+    t.string "room_uuid", null: false
+    t.string "name", null: false
+    t.string "board_type", null: false
+    t.integer "width", null: false
+    t.integer "height", null: false
+    t.string "screen_color", null: false
+    t.string "bg_color", null: false
+    t.string "border_color", null: false
+    t.json "tiles"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["room_uuid"], name: "index_api_v1_play_boards_on_room_uuid"
   end
 
   create_table "api_v1_rooms", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|

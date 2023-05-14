@@ -1,92 +1,77 @@
-# README
+# プロジェクトについて
 
-## 開発中コマンドメモ
+これはTRPGのオンラインセッションに役立つ小規模なツール群を提供するWebツールです。  
+使う人がブラウザのタブ１つをこのツールに割くのを後悔しないことを品質目標とします。  
+このツールは次の２点を解消することで、TRPGオンラインセッション体験の向上を目指します。
 
-* Docker起動
-   1. `docker compose up -d` 起動(最低限これだけ)
-   2. `docker compose ps` コンテナ―状況確認
-   3. `docker compose logs rails -f` railsのログを確認
-* Docker初期化
-   1. `docker compose down` コンテナー停止＆削除
-   2. `docker rmi $(docker images -q)` イメージ全削除
-   3. `docker system prune --volumes` コンテナなど全削除
-   4. `docker system df` Dockerが使っているストレージ容量確認
-* rails操作
-   * `docker compose exec rails bash` railsコンテナに入る
-   * `docker compose run rails bundle install` 未起動のコンテナに直接コマンド叩く
-* railsデバッグ
-   1. railsソースに`binding.pry`を書く
-   2. `docker compose restart rails`
-   3. `docker attach trpg-session-tools_rails`
+* データ量が多くて他のキャラクターのことまで頭が回すことができず、セッションが満喫できない
+* 汎用的なオンラインセッションツールでは表現不可能なルールがあるためオンラインでは遊べないTRPGシステムがある
 
-## 構成
+### 具体的な対策
+
+前者については1画面にデータをまとめて表示する機能により対応します。  
+（キャラクターシート１枚ごとに１つのタブを使っていたら大変ですから）  
+後者については専用のツールを作成します。
+
+### 本ツールの位置づけ
+
+本ツールはあくまで補助的な役割とします。  
+フルスタックなオンラインセッションツールは作るのが大変なので挫折しました。 作れる規模で確実に作っていくことが大切と思っています。
+
+# 主要機能
+
+### 画面分割機能
+
+* 画面を分割することで、複数のツールを同時に操作可能です
+* 画面の挿入位置はレイアウト編集モード中に行います
+* 分割後のレイアウトは部屋の中で共有する仕組みを作る予定です。
+
+##### 表示例１（1ツールで画面全体を使っている例）
+
+![画面分割機能画像1](https://github.com/HillTopTRPG/trpg-session-tools/raw/images/document/markdown/split_pane_capture_1.png "画面分割例1")
+
+##### 表示例2（4つのツールを表示している例）
+
+![画面分割機能画像2](https://github.com/HillTopTRPG/trpg-session-tools/raw/images/document/markdown/split_pane_capture_2.png "画面分割例2")
+
+### チャット機能
+
+* 簡単な意思疎通を図るための些細な実装です。
+* ダイスロールなどはメインのオンラインセッションツールにて行ってください。
+
+### システム特化型ダッシュボード
+
+* セッション中、他の人のキャラクター情報を把握できていますか？
+* このツールにすべてのキャラクターシートを読み込ませましょう！
+* ブラウザのタブを１つこのツールのために使うデメリットを上回る利便性をきっと実感することができるはずです。
+* 対応システム予定
+   * シノビガミ
+   * ネクロニカ
+   * 他未定
+
+### グリッドボード
+
+* マス目を塗りつぶしたり直線を引いたりできるボードです。
+* 同じ部屋にいる人同士でボードを共有し、一緒に書き込むことができます。
+* スクエアマップ（実装済み）
+* へクスマップ（実装予定）
+* 画像タイル貼り付けによるマップビルド（実装予定）
+* バケツ塗りつぶし機能（実装予定）
+   * **翠緑のフローリア**の魔法脈システムが遊べるレベルを想定
+* コマ配置機能（実装予定）
+   * 非常に簡素にする予定
+
+## システム構成
 
 * docker(docker-compose)
 
-   1. [nginx](https://www.nginx.co.jp/) 1.23-alpine port=81
-   2. Ruby on Rails 7
+   1. [nginx](https://www.nginx.co.jp/) 1.23-alpine (port=81)
+   2. Ruby on Rails 7 (Ruby:3.0.6)
    3. mysql 8.0.25
    4. Vue 3 + Vuetify 3 (build only)
       * Build Tool: [Vite](https://ja.vitejs.dev/guide/)
 
-## 環境構築（ローカルで動かしてみる）
+## 設置方法
 
-1. `Rancher Desktop 1.4.1`をインストールする
-
-   * [こちら](https://github.com/rancher-sandbox/rancher-desktop/releases/tag/v1.4.1)
-     の下の方にある`Assets`
-     のリンク集から自分のPCに合うものをダウンロードして使う
-
-2. `Rancher Desktop`を起動
-
-   * 起動することで`Docker`が使える(`docker`と`docker-compose`のコマンドが叩ける)ようになる
-
-3. `Rancher Desktop`の設定
-
-   * General
-      * Check for updates automatically: un check
-
-   * WSL Integrations
-      * 設定項目なし
-
-   * Kubernetes Settings
-      * Kubernetes version: v1.24.3
-      * Port: 6443
-      * Enable Kubernetes: ✔
-      * Enable Traefik: ✔
-      * Container Runtime: dockerd(moby)
-
-   * Port Forwarding
-      * Empty
-
-   * Images
-      * 設定項目なし
-
-   * Troubleshooting
-      * 設定項目なし
-
-4. このリポジトリのソースを配置するフォルダを作成する
-
-5. Windowsならコマンドプロンプト, Macならターミナルを起動する
-
-   * 以降はOS標準のソフトを使ってコマンドを叩いていく
-
-6. このリポジトリのソースをローカルに配置する
-
-   1. `cd 配置フォルダのパス`
-   2. `git clone このリポジトリをcloneするための指定`
-
-      * もし`git`コマンドが使えない場合はgitをインストールして5からやり直す
-
-7. コマンドライン上で6-2の`git clone`によって作成されたフォルダに移動する
-
-   * `cd cloneで作成されたフォルダのパス`
-
-8. とにかく起動(docker-compose.ymlの記載に沿ってdockerが各環境を構築して起動する)
-
-   * `docker compose up`
-
-9. ブラウザからアクセス！
-
-   * http://localhost:81  フロントエンドのページ（メインのコンテンツ）
-   * http://localhost:81/api/v1/users  バックエンドデータを直接覗き見
+* [環境構築（ローカルで動かす例）](/document/markdown/Initialize.md)
+* [開発中コマンドメモ](/document/markdown/DevelopperCommands.md)

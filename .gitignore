@@ -27,6 +27,12 @@
 
 /public/assets
 
+/minio/config/*
+/minio/export/.minio.sys/*
+/minio/export/manchat/*
+/minio/data/manchat/*
+/minio/data/.minio.sys/*
+
 # Ignore master key for decrypting credentials and more.
 /config/master.key
 
@@ -34,6 +40,7 @@
 .idea/**/workspace.xml
 .idea/**/tasks.xml
 .idea/**/Project_Default.xml
+.idea/*
 
 config/settings.local.yml
 config/settings/*.local.yml

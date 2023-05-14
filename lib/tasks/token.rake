@@ -4,6 +4,9 @@
 namespace :token do
   desc 'ユーザーチャンネルのサブスクライバーのトークンの有効期限を延長する'
   task ttl_extension: :environment do
+    puts '---------------------------------------'
+    puts 'ttl_extension'
+    puts '---------------------------------------'
     Api::V1::UsersChannelSubscriber.all.each do |subscription|
       channel_name = "user_#{subscription.subscription_uuid}"
 

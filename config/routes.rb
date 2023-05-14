@@ -19,11 +19,11 @@ Rails.application.routes.draw do
 
       get 'room_collections/:room_uuid', to: 'room_collections#index', as: 'room_collections'
 
-      %w[chats].each do |n|
+      %w[chats map_masks play_boards map_lines].each do |n|
         get n, to: "#{n}#index", as: n
         post n, to: "#{n}#create"
         patch "#{n}/:uuid", to: "#{n}#update"
-        delete "#{n}/:uuid", to: "#{n}#destroy"
+        delete "#{n}", to: "#{n}#destroy"
       end
 
       %w[change_logs].each do |n|

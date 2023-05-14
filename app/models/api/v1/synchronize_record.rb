@@ -5,37 +5,41 @@ module Api
     class SynchronizeRecord < ApplicationRecord
       self.abstract_class = true
 
-      after_create lambda {
+      scope :for_client, ->(params) { where(room_uuid: params[:room_uuid]).order(:created_at) }
+
+      after_commit lambda {
         ActionCable.server.broadcast(
           "room_#{room_uuid}",
           {
             type: 'create-data',
             table: self.class.table_name,
-            data: to_response
+            dataList: [to_response]
           }
         )
-      }
-      after_update lambda {
+      }, on: :create
+
+      after_commit lambda {
         ActionCable.server.broadcast(
           "room_#{room_uuid}",
           {
             type: 'update-data',
             table: self.class.table_name,
-            data: to_response,
+            dataList: [to_response],
             changes: previous_changes
           }
         )
-      }
-      after_destroy lambda {
+      }, on: :update
+
+      after_commit lambda {
         ActionCable.server.broadcast(
           "room_#{room_uuid}",
           {
             type: 'destroy-data',
             table: self.class.table_name,
-            uuid: uuid
+            uuids: [uuid]
           }
         )
-      }
+      }, on: :destroy
     end
   end
 end

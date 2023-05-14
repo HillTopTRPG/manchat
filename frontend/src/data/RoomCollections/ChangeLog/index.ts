@@ -9,6 +9,6 @@ export type ChangeLog = {
   updated_at: Date
 }
 
-export function createChangeLogFunctions(state: { changeLogs: ChangeLog[] }) {
+export function createChangeLogFunctions() {
   return {}
 }

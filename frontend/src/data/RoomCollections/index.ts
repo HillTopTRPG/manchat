@@ -1,7 +1,10 @@
 import { computed, inject, InjectionKey, reactive } from 'vue'
 import { Chat, createChatFunctions } from '~/data/RoomCollections/Chat'
 import { ChangeLog, createChangeLogFunctions } from '~/data/RoomCollections/ChangeLog'
+import { createMapMaskFunctions, MapMask } from '~/data/RoomCollections/MapMask'
 import { User } from '~/data/user'
+import { createPlayBoardFunctions, PlayBoard } from '~/data/RoomCollections/PlayBoard'
+import { createMapLineFunctions, MapLine } from '~/data/RoomCollections/MapLine'
 
 const changeDate = <T extends {
   created_at: Date
@@ -21,11 +24,17 @@ export default function RoomCollectionStore(payload: {
     users: User[]
     chats: Chat[]
     changeLogs: ChangeLog[]
+    mapMasks: MapMask[]
+    playBoards: PlayBoard[]
+    mapLines: MapLine[]
   }>({
        ready     : false,
        users     : [],
        chats     : [],
        changeLogs: [],
+       mapMasks  : [],
+       playBoards: [],
+       mapLines  : [],
      })
 
   const axios: any            = inject('axios')
@@ -38,6 +47,9 @@ export default function RoomCollectionStore(payload: {
       state.users.splice(0, state.users.length, ...data.users.map((d: any) => changeDate(d)))
       state.chats.splice(0, state.chats.length, ...data.chats.map((d: any) => changeDate(d)))
       state.changeLogs.splice(0, state.changeLogs.length, ...data.change_logs)
+      state.mapMasks.splice(0, state.mapMasks.length, ...data.map_masks.map((d: any) => changeDate(d)))
+      state.playBoards.splice(0, state.playBoards.length, ...data.play_boards.map((d: any) => changeDate(d)))
+      state.mapLines.splice(0, state.mapLines.length, ...data.map_lines.map((d: any) => changeDate(d)))
     } catch (err) {
       console.log(JSON.stringify(err, null, '  '))
     }
@@ -50,8 +62,6 @@ export default function RoomCollectionStore(payload: {
 
   const roomChannelSubscriptionHandler = {
     received(data: any) {
-      //      console.log(JSON.stringify(data, null, '  '))
-      //      console.log(`[${data.table}]-[${data.type}]`)
       switch (data.table) {
         case 'api_v1_users':
           basicDataHandler(data, state.users)
@@ -61,6 +71,15 @@ export default function RoomCollectionStore(payload: {
           break
         case 'api_v1_change_logs':
           basicDataHandler(data, state.changeLogs)
+          break
+        case 'api_v1_map_masks':
+          basicDataHandler(data, state.mapMasks)
+          break
+        case 'api_v1_play_boards':
+          basicDataHandler(data, state.playBoards)
+          break
+        case 'api_v1_map_lines':
+          basicDataHandler(data, state.mapLines)
           break
         default:
           console.log(`ignore: [${data.table}]-[${data.type}]`)
@@ -72,30 +91,65 @@ export default function RoomCollectionStore(payload: {
                                room_uuid: payload.room_uuid,
                              }, roomChannelSubscriptionHandler)
 
+  const chatFunctions      = createChatFunctions(payload)
+  const changeLogFunctions = createChangeLogFunctions()
+  const mapMaskFunctions   = createMapMaskFunctions(payload)
+  const playBoardFunctions = createPlayBoardFunctions(payload)
+  const mapLineFunctions   = createMapLineFunctions(payload)
   return {
+    ...chatFunctions, ...changeLogFunctions, ...mapMaskFunctions, ...playBoardFunctions, ...mapLineFunctions,
     ready     : computed(() => state.ready),
     users     : computed(() => state.users),
     chats     : computed(() => state.chats),
-    changeLogs: computed(() => state.changeLogs), ...createChatFunctions(state, payload), ...createChangeLogFunctions(
-      state),
+    mapMasks  : computed(() => state.mapMasks),
+    mapLines  : computed(() => state.mapLines),
+    playBoards: computed(() => state.playBoards),
+    changeLogs: computed(() => state.changeLogs),
   }
 }
 
-export function basicDataHandler<T extends { uuid: string, updated_at: Date, created_at: Date }>(data: { type: string, uuid: string, data: T },
+export function basicDataHandler<T extends { uuid: string, updated_at: Date, created_at: Date }>(data: { type: string, uuid?: string, uuids?: string[], data?: T, dataList?: T[] },
                                                                                                  list: T[],
 ) {
   switch (data.type) {
     case 'create-data':
-      list.push(changeDate(data.data))
+      if (data.data) {
+        list.push(changeDate(data.data))
+      }
+      if (data.dataList) {
+        list.push(...data.dataList.map(changeDate))
+      }
       return true
     case 'destroy-data':
-      const index = list.findIndex(r => r.uuid === data.uuid)
-      if (index >= 0) {
-        list.splice(index, 1)
+      if (data.uuid) {
+        const idx = list.findIndex(r => r.uuid === data.uuid)
+        if (idx > -1) {
+          list.splice(idx, 1)
+        }
+      }
+      if (data.uuids) {
+        list
+          .map((r, idx) => data.uuids!.includes(r.uuid) ? idx : null)
+          .filter((idx): idx is number => idx !== null)
+          .reverse()
+          .forEach(idx => list.splice(idx, 1))
       }
       return true
     case 'update-data':
-      list.splice(list.findIndex(r => r.uuid === data.data.uuid), 1, changeDate(data.data))
+      if (data.data) {
+        const idx = list.findIndex(r => r.uuid === data.data!.uuid)
+        if (idx > -1) {
+          list.splice(idx, 1, changeDate(data.data))
+        }
+      }
+      if (data.dataList) {
+        data.dataList.forEach(d => {
+          const idx = list.findIndex(r => r.uuid === d.uuid)
+          if (idx > -1) {
+            list.splice(idx, 1, changeDate(d))
+          }
+        })
+      }
       return true
   }
 }
