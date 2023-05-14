@@ -24,9 +24,10 @@
 1. ```shell
    docker compose down # コンテナー停止＆削除
    ```
-2. ```shell
-   docker rmi $(docker images -q) # イメージ全削除
-   ```
+   2. ```shell
+      docker rmi $(docker images -q) # イメージ全削除
+      docker image prune -a -f
+      ```
 3. ```shell
    docker system prune -f --volumes # コンテナなど全削除
    ```
