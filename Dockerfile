@@ -32,8 +32,25 @@ RUN gem install bundler -v ${BUNDLER_VERSION}
 
 WORKDIR /app
 
-ADD ./wait-for-it.sh /app/wait-for-it.sh
-RUN chmod -R 777 /app
+COPY app app
+COPY bin bin
+COPY config config
+COPY db db
+COPY lib lib
+COPY log log
+COPY public public
+COPY test test
+COPY tmp tmp
+COPY .rubocop*.yml .
+COPY .ruby-version .
+COPY config.ru .
+COPY Gemfile* .
+COPY LICENSE .
+COPY Rakefile .
+COPY wait-for-it.sh .
+
+RUN chown -R root:root .
+USER root
 
 ENTRYPOINT [ \
   "prehook", "bundle install -j4", "--", \

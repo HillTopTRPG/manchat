@@ -1,10 +1,10 @@
 development:
   adapter: redis
-  url: "redis://redis"
+  url: <%= ENV.fetch("REDIS_URL") { "redis://redis" } %>
 
 test:
   adapter: test
 
 production:
   adapter: redis
-  url: "redis://redis"
+  url: <%= ENV.fetch("REDIS_URL") %>

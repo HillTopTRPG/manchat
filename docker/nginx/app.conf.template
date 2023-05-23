@@ -1,13 +1,13 @@
 upstream rails {
-  server rails:3000;
+  server ${RAILS_HOST}:${RAILS_PORT};
 }
 
 upstream vue {
-  server vue:3120;
+  server ${VUE_HOST}:${VUE_PORT};
 }
 
 server {
-  listen 80;
+  listen ${NGINX_PORT};
   server_name localhost;
 
   large_client_header_buffers 4 32k;
